@@ -53,4 +53,4 @@ main_func.elf: main_func.o context_switch.o bwio.o kernel.o
 	$(LD) $(LDFLAGS) -o $@ bwio.o kernel.o main_func.o context_switch.o -lgcc #-lbwio
 
 clean:
-	-rm -f *.elf *.s *.o *.map
+	-rm -f *.elf *.s *.o *.map ../obj/* ../asm/* ../elf/*
