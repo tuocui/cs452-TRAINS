@@ -1,3 +1,10 @@
+#!/bin/bash
+
+red='\e[31m'
+grn='\e[32m'
+wht='\e[0m'
+
+
 cd src
 
 if [ "$1" == "clean" ]; then
@@ -5,10 +12,18 @@ if [ "$1" == "clean" ]; then
 else
   make clean
   cp context_switch.s.in context_switch.s
+  
   make
+  if [ $? -ne 0 ]; then
+    echo -e "${red}FAILED to build!!${wht}"
+    exit -1;
+  fi
+
   cp *.elf /u/cs452/tftp/ARM/z26zheng/
   chmod +x /u/cs452/tftp/ARM/z26zheng/*.elf
   mv *.o ../obj/
   mv *.s ../asm/
   mv *.elf ../elf/
+
+  echo -e "${grn}Finished building :)${wht}"
 fi
