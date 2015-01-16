@@ -17,6 +17,10 @@
     bwprintf(COM2,"Assert failed (%s:%d): %s\n\r\n\r",__FILE__,__LINE__,__VA_ARGS__);\
   }
 
+/* to disable debug print, in your source file, do:
+ * #undef DEBUG
+ * #define DEBUG 0
+ */
 #define DEBUG 1
 #define debug(fmt, ...) \
   if(DEBUG == 1) { \
