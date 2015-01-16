@@ -1,4 +1,4 @@
-#include "kern.h"
+#include "kernel.h"
 #include "context_switch.h"
 
 

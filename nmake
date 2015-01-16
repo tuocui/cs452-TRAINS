@@ -1,5 +1,10 @@
+cd ~/cs452/cs452-TRAINS/src
 make clean
 cp context_switch.s.in context_switch.s
 make
 cp *.elf /u/cs452/tftp/ARM/z26zheng/
 chmod +x /u/cs452/tftp/ARM/z26zheng/*.elf
+mv *.o ../obj/
+mv *.s ../asm/
+mv *.elf ../elf/
+

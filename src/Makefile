@@ -16,7 +16,9 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 
 LDFLAGS = -init main -N -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L../../lib
 
+
 all:  kernel.s main_func.s main_func.elf
+
 
 bwio.s: bwio.c
 	$(XCC) -S $(CFLAGS) bwio.c
