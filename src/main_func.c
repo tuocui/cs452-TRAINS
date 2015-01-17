@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   int * sp;
   sp = initbuf + 1000;
   bwprintf(COM2, "We set char: %c\n\r", ch);
-  int * lr = (sp - 14);
+  int * lr = (sp + 14);
   *lr = (int)&first_task;
 
   kernel_exit(1, (int)sp, 0xd0);
