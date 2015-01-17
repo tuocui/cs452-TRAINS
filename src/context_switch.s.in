@@ -14,19 +14,6 @@ init_kernelentry:
   ldmfd sp, {fp, sp, pc}
 
 .align 2
-.global print_pc	
-.type	print_pc, %function
-print_pc:
-  mov ip, sp
-  stmfd sp!, {fp, ip, lr}
-  mov r0, #1
-  mov r1, sp
-  bl bwputr
-  ldmfd sp, {fp, sp, pc}
-
-
-
-.align 2
 .global kernel_exit
 .type kernel_exit, %function
 @TODO: find out args etc settings
