@@ -35,11 +35,12 @@ kernel_exit:
   @ 1. push kregs onto stack
   mov ip, sp
   stmfd sp!, {r3-r12, r14}
+  @ Set spsr to saved value
+  msr spsr, r2
   @ 2. switch to system mode
   msr cpsr_c, #0xdf
-  @ 3. get retval, sp, spsr from TD
+  @ 3. get retval, sp from TD
   mov sp, r1
-  msr spsr, r2
   @ load the pc into r1
   ldmfd sp!, {r1}
   @ r0 is already retval
@@ -47,9 +48,7 @@ kernel_exit:
   ldmfd sp!, {r4-r12, r14}
   @ 6. return to svc state
   msr cpsr_c, #0xd3
-  @ 7. install spsr in cpsr, now in user mode
-  msr cpsr_c, r2
-  @ 8. install the pc of the active task
+  @ 8. install the pc of the active task and change modes
   movs pc, r1
   @ldmfd sp, {r3-r12, pc}
 
@@ -60,9 +59,6 @@ kernel_exit:
 kernelentry:
   @ 3. change to system state, sp lr are in user
   msr cpsr_c, #0xdf
-  @mov r0, #1
-  @mov r1, pc
-  @bl bwputr
   @ 5. store user's registers values onto user stack
   stmfd sp!, {r4-r12, r14}
   @ 6. save active user task's sp in r1
@@ -70,16 +66,13 @@ kernelentry:
   @ 7. back to service state
   msr cpsr_c, #0xd3
   @ save user's pc to stack which is stored in lr_svc
-  stmfd r1!, {r14}
-  @mov r0, #1
-  @mov r1, r3
-  @bl bwputr
+  stmfd r1!, {lr}
   @ 8. getting spsr, user's values were set by swi
   mrs r2, spsr
   @ 9. pop kernel registers from stack
   ldmfd sp!, {r3-r12, r14}
   mov sp, ip
-  movs pc, lr
+  mov pc, lr
   @ r1: user sp, r2: user spsr, arguments on user stack
   @ request type is r1 - 4, figure out #params from there
 

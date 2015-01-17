@@ -11,11 +11,11 @@ void call_swi() {
 }
 
 void first_task() {
-  //int i = 123;
-  bwprintf(COM2, "FIRST USER TASK!!\n\r");
-  asm("swi 0");
-  bwprintf(COM2, "FIRST USER TASK AGAIN!");
-  asm("swi 0");
+  int i = 0;
+  while (1) {
+    bwprintf(COM2, "FIRST USER TASK!! #%d\n\r", ++i);
+    asm("swi 0");
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -42,34 +42,25 @@ int main(int argc, char *argv[]) {
   int * pc = (sp - 10);
   *pc = (int)&first_task + 0x218000;
   int * fp = (sp - 2);
-  *fp = sp;
+  *fp = (int)sp;
   bwprintf( COM2, "sp: %x, pc: %x, fp: %x, pc_val: %x, fp_val: %x", sp, pc, fp, *pc, *fp );
   bwprintf( COM2, "first_task location: %x\r\n\n\n", &first_task );
 
   kernel_exit(1, (int)pc, 0xd0);
 
-  register unsigned int *new_sp_reg asm("r0");
-  unsigned int *new_sp;
-  asm volatile(
-    "mov %0, r1\n\t" 
-  : "+r"(new_sp_reg)
-  );
-  new_sp = new_sp_reg;
+  register int new_sp_reg asm("r0"); // absolute 
+  int new_sp;
 
-  bwprintf(COM2, "\n\rAfter first kernel exit\n\r");
-  bwprintf(COM2, "\n\rUser sp: %x\n\r", new_sp);
-  bwprintf(COM2, "\n\rUser pc: %x\n\r", *new_sp);
+  while(1) {
+    asm volatile(
+      "mov %0, r1\n\t" 
+    : "+r"(new_sp_reg)
+    );
+    new_sp = new_sp_reg;
+    bwprintf( COM2, "new_sp:%d\r\n", new_sp ); 
+    kernel_exit(1, (int)new_sp, 0xd0);
+  }
 
-  kernel_exit(1, new_sp, 0xd0);
-
-
-
-  bwprintf(COM2, "\n\rGoodbye\n\r");
-  bwprintf(COM2, "\n\rGoodbye\n\r");
-  bwprintf(COM2, "\n\rGoodbye\n\r");
-  bwprintf(COM2, "\n\rGoodbye\n\r");
-  bwprintf(COM2, "\n\rGoodbye\n\r");
-  bwprintf(COM2, "\n\rGoodbye\n\r");
   bwprintf(COM2, "\n\rGoodbye\n\r");
  
   lr_reg = redboot_lr;
