@@ -42,7 +42,7 @@ context_switch.o: context_switch.s
 	$(AS) $(ASFLAGS) -o context_switch.o context_switch.s
 
 main_func.o: main_func.s
-	$(AS) $(ASFLAGS) -o main_func.o main_func.s
+	$(AS) $(ASFLAGS) -o main_func.o main_func.s 
 
 
 
@@ -50,7 +50,7 @@ main_func.o: main_func.s
 # MUST add .o file here:
 main_func.elf: main_func.o context_switch.o bwio.o kernel.o 
 # MUST add .o file here:
-	$(LD) $(LDFLAGS) -o $@ bwio.o kernel.o main_func.o context_switch.o -lgcc #-lbwio
+	$(LD) $(LDFLAGS) -o $@ bwio.o kernel.o context_switch.o main_func.o  -lgcc #-lbwio
 
 clean:
 	-rm -f *.elf *.s *.o *.map ../obj/* ../asm/* ../elf/*
