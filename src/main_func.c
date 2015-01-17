@@ -28,7 +28,18 @@ int main(int argc, char *argv[]) {
   int * lr = (sp + 14);
   *lr = (int)&first_task;
 
-  kernel_exit(1, (int)sp, 0xd0);
+  /*lr = (sp + 15);
+  *lr = (int)&first_task;
+  lr = (sp + 13);
+  *lr = (int)&first_task;
+  lr = (sp - 13);
+  *lr = (int)&first_task;
+  lr = (sp - 14);
+  *lr = (int)&first_task;
+  lr = (sp - 15);
+  *lr = (int)&first_task;*/
+
+  kernel_exit(1, (int)lr, 0xd0);
   bwprintf(COM2, "\n\rGoodbye\n\r");
   return 0;
 }

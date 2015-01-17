@@ -19,8 +19,8 @@ else
     exit -1;
   fi
 
-  cp *.elf /u/cs452/tftp/ARM/z26zheng/
-  chmod +x /u/cs452/tftp/ARM/z26zheng/*.elf
+  cp *.elf /u/cs452/tftp/ARM/t2cui/
+  chmod +x /u/cs452/tftp/ARM/t2cui/*.elf
   mv *.o ../obj/
   mv *.s ../asm/
   mv *.elf ../elf/
