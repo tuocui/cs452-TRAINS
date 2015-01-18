@@ -20,7 +20,7 @@ else
   fi
 
   cp *.elf /u/cs452/tftp/ARM/z26zheng/
-  chmod +x /u/cs452/tftp/ARM/z26zheng/*.elf
+  chmod 777 /u/cs452/tftp/ARM/z26zheng/*.elf
   mv *.o ../obj/
   mv *.s ../asm/
   mv *.elf ../elf/

@@ -3,3 +3,8 @@ nmake
 ./elf/*
 ./obj/*
 *~
+nmake
+obj
+asm
+elf
+

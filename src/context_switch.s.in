@@ -14,43 +14,28 @@ init_kernelentry:
   ldmfd sp, {fp, sp, pc}
 
 .align 2
-.global print_pc	
-.type	print_pc, %function
-print_pc:
-  mov ip, sp
-  stmfd sp!, {fp, ip, lr}
-  mov r0, #1
-  mov r1, sp
-  bl bwputr
-  ldmfd sp, {fp, sp, pc}
-
-
-
-.align 2
 .global kernel_exit
 .type kernel_exit, %function
 @TODO: find out args etc settings
 
 kernel_exit:
   @ 1. push kregs onto stack
+  mov ip, sp
   stmfd sp!, {r3-r12, r14}
+  @ Set spsr to saved value
+  msr spsr, r2
   @ 2. switch to system mode
   msr cpsr_c, #0xdf
-  @ 3. get retval, sp, spsr from TD
+  @ 3. get retval, sp from TD
   mov sp, r1
-  msr spsr, r2
-  ldr r2, [sp, #56]
-  ldmfd r1, {r2}
-  mrs r2, spsr
+  @ load the pc into r1
+  ldmfd sp!, {r1}
   @ r0 is already retval
   @ 4. pop the registers of the active task 
-  ldmfd sp!, {r0-r12, r14}
-  @ may need to move sp back
+  ldmfd sp!, {r4-r12, r14}
   @ 6. return to svc state
   msr cpsr_c, #0xd3
-  @ 7. install spsr in cpsr, now in user mode
-  msr cpsr_c, r2
-  @ 8. install the pc of the active task
+  @ 8. install the pc of the active task and change modes
   movs pc, r1
   @ldmfd sp, {r3-r12, pc}
 
@@ -60,21 +45,22 @@ kernel_exit:
 @.type kernel_entry, %function
 kernelentry:
   @ 3. change to system state, sp lr are in user
-  @msr cpsr_c, #0xdf
+  msr cpsr_c, #0xdf
   @ 5. store user's registers values onto user stack
-  @stmia sp!, {r0-r12, r14}
+  stmfd sp!, {r4-r12, r14}
   @ 6. save active user task's sp in r1
-  @mov r1, sp
+  mov r1, sp
   @ 7. back to service state
-  @msr cpsr_c, #0xd3
-  @ save user's pc to stack 
-  @stmia r1!, {r14}
-  @sub r1, r1, #60
-  @ TODO: Do later, set user SP back 52 bytes before storing in TD
-  @ 4*NUM_SAVED bytes
+  msr cpsr_c, #0xd3
+  @ save user's next pc to stack which is stored in lr_svc, set by swi
+  stmfd r1!, {lr}
   @ 8. getting spsr, user's values were set by swi
-  @mrs r2, spsr
-  @ 9. pop kernel registers from stack
-  @ldmia sp!, {r3-r12, r14}
-  @ r1: sp, r2: spsr, arguments on user stack
+  mrs r2, spsr
+  @ 9. pop kernel registers from stack, jump to kernel's lr instruction
+  ldmfd sp!, {r3-r12, r14}
+  mov sp, ip
+  mov pc, lr
+  @ r1: user sp, r2: user spsr, arguments on user stack
   @ request type is r1 - 4, figure out #params from there
+
+@@ need to pack up in TD, r0-r3 can be modified by gcc in switch case in event handler
