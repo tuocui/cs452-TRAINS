@@ -9,7 +9,7 @@
 #define USER_SPACE_SIZE TD_MAX * TD_SIZE
 #define REDBOOT_OFFSET 0x218000
 #define NULL ((void *) 0)
-#define NUM_PRIORITIES 4
+#define NUM_PRIORITIES 16
 
 // "Global" variables used by the kernel
 typedef struct global_context_t {
@@ -24,6 +24,8 @@ typedef struct global_context_t {
   unsigned int priority_bitmap;
   int de_bruijn_bit_positions[32];
 } global_context_t;
+
+void kernel_init( struct global_context_t *gc);
 
 void kernel_exit(int retval, unsigned int *sp, unsigned int spsr);
 

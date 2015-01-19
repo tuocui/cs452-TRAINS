@@ -17,14 +17,20 @@ void second_task() {
   }
 }
 
-int main(int argc, char *argv[]) {
-  
-  global_context_t gc;
-  tds_init(&gc);
-  init_kernelentry();
-  init_schedulers(&gc);
+void kernel_init( global_context_t *gc) {
+  gc->cur_task = NULL;
+  gc->td_glb_id = 1;
+  gc->priority_bitmap = 0;
 
-  bwprintf(COM2, "Hellow\n\r");
+  tds_init(gc);
+  init_kernelentry();
+  init_schedulers(gc);
+}
+
+int main(int argc, char *argv[]) {
+  bwputstr( COM2, "INITIALIZING. Trust us, it's not hanging.\r\n" );
+  global_context_t gc;
+  kernel_init( &gc );
 
   register unsigned int *new_sp_reg asm("r1"); // absolute 
   unsigned int *new_sp;
@@ -45,19 +51,16 @@ int main(int argc, char *argv[]) {
       break;    
     }
     bwprintf( COM2, "Scheduled td: %d\r\n", scheduled_td->id );
-    kernel_exit(1, scheduled_td->sp, 0xd0);
+    kernel_exit(scheduled_td->retval, scheduled_td->sp, scheduled_td->spsr);
 
     asm volatile(
      "mov %0, r1\n\t" 
-    : "+r"(new_sp_reg)
+     "mov %1, r2\n\t"
+    : "+r"(new_sp_reg), "+r"(new_spsr_reg)
     );
+
     new_sp = new_sp_reg;
     scheduled_td->sp = new_sp;
-
-    asm volatile(
-     "mov %0, r2\n\t" 
-    : "+r"(new_spsr_reg)
-    );
     new_spsr = new_spsr_reg;
     scheduled_td->spsr = new_spsr;
 
