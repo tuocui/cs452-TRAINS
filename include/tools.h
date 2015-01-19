@@ -9,12 +9,9 @@
 #define FOREVER for( ; ; )
 
 
-#define assert(cond) \
+#define assert(cond, ...) \
   if(!(cond)) { \
-    bwprintf(COM2, "Assert failed (%s:%d)\n\r\n\r", __FILE__, __LINE__); }
-#define assertm(cond, ...) \
-  if(!(cond)) { \
-    bwprintf(COM2,"Assert failed (%s:%d): %s\n\r\n\r",__FILE__,__LINE__,__VA_ARGS__);\
+    bwprintf(COM2,"Assert failed (%s:%d): %s\n\r\n\r",__FILE__,__LINE__, ## __VA_ARGS__);\
   }
 
 /* to disable debug print, in your source file, do:
