@@ -29,7 +29,8 @@ kernel.s: kernel.c
 task_descriptor.s: task_descriptor.c 
 	$(XCC) -S $(CFLAGS) task_descriptor.c
 
-
+scheduler.s: scheduler.c 
+	$(XCC) -S $(CFLAGS) scheduler.c
 
 
 bwio.o: bwio.s
@@ -44,12 +45,15 @@ kernel.o: kernel.s
 task_descriptor.o: task_descriptor.s
 	$(AS) $(ASFLAGS) -o task_descriptor.o task_descriptor.s
 
+scheduler.o: scheduler.s
+	$(AS) $(ASFLAGS) -o scheduler.o scheduler.s
+
 
 
 # MUST add .o file here:
-kernel.elf: kernel.o context_switch.o task_descriptor.o bwio.o
+kernel.elf: kernel.o context_switch.o task_descriptor.o scheduler.o bwio.o
 # MUST add .o file here:
-	$(LD) $(LDFLAGS) -o $@ bwio.o task_descriptor.o context_switch.o kernel.o  -lgcc #-lbwio
+	$(LD) $(LDFLAGS) -o $@ bwio.o task_descriptor.o scheduler.o context_switch.o kernel.o  -lgcc #-lbwio
 
 clean:
 	-rm -f *.elf *.s *.o *.map ../obj/* ../asm/* ../elf/*

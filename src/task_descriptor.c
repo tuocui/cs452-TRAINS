@@ -1,7 +1,3 @@
-//For Testing
-//#include <stdio.h>
-//#include <assert.h>
-
 #include <tools.h>
 #include <task_descriptor.h>
 #include <kernel.h>
@@ -25,6 +21,7 @@ void tds_init(global_context_t *gc) {
     cur_td->priority = 0; // no priority
     cur_td->status = TD_ZOMBIE;
     cur_td->next_free = &(gc->tds[i + 1]);
+    cur_td->next_in_priority = NULL;
   }
   
   ((gc->tds)[TD_MAX - 1]).next_free = NULL;
@@ -56,6 +53,7 @@ task_descriptor_t * tds_create_td(global_context_t *gc, unsigned int priority, i
   /* insanity check */
   --(gc->td_free_num);
   assert(gc->td_free_num >= 0);
+
   return td_out;
 }
 
@@ -70,6 +68,8 @@ void tds_remove_td(global_context_t *gc, task_descriptor_t * td) {
 
   /* add to free list */
   (gc->td_last_free)->next_free = td;
+  td->next_free = NULL;
+  td->next_in_priority = NULL;
   gc->td_last_free = td;
   ++(gc->td_free_num);
 
