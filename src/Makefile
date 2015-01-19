@@ -17,7 +17,7 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 LDFLAGS = -init main -N -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L../../lib
 
 
-all:  kernel.s main_func.s main_func.elf
+all:  kernel.s kernel.s kernel.elf
 
 
 bwio.s: bwio.c
@@ -26,8 +26,8 @@ bwio.s: bwio.c
 kernel.s: kernel.c 
 	$(XCC) -S $(CFLAGS) kernel.c
 
-main_func.s: main_func.c 
-	$(XCC) -S $(CFLAGS) main_func.c
+task_descriptor.s: task_descriptor.c 
+	$(XCC) -S $(CFLAGS) task_descriptor.c
 
 
 
@@ -35,22 +35,21 @@ main_func.s: main_func.c
 bwio.o: bwio.s
 	$(AS) $(ASFLAGS) -o bwio.o bwio.s
 
-kernel.o: kernel.s
-	$(AS) $(ASFLAGS) -o kernel.o kernel.s
-
 context_switch.o: context_switch.s
 	$(AS) $(ASFLAGS) -o context_switch.o context_switch.s
 
-main_func.o: main_func.s
-	$(AS) $(ASFLAGS) -o main_func.o main_func.s 
+kernel.o: kernel.s
+	$(AS) $(ASFLAGS) -o kernel.o kernel.s
 
+task_descriptor.o: task_descriptor.s
+	$(AS) $(ASFLAGS) -o task_descriptor.o task_descriptor.s
 
 
 
 # MUST add .o file here:
-main_func.elf: main_func.o context_switch.o bwio.o kernel.o 
+kernel.elf: kernel.o context_switch.o task_descriptor.o bwio.o
 # MUST add .o file here:
-	$(LD) $(LDFLAGS) -o $@ bwio.o kernel.o context_switch.o main_func.o  -lgcc #-lbwio
+	$(LD) $(LDFLAGS) -o $@ bwio.o task_descriptor.o context_switch.o kernel.o  -lgcc #-lbwio
 
 clean:
 	-rm -f *.elf *.s *.o *.map ../obj/* ../asm/* ../elf/*
