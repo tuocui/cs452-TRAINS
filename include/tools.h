@@ -10,38 +10,25 @@
 
 
 #define assert(cond, ...) \
-  if(!(cond)) { \
-    bwprintf(COM2,"Assert failed (%s:%d): %s\n\r\n\r",__FILE__,__LINE__, ## __VA_ARGS__);\
-  }
+  do {
+  if(!(cond))  \
+    bwprintf(COM2,"Assert failed (%s: %s: %d): %s\n\r\n\r",__FILE__, __func__, __LINE__, ## __VA_ARGS__);\
+  } while (0)
 
 /* to disable debug print, in your source file, do:
  * #undef DEBUG
  * #define DEBUG 0
+ * TODO: let preprocessor defines DEBUG 1 inside nmake
  */
-#define DEBUG 1
+#define DEBUG 0
 #define debug(fmt, ...) \
-  if(DEBUG == 1) { \
-    bwprintf(COM2, fmt, __VA_ARGS__);\
-  }
+  do { \
+    if(DEBUG) { \
+      bwprintf(COM2, "DEBUG (%s: %s: %d) ", __FILE__, __func__, __LINE__);\
+      bwprintf(COM2, fmt, ## __VA_ARGS__);\
+      bwprintf(COM2, "\n\r");\
+  } while (0)
 
 
-//TODO: this function may have dest and source args mis-ordered, 
-//  DO NOT USE IT BEFORE DOUBLE CHECKING 
-//void memcpy(void *dest, const void *source, unsigned int num) {
-//  int i = 0;
-//// casting pointers
-//  char *dest8 = (char *)dest;
-//  char *source8 = (char *)source;
-//  bwprintf(COM2, "Copying memory %d byte(s) at a time\n", sizeof(char));
-//
-//  for (i = 0; i < num; i++) {
-//    // make sure destination doesnt overwrite source
-//    if (&dest8[i] == source8) {
-//      bwprintf(COM2, "destination array address overwrites source address\n");
-//      return;
-//    }
-//  dest8[i] = source8[i];
-//  }
-//}
 
 #endif
