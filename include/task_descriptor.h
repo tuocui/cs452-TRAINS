@@ -10,7 +10,7 @@ typedef struct task_descriptor_t{
   int retval;
 
   unsigned int id;
-  struct task_descriptor_t * parent;
+  unsigned int parent_id;
   unsigned int priority;//;: 4;
 
   enum { 
@@ -23,6 +23,7 @@ typedef struct task_descriptor_t{
 
 //  struct task_descriptor_t * prev;
   struct task_descriptor_t * next_free;
+  struct task_descriptor_t * next_in_priority;
 
 } task_descriptor_t;
 
