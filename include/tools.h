@@ -10,7 +10,7 @@
 
 
 #define assert(cond, ...) \
-  do {
+  do {\
   if(!(cond))  \
     bwprintf(COM2,"Assert failed (%s: %s: %d): %s\n\r\n\r",__FILE__, __func__, __LINE__, ## __VA_ARGS__);\
   } while (0)
