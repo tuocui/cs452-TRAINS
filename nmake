@@ -4,6 +4,8 @@ red='\e[31m'
 grn='\e[32m'
 wht='\e[0m'
 
+USER="$(whoami)"
+DEST="/u/cs452/tftp/ARM/${USER}/"
 
 cd src
 
@@ -19,11 +21,18 @@ else
     exit -1;
   fi
 
-  cp *.elf /u/cs452/tftp/ARM/z26zheng/
-  chmod 777 /u/cs452/tftp/ARM/z26zheng/*.elf
+  ELF="$(find -name *.elf)"
+
+  rm ${DEST}/*elf
+  cp *.elf ${DEST}
+  if [ $? -ne 0 ]; then
+    echo -e "${red}FAILED to copy elf file to ${DEST}${wht}"
+  fi
+
+  chmod 777 ${DEST}/*.elf
   mv *.o ../obj/
   mv *.s ../asm/
   mv *.elf ../elf/
 
-  echo -e "${grn}Finished building :)${wht}"
+  echo -e "${grn}Finished building, file name: \e[3;33m ${ELF} ${wht}"
 fi
