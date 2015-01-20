@@ -1,6 +1,8 @@
 #ifndef __TASK_DESCRIPTOR_H__
 #define __TASK_DESCRIPTOR_H__
 
+#include <global.h>
+
 struct global_context_t;
 
 typedef struct task_descriptor_t{
@@ -21,7 +23,6 @@ typedef struct task_descriptor_t{
     TD_ZOMBIE,
   } status;//: 8;
 
-//  struct task_descriptor_t * prev;
   struct task_descriptor_t * next_free;
   struct task_descriptor_t * next_in_priority;
 

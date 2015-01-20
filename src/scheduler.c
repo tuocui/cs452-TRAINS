@@ -56,7 +56,8 @@ void init_schedulers( global_context_t* gc ) {
 
 }
 
-void add_to_priority( global_context_t *gc, unsigned int priority, task_descriptor_t *td ) {
+void add_to_priority( global_context_t *gc, task_descriptor_t *td ) {
+  unsigned int priority = td->priority;
   assert(priority != 0, "ERROR: you fucked up! Priority 0");
   scheduler_t *scheduler = &((gc->priorities)[priority]);
   task_descriptor_t *last_td = scheduler->last_in_queue;
@@ -67,11 +68,11 @@ void add_to_priority( global_context_t *gc, unsigned int priority, task_descript
     scheduler->first_in_queue = td;  
   }
 
+  td->status = TD_READY;
   gc->priority_bitmap = gc->priority_bitmap | ( 1 << priority );
   scheduler->last_in_queue = td;  
 
   ++(scheduler->num_in_queue);
-  bwprintf( COM2, "num_in_queue after add: %d\r\n", scheduler->num_in_queue );
 }
 
 task_descriptor_t *schedule( global_context_t *gc) {
@@ -89,7 +90,6 @@ task_descriptor_t *schedule( global_context_t *gc) {
   }
   td->next_in_priority = NULL;
   --(scheduler->num_in_queue);
-  bwprintf( COM2, "num_in_queue after schedule: %d\r\n", scheduler->num_in_queue );
 
   return td;
 }

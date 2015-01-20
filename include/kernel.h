@@ -1,14 +1,15 @@
 #ifndef __KERNEL_H__
 #define __KERNEL_H__
 
-#include "task_descriptor.h"
-#include "scheduler.h"
+#include <global.h>
+#include <task_descriptor.h>
+#include <scheduler.h>
+#include <kernel_syscall.h>
+#include <user_task.h>
 
-#define TD_MAX 250
+#define TD_MAX 25
 #define TD_SIZE 0x3000
 #define USER_SPACE_SIZE TD_MAX * TD_SIZE
-#define REDBOOT_OFFSET 0x218000
-#define NULL ((void *) 0)
 #define NUM_PRIORITIES 16
 
 // "Global" variables used by the kernel
@@ -26,6 +27,10 @@ typedef struct global_context_t {
 } global_context_t;
 
 void kernel_init( struct global_context_t *gc);
+
+int activate( global_context_t *gc, task_descriptor_t *td );
+
+void handle( global_context_t *gc, int request_type );
 
 void kernel_exit(int retval, unsigned int *sp, unsigned int spsr);
 

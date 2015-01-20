@@ -52,6 +52,10 @@ kernelentry:
   mov r1, sp
   @ 7. back to service state
   msr cpsr_c, #0xd3
+  @ Calculate address of SWI instruction and load it into r0.
+  ldr r0, [lr,#-4]
+  @ Mask off top 8 bits of instruction to give SWI number.
+  bic r0, r0,#0xFF000000
   @ save user's next pc to stack which is stored in lr_svc, set by swi
   stmfd r1!, {lr}
   @ 8. getting spsr, user's values were set by swi
@@ -60,7 +64,6 @@ kernelentry:
   ldmfd sp!, {r3-r12, r14}
   mov sp, ip
   mov pc, lr
-  @ r1: user sp, r2: user spsr, arguments on user stack
-  @ request type is r1 - 4, figure out #params from there
+  @ r0: request_type, r1: user sp, r2: user spsr, arguments on user stack
 
-@@ need to pack up in TD, r0-r3 can be modified by gcc in switch case in event handler
+
