@@ -24,7 +24,6 @@ void handle_create( global_context_t *gc ) {
     gc->cur_task->retval = -1;
   } 
   else {
-    //TODO: fix code pointer passing
     task_descriptor_t *new_td = tds_create_td(gc, priority, (int)(*code));
 
     /* check if there are tds available */
@@ -34,9 +33,10 @@ void handle_create( global_context_t *gc ) {
     else {
       (gc->cur_task)->retval = new_td->id;
       add_to_priority( gc, new_td );
-      add_to_priority( gc, gc->cur_task );
     }
   }
+  /* add current task back to queue regardless */
+  add_to_priority( gc, gc->cur_task );
 }
 
 void handle_pass( global_context_t *gc ) {
