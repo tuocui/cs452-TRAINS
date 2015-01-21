@@ -4,8 +4,8 @@
 void handle_create( global_context_t *gc ) {
   register unsigned int priority_reg asm("r0");
   unsigned int priority;
-  register int *code_reg asm("r1");
-  int *code;
+  register void (*code_reg)() asm("r1");
+  void (*code)();
   register unsigned int *cur_sp_reg asm("r3") = (gc->cur_task)->sp;
 
   asm volatile(
@@ -25,7 +25,7 @@ void handle_create( global_context_t *gc ) {
   } 
   else {
     //TODO: fix code pointer passing
-    task_descriptor_t *new_td = tds_create_td(gc, priority, (int)code);
+    task_descriptor_t *new_td = tds_create_td(gc, priority, (int)(*code));
 
     /* check if there are tds available */
     if(new_td == NULL) {
