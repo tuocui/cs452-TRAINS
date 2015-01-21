@@ -1,6 +1,4 @@
 #include <tools.h>
-#include <task_descriptor.h>
-#include <scheduler.h>
 #include <kernel.h>
 
 int get_highest_priority( global_context_t *gc ) {

@@ -1,5 +1,4 @@
 #include <tools.h>
-#include <kernel_syscall.h>
 #include <kernel.h>
 
 void handle_create( global_context_t *gc ) {

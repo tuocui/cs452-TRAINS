@@ -15,20 +15,21 @@
     bwprintf(COM2,"Assert failed (%s: %s: %d): %s\n\r\n\r",__FILE__, __func__, __LINE__, ## __VA_ARGS__);\
   } while (0)
 
-/* to disable debug print, in your source file, do:
- * #undef DEBUG
- * #define DEBUG 0
- * TODO: let preprocessor defines DEBUG 1 inside nmake
+/* to enable debug print
+ * call nmake with -d; ./nmake -d
+ * Please do not change the default DEBUG value
  */
+#ifndef DEBUG
 #define DEBUG 0
+#endif
 #define debug(fmt, ...) \
   do { \
     if(DEBUG) { \
-      bwprintf(COM2, "DEBUG (%s: %s: %d) ", __FILE__, __func__, __LINE__);\
+      bwprintf(COM2, "DEBUG (%s: %s: %d)\t", __FILE__, __func__, __LINE__);\
       bwprintf(COM2, fmt, ## __VA_ARGS__);\
       bwprintf(COM2, "\n\r");\
-  } while (0)
-
+    } \
+  } while(0)
 
 
 #endif

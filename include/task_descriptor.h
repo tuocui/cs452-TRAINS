@@ -28,8 +28,14 @@ typedef struct task_descriptor_t{
 
 } task_descriptor_t;
 
-void tds_init(struct global_context_t *gc);
-task_descriptor_t * tds_create_td(struct global_context_t *gc, unsigned int priority, int *code);
-void tds_remove_td(struct global_context_t *gc, task_descriptor_t * td);
+void tds_init( struct global_context_t *gc );
+
+task_descriptor_t * tds_create_td( struct global_context_t *gc, unsigned int priority, int *code );
+
+void tds_remove_td( struct global_context_t *gc, task_descriptor_t * td );
+
+inline int tds_get_index( int id );
+
+inline int tds_get_gen( int id );
 
 #endif

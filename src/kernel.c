@@ -1,13 +1,15 @@
 #include <tools.h>
 #include <kernel.h>
-//#include <task_descriptor.h>
 
 void kernel_init( global_context_t *gc) {
   gc->cur_task = NULL;
-  gc->td_glb_id = 1;
   gc->priority_bitmap = 0;
 
   tds_init(gc);
+  //TODO: find out why init_regs is not linked, and how
+  // init_kernelentry is linked even though it's commented out
+  // in .h 
+  //init_regs();
   init_kernelentry();
   init_schedulers(gc);
 }
@@ -29,6 +31,9 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
     "mov %2, r2\n\t"
   : "+r"(request_type_reg), "+r"(new_sp_reg), "+r"(new_spsr_reg)
   );
+
+  /* check td magic, failures indicate user stack is too small */
+  assert(*(td->orig_sp - (TD_SIZE - 1)) == gc->td_magic);
 
   request_type = request_type_reg;
   new_sp = new_sp_reg;
@@ -60,9 +65,11 @@ void handle( global_context_t *gc, int request_type ) {
   }
 }
 
+
 int main(int argc, char *argv[]) {
+
   int request_type;
-  bwputstr( COM2, "INITIALIZING. Trust us, it's not hanging.\r\n" );
+  bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
   global_context_t gc;
   kernel_init( &gc );
   bwputstr( COM2, "FINISHED INITIALIZATION. WOO!\r\n" );
@@ -86,5 +93,33 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
+
+
+//TODO: delete test once we are assured the id calculation is coorect
+//test for id generating
+//void test() {
+//  int bit = 7;
+//  int tds = (1 << (bit+1)) - 1;
+//  int id = 0;
+//  int i = 0;
+//  int j = 0;
+//  int id_arr[tds];
+//  // initialize id_arr
+//  
+//  for(id = 0; id < tds; ++id) {
+//    id_arr[id] = id+1;
+//  }
+//
+//  for(j = 0; j < 5; ++j) {
+//
+//    for(i = 0; i < tds; ++i) {
+//      id_arr[i] = (id_arr[i] & tds) | (((id_arr[i] >> bit) + 1) << bit) ;
+//      int gen = id_arr[i] >> bit;
+//      int idx = id_arr[i] & tds;
+//      debug("gen: %d, idx: %d", gen, idx);
+//    }
+//
+//  }
+//}
 
 

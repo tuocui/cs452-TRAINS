@@ -1,9 +1,7 @@
-nmake
 ./asm/*
 ./elf/*
 ./obj/*
 *~
-nmake
 obj
 asm
 elf
