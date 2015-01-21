@@ -11,7 +11,7 @@ int get_highest_priority( global_context_t *gc ) {
 
 void init_schedulers( global_context_t* gc ) {
   int i = 0;
-  for ( ; i <= NUM_PRIORITIES; ++i ) {
+  for ( ; i <= PRIORITY_MAX; ++i ) {
     scheduler_t *scheduler = &((gc->priorities)[i]);
     scheduler->priority = i;
     scheduler->num_in_queue = 0;

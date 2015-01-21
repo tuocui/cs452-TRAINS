@@ -30,7 +30,7 @@ typedef struct task_descriptor_t{
 
 void tds_init( struct global_context_t *gc );
 
-task_descriptor_t * tds_create_td( struct global_context_t *gc, unsigned int priority, int *code );
+task_descriptor_t * tds_create_td( struct global_context_t *gc, unsigned int priority, int code );
 
 void tds_remove_td( struct global_context_t *gc, task_descriptor_t * td );
 

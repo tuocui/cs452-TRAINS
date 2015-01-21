@@ -74,10 +74,10 @@ int main(int argc, char *argv[]) {
   kernel_init( &gc );
   bwputstr( COM2, "FINISHED INITIALIZATION. WOO!\r\n" );
 
-  task_descriptor_t *first_td = tds_create_td(&gc, 5, (int*)( (int) &first_user_task + REDBOOT_OFFSET));
+  task_descriptor_t *first_td = tds_create_td(&gc, 5, (int)&first_user_task);
   add_to_priority( &gc, first_td );
 
-  while (1){
+  FOREVER {
     task_descriptor_t *scheduled_td = schedule( &gc );
     if ( scheduled_td == NULL ) {
       // HHEYYYYYYY, we exit

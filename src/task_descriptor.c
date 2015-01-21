@@ -63,7 +63,7 @@ void tds_init(global_context_t *gc) {
   ((gc->tds)[TD_MAX - 1]).next_free = NULL;
 }
 
-task_descriptor_t * tds_create_td(global_context_t *gc, unsigned int priority, int *code) { 
+task_descriptor_t * tds_create_td(global_context_t *gc, unsigned int priority, int code_addr) { 
   if(gc->td_first_free == NULL) {
     assert(gc->td_free_num == 0);
     return NULL;
@@ -81,7 +81,7 @@ task_descriptor_t * tds_create_td(global_context_t *gc, unsigned int priority, i
   td_out->next_free = NULL;
 
   // Set initial pc;
-  *(td_out->sp - 10) = (int)code;
+  *(td_out->sp - 10) = code_addr + REDBOOT_OFFSET;
   *(td_out->sp - 2) = (unsigned int)(td_out->sp);
   td_out->sp -= 10;
 

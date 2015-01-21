@@ -11,22 +11,22 @@
 #define TD_MAX ((1 << (TD_BIT + 1)) - 1) 
 #define TD_SIZE 0x3000
 #define USER_SPACE_SIZE (TD_MAX * TD_SIZE)
-#define NUM_PRIORITIES 16
+#define PRIORITY_MAX 16
 
 // "Global" variables used by the kernel
 typedef struct global_context_t {
 
   /* task descriptor */
+  task_descriptor_t * cur_task;
   task_descriptor_t tds[TD_MAX];
   task_descriptor_t * td_first_free;
   task_descriptor_t * td_last_free;
-  task_descriptor_t * cur_task;
   unsigned int td_magic;
   unsigned int td_free_num;
   unsigned int user_space[TD_MAX * TD_SIZE];
 
   /* scheduler */
-  scheduler_t priorities[NUM_PRIORITIES];
+  scheduler_t priorities[PRIORITY_MAX];
   unsigned int priority_bitmap;
   int de_bruijn_bit_positions[32];
 
