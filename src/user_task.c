@@ -1,27 +1,35 @@
 #include <tools.h>
 #include <user_task.h>
 
+#ifdef A1
 void a1_user_task( ){
   unsigned int my_tid;
   unsigned int parent_tid;
   my_tid = MyTid( );
   parent_tid = MyParentTid( );
-  debug( "My TID: %d, Parent TID: %d", my_tid, parent_tid );
+  bwprintf( COM2, "My TID: %d, Parent TID: %d\n\r", TID_IDX(my_tid),
+      TID_IDX(parent_tid) );
   Pass( );
-  debug( "My TID: %d, Parent TID: %d", my_tid, parent_tid );
+  bwprintf( COM2, "My TID: %d, Parent TID: %d\n\r", TID_IDX(my_tid),
+      TID_IDX(parent_tid) );
   Exit( );
 }
+#endif /* A1 */
+
 
 void first_user_task( ){
+#ifdef A1
   int created_tid;
   created_tid = Create( 10, &a1_user_task );
-  debug( "Created: %d, Priority: Lower than First", created_tid);
+  bwprintf( COM2, "Created: %d, Priority: Lower  than First\n\r", TID_IDX(created_tid));
   created_tid = Create( 1, &a1_user_task );
-  debug( "Created: %d, Priority: Higher than First", created_tid);
+  bwprintf( COM2, "Created: %d, Priority: Higher than First\n\r", TID_IDX(created_tid));
   created_tid = Create( 1, &a1_user_task );
-  debug( "Created: %d, Priority: Higher than First", created_tid);
+  bwprintf( COM2, "Created: %d, Priority: Higher than First\n\r", TID_IDX(created_tid));
   created_tid = Create( 10, &a1_user_task );
-  debug( "Created: %d, Priority: Lower than First", created_tid);
-  debug( "First: exiting");
+  bwprintf( COM2, "Created: %d, Priority: Lower  than First\n\r", TID_IDX(created_tid));
+#endif /* A1 */
+
+  bwprintf( COM2, "First: exiting\n\r");
   Exit( );
 }

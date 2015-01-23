@@ -1,14 +1,6 @@
 #include <tools.h>
 #include <kernel.h>
 
-inline int tds_get_index( int id ) {
-  return ( id & TD_MAX );
-}
-
-inline int tds_get_gen( int id ) {
-  return ( id >> TD_BIT );
-}
-
 void tds_init(global_context_t *gc) {
   /* loading bar */ 
   // TODO: should combine it with screen layout in the future
@@ -22,7 +14,7 @@ void tds_init(global_context_t *gc) {
   gc->td_first_free = gc->tds;
   gc->td_last_free = &(gc->tds[TD_MAX-1]);
   gc->td_free_num = TD_MAX;
-  gc->td_magic = 0x3b1a4ef5;
+  gc->td_magic = TD_MAGIC;
 
   task_descriptor_t *cur_td;  
 

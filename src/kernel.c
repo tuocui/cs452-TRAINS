@@ -68,6 +68,9 @@ void handle( global_context_t *gc, int request_type ) {
 
 int main(int argc, char *argv[]) {
 
+  debug("TD_BIT: %d", TD_BIT);
+  debug("TD_MAX: %d", TD_MAX);
+
   int request_type;
   bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
   global_context_t gc;

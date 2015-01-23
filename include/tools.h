@@ -7,13 +7,15 @@
 #include "bwio.h"
 
 #define FOREVER for( ; ; )
+#define A1 1
 
 
-#define assert(cond, ...) \
-  do {\
-  if(!(cond))  \
-    bwprintf(COM2,"Assert failed (%s: %s: %d): %s\n\r\n\r",__FILE__, __func__, __LINE__, ## __VA_ARGS__);\
-  } while (0)
+#define assert( cond, ... )                                      \
+  do {                                                           \
+  if( !( cond ) )                                                \
+    bwprintf(COM2,"Assert failed (%s:%d):\t%s\n\r\n\r",__FILE__, \
+        __LINE__, ## __VA_ARGS__);                               \
+  } while( 0 )
 
 /* to enable debug print
  * call nmake with -d; ./nmake -d
@@ -22,14 +24,13 @@
 #ifndef DEBUG
 #define DEBUG 0
 #endif
-#define debug(fmt, ...) \
-  do { \
-    if(DEBUG) { \
-      bwprintf(COM2, "DEBUG (%s: %s: %d)\t", __FILE__, __func__, __LINE__);\
-      bwprintf(COM2, fmt, ## __VA_ARGS__);\
-      bwprintf(COM2, "\n\r");\
-    } \
-  } while(0)
+#define debug( fmt, ... )                                     \
+  do {                                                        \
+    if( DEBUG ) {                                             \
+      bwprintf(COM2, "DEBUG (%s: %d):\t"#fmt"\n\r", __FILE__, \
+          __LINE__, ## __VA_ARGS__ );                         \
+    }                                                         \
+  } while( 0 )
 
 
 #endif

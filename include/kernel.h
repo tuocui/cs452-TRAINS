@@ -7,9 +7,8 @@
 #include <kernel_syscall.h>
 #include <user_task.h>
 
-#define TD_BIT 4 // TODO: change to 7 (127 tds) 
-#define TD_MAX ((1 << (TD_BIT + 1)) - 1) 
 #define TD_SIZE 0x3000
+#define TD_MAGIC 0x3b1a4ef5
 #define USER_SPACE_SIZE (TD_MAX * TD_SIZE)
 #define PRIORITY_MAX 16
 
