@@ -5,12 +5,10 @@ void kernel_init( global_context_t *gc) {
   gc->cur_task = NULL;
   gc->priority_bitmap = 0;
 
-  tds_init(gc);
-  //TODO: find out why init_regs is not linked, and how
-  // init_kernelentry is linked even though it's commented out
-  // in .h 
-  //init_regs();
+  init_regs();
   init_kernelentry();
+
+  tds_init(gc);
   init_schedulers(gc);
 }
 

@@ -1,5 +1,6 @@
 #include <tools.h>
 #include <user_task.h>
+#include "syscall.h"
 
 #ifdef A1
 void a1_user_task( ){

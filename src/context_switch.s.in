@@ -17,7 +17,7 @@ init_regs:
   mov r7, #0
   mov r8, #0
   mov r9, #0
-  mov r10, #0
+  @mov r10, #0 @ apparently we cannot clear this register @,@? 
   ldmfd sp, {fp, sp, pc}
 
 .align 2

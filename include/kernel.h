@@ -6,6 +6,7 @@
 #include <scheduler.h>
 #include <kernel_syscall.h>
 #include <user_task.h>
+#include "context_switch.h"
 
 #define TD_SIZE 0x3000
 #define TD_MAGIC 0x3b1a4ef5
@@ -37,8 +38,5 @@ int activate( global_context_t *gc, task_descriptor_t *td );
 
 void handle( global_context_t *gc, int request_type );
 
-void kernel_exit(int retval, unsigned int *sp, unsigned int spsr);
-
-void init_kernelentry();
 
 #endif

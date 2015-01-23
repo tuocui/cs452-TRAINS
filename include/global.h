@@ -6,7 +6,7 @@
 #define NULL ((void *) 0)
 
 /* task descriptor related */
-#define TD_BIT 7 // TODO: change to 7 (127 tds) 
+#define TD_BIT 3 // TODO: change to 7 (127 tds) 
 #define TD_MAX ((1 << TD_BIT) - 1) 
 #define TID_IDX( id ) ( id & TD_MAX )
 #define TID_GEN( id ) ( id >> TD_BIT )

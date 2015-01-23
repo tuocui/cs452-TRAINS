@@ -2,11 +2,9 @@
 #define __CONTEXT_SWITCH_H__
 
 
-//void print_pc();
-//
-//void kernel_exit(int retval, int sp, int spsr);
-//
-//void init_kernelentry();
+void kernel_exit(int retval, unsigned int *sp, unsigned int spsr);
+
+void init_kernelentry();
 
 void init_regs();
 
