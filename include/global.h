@@ -16,6 +16,7 @@
 #define SYS_MY_TID 2
 #define SYS_MY_PARENT_TID 3
 #define SYS_PASS 4
+#define SYS_SEND 5
 #define SYS_KILL 99
 
 #endif

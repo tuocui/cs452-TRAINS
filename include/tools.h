@@ -8,7 +8,7 @@
 
 #define FOREVER for( ; ; )
 #define A1 1
-
+#define A2 1
 
 #define assert( cond, ... )                                      \
   do {                                                           \
