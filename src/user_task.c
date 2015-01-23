@@ -2,6 +2,7 @@
 #include <user_task.h>
 #include "syscall.h"
 
+#undef A1
 #ifdef A1
 void a1_user_task( ){
   unsigned int my_tid;
@@ -17,6 +18,25 @@ void a1_user_task( ){
 }
 #endif /* A1 */
 
+//TODO remove testing struct
+struct Server {
+  int a;
+  int b;
+};
+#ifdef A2
+void a2_user_task( ) {
+  
+  struct Server server_s;
+  struct Server server_r;
+  char * msg;
+  char * reply;
+  
+  msg = (char*)&server_s;
+  reply = (char*)&server_r;
+  debug("tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d", 5, msg, 6, reply, 7);
+  Send( 5, msg, 6, reply, 7);
+}
+#endif /* A2 */
 
 void first_user_task( ){
 #ifdef A1
@@ -41,6 +61,12 @@ void first_user_task( ){
   debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
 #endif /* A1 */
 
+#ifdef A2
+  a2_user_task( );
+#endif /* A2 */
+
   bwprintf( COM2, "First: exiting\n\r");
   Exit( );
 }
+
+

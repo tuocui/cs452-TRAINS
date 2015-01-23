@@ -1,6 +1,54 @@
 #include <tools.h>
 #include <kernel.h>
 
+void handle_send( global_context_t *gc ) {
+  register unsigned int int_reg asm("r0");
+  register char *      char_reg asm("r1");
+  register unsigned int *cur_sp_reg asm("r2") = (gc->cur_task)->sp;
+  int tid, msglen, replylen;
+  char *msg, *reply;
+
+  /* get the first two arguments: tid and *msg */
+  asm volatile( 
+      "msr cpsr_c, #0xdf\n\t"       // switch to system mode
+      "mov r3, %2\n\t"              // load user sp to r3
+      "add r3, r3, #44\n\t"         // 10 registers + pc saved
+      "ldmfd r3!, {%0, %1}\n\t"     // store two args
+      "mov %2, r3\n\t"              // update local cur_sp_reg 
+      "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
+      : "+r"(int_reg), "+r"(char_reg), "+r"(cur_sp_reg)
+      );
+   tid = int_reg;
+   msg = char_reg;
+   
+  /* get the next two arguments: msglen and *reply */
+  asm volatile( 
+      "msr cpsr_c, #0xdf\n\t"       // switch to system mode
+      "mov r3, %2\n\t"              // load user sp to r3
+      "ldmfd r3!, {%0, %1}\n\t"     // store two args
+      "mov %2, r3\n\t"              // update local cur_sp_reg 
+      "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
+      : "+r"(int_reg), "+r"(char_reg), "+r"(cur_sp_reg)
+      );
+   msglen = int_reg;
+   reply = char_reg;
+
+   /* get the last argument: replylen */
+   asm volatile( 
+      "msr cpsr_c, #0xdf\n\t"       // switch to system mode
+      "mov r3, %2\n\t"              // load user sp to r3
+      "ldmfd r3!, {%0}\n\t"         // store one arg
+      "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
+      : "+r"(int_reg), "+r"(cur_sp_reg)
+      );
+   replylen = int_reg;
+
+   debug("tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d\n\t",
+       tid, msg, msglen, reply, replylen);
+
+   //TODO: schedule next task
+}
+
 void handle_create( global_context_t *gc ) {
   register unsigned int priority_reg asm("r0");
   unsigned int priority;

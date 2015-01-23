@@ -52,6 +52,9 @@ void handle( global_context_t *gc, int request_type ) {
   case SYS_MY_PARENT_TID:
     handle_my_parent_tid( gc );
     break;
+  case SYS_SEND:
+    handle_send( gc );
+    break;
   case SYS_PASS:
     handle_pass( gc );
     break;
