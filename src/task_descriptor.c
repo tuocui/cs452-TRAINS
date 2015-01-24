@@ -44,7 +44,7 @@ void tds_init(global_context_t *gc) {
    *(cur_td->orig_sp - (TD_SIZE - 1)) = gc->td_magic; // set magic number
     cur_td->spsr = 0xd0;
     cur_td->retval = 0;
-    cur_td->id = i + 1;
+    cur_td->id = i;
     cur_td->parent_id = 0;
     cur_td->priority = 0; // no priority
     cur_td->status = TD_ZOMBIE;
