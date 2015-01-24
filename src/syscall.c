@@ -6,10 +6,11 @@ int Create( int priority, void (*code) ( ) ) {
   int retval;
   asm volatile(
     "stmfd sp!, {r0, r1}\n\t"
-    "swi 1\n\t"
+    "swi %1\n\t"
     "mov %0, r0\n\t"
     "ldmfd sp!, {r1, r2}\n\t" 
     : "+r"(retval_reg)
+    : "i"(SYS_CREATE)
   );
   retval = retval_reg;
   return retval;
@@ -34,10 +35,11 @@ int Send( int tid, char *msg, int msglen, char *reply, int replylen ) {
     "stmfd sp!, {r0}\n\t"
     "ldr r0, [fp, #-20]\n\t"
     "stmfd sp!, {r0}\n\t"
-    "swi 5\n\t"
+    "swi %1\n\t"
     "mov %0, r0\n\t"
     "add sp, sp, #20\n\t"
     : "+r"(retval_reg)
+    : "i"(SYS_SEND)
   );
 
   retval = retval_reg;
@@ -50,9 +52,10 @@ int MyTid( ) {
   register int retval_reg asm("r0");
   int retval;
   asm volatile(
-    "swi 2\n\t"
+    "swi %1\n\t"
     "mov %0, r0\n\t"
     : "+r"(retval_reg)
+    : "i"(SYS_MY_TID)
   );
   retval = retval_reg;
   return retval;
@@ -62,9 +65,10 @@ int MyParentTid( ) {
   register int retval_reg asm("r0");
   int retval;
   asm volatile(
-    "swi 3\n\t"
+    "swi %1\n\t"
     "mov %0, r0\n\t"
     : "+r"(retval_reg)
+    : "i"(SYS_MY_PARENT_TID)
   );
   retval = retval_reg;
   return retval;
@@ -73,14 +77,16 @@ int MyParentTid( ) {
 void Pass( ) {
   // Lol, super simple
   asm volatile(
-   "swi 4\n\t"
+   "swi %0\n\t"
+   :: "i"(SYS_PASS)
   );
 }
 
 void Exit( ) {
   // Also super simple
   asm volatile(
-    "swi 99\n\t"
+    "swi %0\n\t"
+    :: "i"(SYS_KILL)
   );
 }
 

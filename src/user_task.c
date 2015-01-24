@@ -2,7 +2,8 @@
 #include <user_task.h>
 #include "syscall.h"
 
-#undef A1
+//#undef A1
+#undef A2
 #ifdef A1
 void a1_user_task( ){
   unsigned int my_tid;

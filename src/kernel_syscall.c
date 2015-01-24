@@ -76,8 +76,9 @@ void handle_send( global_context_t *gc ) {
     * the RECEIVER will wake it up by looking up the sender's queue,
     * or the replyer will wake it up by specifying its index 
     */
-   
 }
+
+
 
 void handle_create( global_context_t *gc ) {
   register unsigned int priority_reg asm("r0");
