@@ -30,14 +30,14 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   : "+r"(request_type_reg), "+r"(new_sp_reg), "+r"(new_spsr_reg)
   );
 
-  /* check td magic, failures indicate user stack is too small */
-  assert(*(td->orig_sp - (TD_SIZE - 1)) == gc->td_magic);
-
   request_type = request_type_reg;
   new_sp = new_sp_reg;
   td->sp = new_sp;
   new_spsr = new_spsr_reg;
   td->spsr = new_spsr;
+
+  /* check td magic, failures indicate user stack is too small */
+  assert(*(td->orig_sp - (TD_SIZE - 1)) == gc->td_magic);
   return request_type;
 }
 
