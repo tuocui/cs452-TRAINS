@@ -63,7 +63,7 @@ task_descriptor_t * tds_create_td(global_context_t *gc, unsigned int priority, i
 
   task_descriptor_t * td_out = gc->td_first_free;
 
-  td_out->id = (td_out->id & TD_MAX) | (((td_out->id >> TD_BIT) + 1) << TD_BIT) ;
+  td_out->id = (td_out->id & (TD_MAX - 1)) | (((td_out->id >> TD_BIT) + 1) << TD_BIT) ;
   td_out->parent_id = gc->cur_task == NULL ? 0 : (gc->cur_task)->id;
   td_out->priority = priority;
   td_out->status = TD_READY;
