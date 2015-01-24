@@ -57,16 +57,25 @@ void handle_send( global_context_t *gc ) {
 
    /* TODO: if task_id has exited, return -2 */
 
-   /* TODO: now we know the receiver is alive, put sender into receiver's queue */
+   /* now we know the receiver is alive */
 
    /* TODO: if receiver is SEND_BLOCK (waiting), 
     *       1. copy the message to receiver's user space,
-    *       2. change receiver's state to READY
-    *       3. schedule receiver 
+    *       2. change receiver's state to READY, set its return val etc.
+    *       3. schedule receiver
+    *       4. change sender's state to REPLY_BLOCK
+    */
+   
+   /* TODO: if receiver is not waiting,
+    *       1. find receiver's TD and put sender in the end of its sender's queue
+    *       2. change sender's state to RECEIVE_BLOCK
+    *       3. ?? something else ?? 
     */
 
-   /* TODO: schedule sender self */
-
+   /* now the sender is either RECEIVE_BLOCK or REPLY_BLOCK, 
+    * the RECEIVER will wake it up by looking up the sender's queue,
+    * or the replyer will wake it up by specifying its index 
+    */
    
 }
 
