@@ -5,8 +5,11 @@ void handle_send( global_context_t *gc ) {
   register unsigned int int_reg asm("r0");
   register char *      char_reg asm("r1");
   register unsigned int *cur_sp_reg asm("r2") = (gc->cur_task)->sp;
+  unsigned int          *cur_sp;
   int tid, msglen, replylen;
   char *msg, *reply;
+  
+  //debug("cur_sp_reg: %x", cur_sp_reg);
 
   /* get the first two arguments: tid and *msg */
   asm volatile( 
@@ -18,10 +21,12 @@ void handle_send( global_context_t *gc ) {
       "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
       : "+r"(int_reg), "+r"(char_reg), "+r"(cur_sp_reg)
       );
+   cur_sp = cur_sp_reg;
    tid = int_reg;
    msg = char_reg;
-   
+
   /* get the next two arguments: msglen and *reply */
+  cur_sp_reg = cur_sp;
   asm volatile( 
       "msr cpsr_c, #0xdf\n\t"       // switch to system mode
       "mov r3, %2\n\t"              // load user sp to r3
@@ -30,23 +35,39 @@ void handle_send( global_context_t *gc ) {
       "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
       : "+r"(int_reg), "+r"(char_reg), "+r"(cur_sp_reg)
       );
+   cur_sp = cur_sp_reg;
    msglen = int_reg;
    reply = char_reg;
 
    /* get the last argument: replylen */
+   cur_sp_reg = cur_sp;
    asm volatile( 
       "msr cpsr_c, #0xdf\n\t"       // switch to system mode
-      "mov r3, %2\n\t"              // load user sp to r3
+      "mov r3, %1\n\t"              // load user sp to r3
       "ldmfd r3!, {%0}\n\t"         // store one arg
       "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
       : "+r"(int_reg), "+r"(cur_sp_reg)
       );
    replylen = int_reg;
 
-   debug("tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d\n\t",
+   debug("tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
        tid, msg, msglen, reply, replylen);
 
-   //TODO: schedule next task
+   /* TODO: if task_id's index , return -1 */
+
+   /* TODO: if task_id has exited, return -2 */
+
+   /* TODO: now we know the receiver is alive, put sender into receiver's queue */
+
+   /* TODO: if receiver is SEND_BLOCK (waiting), 
+    *       1. copy the message to receiver's user space,
+    *       2. change receiver's state to READY
+    *       3. schedule receiver 
+    */
+
+   /* TODO: schedule sender self
+
+   
 }
 
 void handle_create( global_context_t *gc ) {
