@@ -53,7 +53,7 @@ void handle_send( global_context_t *gc ) {
    debug("tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
        tid, msg, msglen, reply, replylen);
 
-   /* TODO: if task_id's index , return -1 */
+   /* TODO: if task_id's index is not valid , return -1 */
 
    /* TODO: if task_id has exited, return -2 */
 
@@ -65,7 +65,7 @@ void handle_send( global_context_t *gc ) {
     *       3. schedule receiver 
     */
 
-   /* TODO: schedule sender self
+   /* TODO: schedule sender self */
 
    
 }
