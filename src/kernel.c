@@ -66,7 +66,6 @@ void handle( global_context_t *gc, int request_type ) {
   }
 }
 
-
 int main(int argc, char *argv[]) {
 
   debug("TD_BIT: %d", TD_BIT);
@@ -126,4 +125,20 @@ int main(int argc, char *argv[]) {
 //  }
 //}
 
+//TODO: delete memcpy test once we are assured that it works properly
+//char * src = "123456";
+//  char * dst = "999999"; 
+//  dst[-1] = 'a';
+//
+//  int size = 7;
+//  debug("size: %d\n", size);
+//
+//  kmemcpy(dst, src, 3);
+//
+//  int s = 0;
+//  debug();
+//  debug("dst[-1]: %c", dst[-1]);
+//  for(; s < 7; ++s) 
+//    debug("s: %d, dst[s]: %c", s, dst[s]);
+  
 
