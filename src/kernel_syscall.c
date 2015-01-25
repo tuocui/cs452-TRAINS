@@ -103,7 +103,6 @@ void handle_create( global_context_t *gc ) {
     gc->cur_task->retval = -1;
   } 
   else {
-    debug("code: %x, *code: %x;", code, *code);
     task_descriptor_t *new_td = tds_create_td(gc, priority, (int)(code));
 
     /* check if there are tds available */
