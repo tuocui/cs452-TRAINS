@@ -17,4 +17,8 @@ void handle_my_parent_tid( struct global_context_t *gc );
 
 void handle_send( struct global_context_t *gc );
 
+void handle_receive( struct global_context_t *gc );
+
+void handle_reply( struct global_context_t *gc );
+
 #endif
