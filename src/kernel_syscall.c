@@ -22,7 +22,7 @@ void handle_send( global_context_t *gc ) {
   
   //debug("cur_sp_reg: %x", cur_sp_reg);
 
-  /* get the first two arguments: tid and *msg */
+  /* get the first two arguments: tid */
   asm volatile( 
     "msr cpsr_c, #0xdf\n\t"       // switch to system mode
     "add r3, %1, #44\n\t"         // 10 registers + pc saved
@@ -35,9 +35,11 @@ void handle_send( global_context_t *gc ) {
   /* get the next two arguments: *msg, and msglen */
   asm volatile( 
     "msr cpsr_c, #0xdf\n\t"       // switch to system mode
-    "ldmfd r3!, {%0, %1}\n\t"     // store two args
+    //"add r3, %2, #48\n\t"         // 10 registers + pc saved
+    "ldmfd r3!, {%0}\n\t"         // store two args
+    "ldmfd r3!, {%1}\n\t"         // store two args
     "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
-    : "+r"(char_reg), "+r"(int_reg)
+    : "+r"(char_reg), "+r"(int_reg), "+r"(cur_sp_reg)
   );
   msg_s = char_reg;
   msglen_s = int_reg;
@@ -45,9 +47,9 @@ void handle_send( global_context_t *gc ) {
   /* get the last arguments: *reply, replylen */
   asm volatile( 
     "msr cpsr_c, #0xdf\n\t"       // switch to system mode
-    "ldmfd r3!, {%0, %1}\n\t"         // store two args
+    "ldmfd r3!, {%0, %1}\n\t"     // store two args
     "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
-    : "+r"(char_reg), "+r"(int_reg)
+    : "+r"(char_reg), "+r"(int_reg), "+r"(cur_sp_reg)
   );
   reply_s = char_reg;
   replylen_s = int_reg;
@@ -63,6 +65,7 @@ void handle_send( global_context_t *gc ) {
   assert( tid_idx_s <= ( TD_MAX - 1 ));
 
   if( TID_GEN(tid_s) == 0 ){
+    debug( "heeyyyyy, invalid id" );
     gc->cur_task->retval = -1;
     add_to_priority( gc, gc->cur_task );
     return;
@@ -109,7 +112,7 @@ void handle_send( global_context_t *gc ) {
     msg_r = char_reg;
     msglen_r = int_reg;
 
-    debug("RECEIVER: tid_r: %d, msg_r: %x, msglen_r: %d", ptid_r, msg_r, msglen_r);
+    debug("RECEIVER: tid_r: %x, msg_r: %x, msglen_r: %d", ptid_r, msg_r, msglen_r);
 
     *ptid_r = gc->cur_task->id;
     int msg_copied = min(msglen_s, msglen_r);
@@ -123,6 +126,7 @@ void handle_send( global_context_t *gc ) {
   }
 
   if ( td_r->first_sender_in_queue == NULL ) {
+    debug( "New Sender on Receive Queue" );
     td_r->first_sender_in_queue = gc->cur_task;
     td_r->last_sender_in_queue = gc->cur_task;
   } else {
@@ -152,8 +156,10 @@ void handle_receive( global_context_t *gc ) {
   task_descriptor_t *r_td = gc->cur_task;
   if ( r_td->first_sender_in_queue == NULL ) {
     r_td->status = TD_SEND_BLOCKED;
+    debug( "receive TD is now blocked" );
     // Anything else?
   } else {
+    debug( "Receiving a send waiting in queue" );
     task_descriptor_t *s_td = r_td->first_sender_in_queue;
     assert(s_td->status == TD_RECEIVE_BLOCKED);
     r_td->first_sender_in_queue = s_td->next_sender;
@@ -185,7 +191,7 @@ void handle_receive( global_context_t *gc ) {
         "msr cpsr_c, #0xdf\n\t"       // switch to system mode
         "ldmfd r3!, {%0, %1}\n\t"     // store two args
         "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
-        : "+r"(char_reg), "+r"(int_reg)
+        : "+r"(char_reg), "+r"(int_reg), "+r"(s_sp_reg)
         );
      msg_s = char_reg;
      msglen_s = int_reg;
@@ -195,10 +201,13 @@ void handle_receive( global_context_t *gc ) {
         "msr cpsr_c, #0xdf\n\t"       // switch to system mode
         "ldmfd r3!, {%0, %1}\n\t"         // store two args
         "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
-        : "+r"(char_reg), "+r"(int_reg)
+        : "+r"(char_reg), "+r"(int_reg), "+r"(s_sp_reg)
         );
      reply_s = char_reg;
      replylen_s = int_reg;
+
+     debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
+        tid_s, msg_s, msglen_s, reply_s, replylen_s);
 
      int_reg = 0;
      pint_reg = NULL;
@@ -221,16 +230,16 @@ void handle_receive( global_context_t *gc ) {
       msg_r = char_reg;
       msglen_r = int_reg;
 
-      debug("RECEIVER: tid_r: %d, msg_r: %x, msglen_r: %d", ptid_r, msg_r, msglen_r);
+      debug("tid: %x, msg: %x, msglen: %d", ptid_r, msg_r, msglen_r);
 
       *ptid_r = s_td->id;
       int msg_copied = min(msglen_s, msglen_r);
       kmemcpy( /*dst*/ msg_r, /*src*/ msg_s, msg_copied );
 
-      td_r->retval = msg_copied;
-      add_to_priority( gc, td_r );
-
       s_td->status = TD_REPLY_BLOCKED;
+
+      r_td->retval = msg_copied;
+      add_to_priority( gc, r_td );
     }
 }
 

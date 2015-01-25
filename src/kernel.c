@@ -55,6 +55,9 @@ void handle( global_context_t *gc, int request_type ) {
   case SYS_SEND:
     handle_send( gc );
     break;
+  case SYS_RECEIVE:
+    handle_receive( gc );
+    break;
   case SYS_PASS:
     handle_pass( gc );
     break;

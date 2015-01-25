@@ -50,6 +50,9 @@ void tds_init(global_context_t *gc) {
     cur_td->status = TD_ZOMBIE;
     cur_td->next_free = &(gc->tds[i + 1]);
     cur_td->next_in_priority = NULL;
+    cur_td->first_sender_in_queue = NULL;
+    cur_td->last_sender_in_queue = NULL;
+    cur_td->next_sender = NULL;
   }
   
   ((gc->tds)[TD_MAX - 1]).next_free = NULL;
