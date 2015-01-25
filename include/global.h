@@ -19,6 +19,7 @@ typedef unsigned int size_t;
 #define SYS_PASS 4
 #define SYS_SEND 5
 #define SYS_RECEIVE 6
+#define SYS_REPLY 7
 #define SYS_KILL 99
 
 #endif

@@ -2,7 +2,7 @@
 #include <kernel.h>
 
 /* memcpy for message passing */
-void kmemcpy( char * dst, char * src, size_t len ) {
+void kmemcpy( char * dst, const char * src, size_t len ) {
   dst += len; 
   src += len;
   while(len-- > 0)  
@@ -10,10 +10,11 @@ void kmemcpy( char * dst, char * src, size_t len ) {
 }
 
 void handle_send( global_context_t *gc ) {
-  register unsigned int int_reg_s asm("r0");
-  register char *      char_reg_s asm("r1");
-  register unsigned int *cur_sp_reg_s asm("r2") = (gc->cur_task)->sp;
-  unsigned int          *cur_sp_s;
+  register unsigned int  int_reg    asm("r0");
+  register char         *char_reg   asm("r1");
+  register unsigned int *pint_reg   asm("r2");
+  register unsigned int *cur_sp_reg asm("r3") = (gc->cur_task)->sp;
+
   int tid_s, msglen_s, replylen_s;
   char *msg_s, *reply_s;
   
@@ -22,43 +23,34 @@ void handle_send( global_context_t *gc ) {
   /* get the first two arguments: tid and *msg */
   asm volatile( 
       "msr cpsr_c, #0xdf\n\t"       // switch to system mode
-      "mov r3, %2\n\t"              // load user sp to r3
-      "add r3, r3, #44\n\t"         // 10 registers + pc saved
+      "add r3, %2, #44\n\t"         // 10 registers + pc saved
       "ldmfd r3!, {%0, %1}\n\t"     // store two args
-      "mov %2, r3\n\t"              // update local cur_sp_reg 
       "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
-      : "+r"(int_reg_s), "+r"(char_reg_s), "+r"(cur_sp_reg_s)
+      : "+r"(int_reg), "+r"(char_reg), "+r"(cur_sp_reg)
       );
-   cur_sp_s = cur_sp_reg_s;
-   tid_s = int_reg_s;
-   msg_s = char_reg_s;
+   tid_s = int_reg;
+   msg_s = char_reg;
 
   /* get the next two arguments: msglen and *reply */
-  cur_sp_reg_s = cur_sp_s;
   asm volatile( 
       "msr cpsr_c, #0xdf\n\t"       // switch to system mode
-      "mov r3, %2\n\t"              // load user sp to r3
       "ldmfd r3!, {%0, %1}\n\t"     // store two args
-      "mov %2, r3\n\t"              // update local cur_sp_reg 
       "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
-      : "+r"(int_reg_s), "+r"(char_reg_s), "+r"(cur_sp_reg_s)
+      : "+r"(int_reg), "+r"(char_reg), "+r"(cur_sp_reg)
       );
-   cur_sp_s = cur_sp_reg_s;
-   msglen_s = int_reg_s;
-   reply_s = char_reg_s;
+   msglen_s = int_reg;
+   reply_s = char_reg;
 
    /* get the last argument: replylen */
-   cur_sp_reg_s = cur_sp_s;
    asm volatile( 
       "msr cpsr_c, #0xdf\n\t"       // switch to system mode
-      "mov r3, %1\n\t"              // load user sp to r3
       "ldmfd r3!, {%0}\n\t"         // store one arg
       "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
-      : "+r"(int_reg_s), "+r"(cur_sp_reg_s)
+      : "+r"(int_reg), "+r"(cur_sp_reg)
       );
-   replylen_s = int_reg_s;
+   replylen_s = int_reg;
 
-   debug("tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
+   debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
        tid_s, msg_s, msglen_s, reply_s, replylen_s);
 
    /* if task_id's index is not valid , return -1 */
@@ -77,36 +69,39 @@ void handle_send( global_context_t *gc ) {
 
    /* now we know the receiver is alive */
 
-   /* TODO: if receiver is SEND_BLOCK (waiting), 
-    *       0. find out length of data to transfer
-    *       1. copy the message to receiver's user space, set receiver's *tid
-    *       2. change receiver's state to READY, set its return val etc.
-    *       3. schedule receiver
-    *       4. change sender's state to REPLY_BLOCK
+   /* if receiver is SEND_BLOCK (waiting), 
+    *   0. find out length of the data to transfer, should be the min of two
+    *   1. copy the message to receiver's user space, set receiver's *tid
+    *   2. change receiver's state to READY, set its return val, what else?
+    *   3. wake up the receiver and schedule it
+    *   4. change sender's state to REPLY_BLOCK
     */
    else if( td_r->status == TD_SEND_BLOCKED ) {
-     //TODO: reuse previous registers if you can, this is too repeatitive 
-     register int  *pint_reg_r asm("r0");
-     register char *char_reg_r asm("r1");
-     register int    int_reg_r asm("r2");
-     register unsigned int *cur_sp_reg_r asm("r3") = (gc->cur_task)->sp;
-     int *tid_r, msglen_r;
+     /* reuse previous registers */
+     int_reg = 0;
+     pint_reg = NULL;
+     char_reg = NULL;
+     cur_sp_reg = (gc->cur_task)->sp;
+     unsigned int *ptid_r, msglen_r;
      char *msg_r;
 
      /* get receiver's arguments: *tid, *msg and msglen */
      asm volatile( 
          "msr cpsr_c, #0xdf\n\t"       // switch to system mode
-         "mov r3, %3\n\t"              // load user sp to r3
-         "add r3, r3, #44\n\t"         // 10 registers + pc saved
-         "ldmfd r3!, {%0, %1, %2}\n\t" // store all three args
+         "add r3, %3, #44\n\t"         // 10 registers + pc saved
+         "ldmfd r3!, {%0}\n\t"         // load *tid, must load separately here
+         "ldmfd r3!, {%1}\n\t"         // load *msg
+         "ldmfd r3!, {%2}\n\t"         // load msglen
          "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
-         : "+r"(pint_reg_r), "+r"(char_reg_r), "+r"(int_reg_r), "+r"(cur_sp_reg_r)
+         : "+r"(pint_reg), "+r"(char_reg), "+r"(int_reg), "+r"(cur_sp_reg)
          );
-      tid_r = pint_reg_r;
-      msg_r = char_reg_r;
-      msglen_r = int_reg_r;
+      ptid_r = pint_reg;
+      msg_r = char_reg;
+      msglen_r = int_reg;
 
-      *tid_r = gc->cur_task->id;
+      debug("RECEIVER: tid_r: %d, msg_r: %x, msglen_r: %d", ptid_r, msg_r, msglen_r);
+
+      *ptid_r = gc->cur_task->id;
       int msg_copied = min(msglen_s, msglen_r);
       kmemcpy( /*dst*/ msg_r, /*src*/ msg_s, min(msglen_s, msg_copied) );
 
@@ -131,6 +126,7 @@ void handle_send( global_context_t *gc ) {
     */
 }
 
+void handle_reply
 
 void handle_create( global_context_t *gc ) {
   register unsigned int priority_reg asm("r0");
@@ -141,9 +137,8 @@ void handle_create( global_context_t *gc ) {
 
   asm volatile(
     "msr cpsr_c, #0xdf\n\t"
-    "mov r1, %2\n\t"
-    "add r2, r1, #44\n\t" // 10 registers + pc saved
-    "ldmfd r2, {%0, %1}\n\t"
+    "add r3, %2, #44\n\t" // 10 registers + pc saved
+    "ldmfd r3, {%0, %1}\n\t"
     "msr cpsr_c, #0xd3\n\t"
     : "+r"(priority_reg), "+r"(code_reg), "+r"(cur_sp_reg)
   );
