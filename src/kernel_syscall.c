@@ -2,6 +2,8 @@
 #include <kernel.h>
 
 /* memcpy for message passing */
+// TODO: Utilize our 10 spare registers to do memcpy.
+// Way faster than copying 1 byte at a time
 void kmemcpy( char * dst, const char * src, size_t len ) {
   dst += len; 
   src += len;
@@ -55,9 +57,16 @@ void handle_send( global_context_t *gc ) {
 
    /* if task_id's index is not valid , return -1 */
    // all id_idx are possible in this kernel
+   // If generation == 0, then impossible
    int tid_idx_s = TID_IDX( tid_s );
    assert( tid_idx_s >= 0 );
    assert( tid_idx_s <= ( TD_MAX - 1 ));
+
+   if( TID_GEN(tid_s) == 0 ){
+     gc->cur_task->retval = -1;
+     add_to_priority( gc, gc->cur_task );
+     return;
+   }
 
    /* if task has a different gen, or it's a zombie, return -2, schedule sender */
    task_descriptor_t * td_r = &(gc->tds[TID_IDX(tid_s)]);
@@ -65,9 +74,10 @@ void handle_send( global_context_t *gc ) {
        td_r->status == TD_ZOMBIE ) {
      gc->cur_task->retval = -2; 
      add_to_priority( gc, gc->cur_task );
+     return;
    }
 
-   /* now we know the receiver is alive */
+   /* now we know the receiver is exists */
 
    /* if receiver is SEND_BLOCK (waiting), 
     *   0. find out length of the data to transfer, should be the min of two
@@ -76,12 +86,12 @@ void handle_send( global_context_t *gc ) {
     *   3. wake up the receiver and schedule it
     *   4. change sender's state to REPLY_BLOCK
     */
-   else if( td_r->status == TD_SEND_BLOCKED ) {
+   if( td_r->status == TD_SEND_BLOCKED ) {
      /* reuse previous registers */
      int_reg = 0;
      pint_reg = NULL;
      char_reg = NULL;
-     cur_sp_reg = (gc->cur_task)->sp;
+     register unsigned int *receiver_sp_reg asm("r3") = td_r->sp;
      unsigned int *ptid_r, msglen_r;
      char *msg_r;
 
@@ -93,7 +103,7 @@ void handle_send( global_context_t *gc ) {
          "ldmfd r3!, {%1}\n\t"         // load *msg
          "ldmfd r3!, {%2}\n\t"         // load msglen
          "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
-         : "+r"(pint_reg), "+r"(char_reg), "+r"(int_reg), "+r"(cur_sp_reg)
+         : "+r"(pint_reg), "+r"(char_reg), "+r"(int_reg), "+r"(receiver_sp_reg)
          );
       ptid_r = pint_reg;
       msg_r = char_reg;
@@ -103,7 +113,7 @@ void handle_send( global_context_t *gc ) {
 
       *ptid_r = gc->cur_task->id;
       int msg_copied = min(msglen_s, msglen_r);
-      kmemcpy( /*dst*/ msg_r, /*src*/ msg_s, min(msglen_s, msg_copied) );
+      kmemcpy( /*dst*/ msg_r, /*src*/ msg_s, msg_copied );
 
       td_r->status = TD_READY;
       td_r->retval = msg_copied;
@@ -111,7 +121,7 @@ void handle_send( global_context_t *gc ) {
       add_to_priority( gc, td_r );
 
       gc->cur_task->status = TD_REPLY_BLOCKED;
-  
+      return;
    }
    
    /* TODO: if receiver is not waiting,
@@ -125,8 +135,6 @@ void handle_send( global_context_t *gc ) {
     * or the replyer will wake it up by specifying its index 
     */
 }
-
-void handle_reply
 
 void handle_create( global_context_t *gc ) {
   register unsigned int priority_reg asm("r0");
