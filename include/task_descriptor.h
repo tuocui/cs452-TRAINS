@@ -25,6 +25,9 @@ typedef struct task_descriptor_t{
 
   struct task_descriptor_t * next_free;
   struct task_descriptor_t * next_in_priority;
+  struct task_descriptor_t * first_sender_in_queue; // receiver information
+  struct task_descriptor_t * last_sender_in_queue; // receiver information
+  struct task_descriptor_t * next_sender; // sender information
 
 } task_descriptor_t;
 
