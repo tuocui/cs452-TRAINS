@@ -5,6 +5,7 @@
 #define __TOOLS_H__
 
 #include "bwio.h"
+#include "global.h"
 
 #define FOREVER for( ; ; )
 #define A1 1
@@ -31,6 +32,11 @@
           __LINE__, ## __VA_ARGS__ );                         \
     }                                                         \
   } while( 0 )
+
+#define min(a, b)              \
+   ( {__typeof__ (a) _a = (a); \
+      __typeof__ (b) _b = (b); \
+      _a < _b ? _a : _b; } )
 
 
 #endif

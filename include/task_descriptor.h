@@ -17,10 +17,10 @@ typedef struct task_descriptor_t{
 
   enum { 
     TD_READY,
-    TD_RECEIVE_BLOCKED,
-    TD_REPLY_BLOCKED,
-    TD_SEND_BlOCKED,
-    TD_ZOMBIE,
+    TD_RECEIVE_BLOCKED,   // Sender's state
+    TD_REPLY_BLOCKED,     // Sender's state
+    TD_SEND_BLOCKED,      // Recver's state
+    TD_ZOMBIE,            // Exited already
   } status;//: 8;
 
   struct task_descriptor_t * next_free;

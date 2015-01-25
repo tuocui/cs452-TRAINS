@@ -1,20 +1,7 @@
 #include <syscall.h>
 #include "tools.h"
 
-int Create( int priority, void (*code) ( ) ) {
-  register int retval_reg asm("r0");
-  int retval;
-  asm volatile(
-    "stmfd sp!, {r0, r1}\n\t"
-    "swi %1\n\t"
-    "mov %0, r0\n\t"
-    "ldmfd sp!, {r1, r2}\n\t" 
-    : "+r"(retval_reg)
-    : "i"(SYS_CREATE)
-  );
-  retval = retval_reg;
-  return retval;
-}
+
 
 int Send( int tid, char *msg, int msglen, char *reply, int replylen ) {
   /* if more(less) local varibles are declared, we need to change
@@ -44,6 +31,36 @@ int Send( int tid, char *msg, int msglen, char *reply, int replylen ) {
 
   retval = retval_reg;
 
+  return retval;
+}
+
+int Create( int priority, void (*code) ( ) ) {
+  register int retval_reg asm("r0");
+  int retval;
+  asm volatile(
+    "stmfd sp!, {r0, r1}\n\t"
+    "swi %1\n\t"
+    "mov %0, r0\n\t"
+    "ldmfd sp!, {r1, r2}\n\t" 
+    : "+r"(retval_reg)
+    : "i"(SYS_CREATE)
+  );
+  retval = retval_reg;
+  return retval;
+}
+
+int Receive( int *tid, char *msg, int msglen ) {
+  register int retval_reg asm("r0");
+  int retval;
+  asm volatile( 
+      "stmfd sp!, {r0, r1, r2}\n\t"
+      "swi %1\n\t"
+      "mov %0, r0\n\t"
+      "add sp, sp, #12\n\t"
+      : "+r"(retval_reg)
+      : "i"(SYS_RECEIVE)
+      );
+  retval = retval_reg;
   return retval;
 }
 
