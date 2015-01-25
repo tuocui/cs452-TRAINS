@@ -25,11 +25,11 @@ void first_user_task( ){
 
   int created_tid;
   created_tid = Create( 10, &a1_user_task );
-  bwprintf( COM2, "Created: %d, Priority: Lower  than First\n\r", created_tid);
+  bwprintf( COM2, "Created: %d, Priority: Lower than First\n\r", created_tid);
   debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
 
   created_tid = Create( 10, &a1_user_task );
-  bwprintf( COM2, "Created: %d, Priority: Lower  than First\n\r", created_tid);
+  bwprintf( COM2, "Created: %d, Priority: Lower than First\n\r", created_tid);
   debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
 
   created_tid = Create( 1, &a1_user_task );
