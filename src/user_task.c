@@ -28,32 +28,43 @@ void gen_user_task( ){
 
 void user_send_task( ){
   struct Server server_s;
-  struct Server server_r;
+  struct Server server_reply;
   int my_tid = MyTid( );
   int receiver_tid = 33;
   server_s.a = (char) my_tid;
   server_s.b = (char) my_tid;
   debug(
     "tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d", 
-    receiver_tid, &server_s,  sizeof(server_s), &server_r,  sizeof(server_r)
+    receiver_tid, &server_s,  sizeof(server_s), &server_reply,  sizeof(server_reply)
   );
-  Send( receiver_tid, (char *) &server_s,  sizeof(server_s), (char *) &server_r,  sizeof(server_r));
+  int rtn = Send( receiver_tid, (char *) &server_s,  sizeof(server_s), (char *) &server_reply,
+      sizeof(server_reply));
+
+  debug( "Send's rtn: %d; replymsg: %c%c", rtn,  server_reply.a, server_reply.b );
+  
 }
 
 void user_receive_task( ){
-  int sender_tid;
+  int sender_tid, rtn;
   struct Server server_r;
-  int msglen = sizeof(server_r);
+  struct Server server_reply;
+  server_reply.a = 'f';
+  server_reply.b = 'u';
+
+  //int msglen = sizeof(server_r);
   debug(
     "tid: %d, msg: %x, msglen: %d", 
     &sender_tid, &server_r,  sizeof(server_r)
   );
-  int rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  debug("rtn: %d", rtn);
-  debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
-  rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  debug("rtn: %d", rtn);
-  debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+
+  //rtn = Receive( &sender_tid, (char *) &server_r, msglen );
+  //debug("rtn: %d", rtn);
+  //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+  //rtn = Receive( &sender_tid, (char *) &server_r, msglen );
+  //debug("rtn: %d", rtn);
+  //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+  rtn = Reply( 31, (char*)&server_reply, sizeof(server_reply)+1 );
+  debug("Reply's rtn: %d", rtn );
   Exit( );
 }
 

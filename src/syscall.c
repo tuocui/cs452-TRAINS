@@ -2,9 +2,6 @@
 #include "tools.h"
 
 
-
-
-
 int Create( int priority, void (*code) ( ) ) {
   register int retval_reg asm("r0");
   int retval;
