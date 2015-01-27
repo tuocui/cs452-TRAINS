@@ -50,7 +50,7 @@ char *get_message( unsigned int *sp, int offset, int *msglen ) {
 }
 
 // TODO: Errno's
-int check_tid( global_context_t *gc, int tid ) {
+int check_tid( global_context_t *gc, unsigned int tid ) {
   /* if task_id's index is not valid , return -1 */
   // all id_idx are possible in this kernel
   int tid_idx = TID_IDX( tid );
@@ -74,7 +74,8 @@ int check_tid( global_context_t *gc, int tid ) {
 }
 
 void handle_send( global_context_t *gc ) {
-  int tid_s, msglen_s, replylen_s;
+  unsigned int tid_s;
+  int msglen_s, replylen_s;
   char *msg_s, *reply_s;
 
   tid_s = get_message_tid( gc->cur_task->sp, 44 );
@@ -167,13 +168,14 @@ void handle_receive( global_context_t *gc ) {
       r_td->last_sender_in_queue = NULL;
     }
 
-    int tid_s, msglen_s, replylen_s;
+    unsigned int tid_s;
+    int msglen_s, replylen_s;
     char *msg_s, *reply_s;
 
     /* get the first two arguments: tid and *msg */
     tid_s = get_message_tid( s_td->sp, 44 );
     msg_s = get_message( s_td->sp, 48, &msglen_s );
-    reply_s = get_message( s_td->sp, 48, &replylen_s );
+    reply_s = get_message( s_td->sp, 56, &replylen_s );
 
     debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
        tid_s, msg_s, msglen_s, reply_s, replylen_s);
@@ -198,7 +200,8 @@ void handle_receive( global_context_t *gc ) {
 }
 
 void handle_reply( global_context_t *gc ) {
-  int target_tid, replylen_r, replylen_s;
+  unsigned int target_tid;
+  int replylen_r, replylen_s;
   char *reply_r, *reply_s;
 
   /* get replyer's arg: target tid */
