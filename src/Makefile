@@ -43,6 +43,9 @@ kernel_syscall.s: kernel_syscall.c
 user_task.s:user_task.c 
 	$(XCC) -S $(CFLAGS) user_task.c
 
+nameserver.s: nameserver.c 
+	$(XCC) -S $(CFLAGS) nameserver.c
+
 
 bwio.o: bwio.s
 	$(AS) $(ASFLAGS) -o bwio.o bwio.s
@@ -68,11 +71,14 @@ kernel_syscall.o: kernel_syscall.s
 user_task.o: user_task.s
 	$(AS) $(ASFLAGS) -o user_task.o user_task.s
 
+nameserver.o: nameserver.s
+	$(AS) $(ASFLAGS) -o nameserver.o nameserver.s
+
 
 # MUST add .o file here:
-kernel.elf: kernel.o context_switch.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o bwio.o
+kernel.elf: kernel.o context_switch.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o bwio.o
 # MUST add .o file here:
-	$(LD) $(LDFLAGS) -o $@ bwio.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o context_switch.o kernel.o  -lgcc #-lbwio
+	$(LD) $(LDFLAGS) -o $@ bwio.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o context_switch.o kernel.o -lgcc #-lbwio
 
 clean:
 	-rm -f *.elf *.s *.o *.map ../obj/* ../asm/* ../elf/*

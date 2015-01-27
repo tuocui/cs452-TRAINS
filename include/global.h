@@ -22,5 +22,9 @@ typedef unsigned int size_t;
 #define SYS_REPLY 7
 #define SYS_EXIT 99
 
+/* server jobs */
+#define NUM_JOBS 1
+#define JOB_RPS 0
+
 #endif
 

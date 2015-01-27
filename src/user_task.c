@@ -1,6 +1,7 @@
 #include <tools.h>
 #include <user_task.h>
-#include "syscall.h"
+#include <syscall.h>
+#include <nameserver.h>
 
 //TODO remove testing struct
 struct Server {
@@ -64,6 +65,8 @@ void user_receive_task( ){
   rtn = Receive( &sender_tid, (char *) &server_r, msglen );
   debug("rtn: %d", rtn);
   debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+  char c = bwgetc( COM2 );
+  bwputc( COM2, c );
   rtn = Reply( sender_tid, (char*)&server_reply, sizeof(server_reply) );
   debug("Reply's rtn: %d", rtn );
   Exit( );
@@ -86,11 +89,22 @@ void a1_user_task( ){
 }
 #endif /* A1 */
 #ifdef A2
-void a2_user_task( ) {
+void a2_test_task( ) {
+  bwsetfifo( COM2, OFF );
   int receiver_tid = Create( 10, &user_receive_task );
   int sender_tid1 = Create( 1, &user_send_task );
   int sender_tid2 = Create( 1, &user_send_task );
   debug( "Receiver tid: %d, sender1 tid: %d, sender2 tid: %d", receiver_tid, sender_tid1, sender_tid2 );
+  Exit( );
+}
+
+void a2_user_task( ) {
+  bwsetfifo( COM2, OFF );
+  // Create nameserver
+  int nameserver_tid = Create( 1, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid );
+  // Create RPS server
+  // Create RPS clients
   Exit( );
 }
 #endif /* A2 */
@@ -119,7 +133,9 @@ void first_user_task( ){
 #endif /* A1 */
 
 #ifdef A2
+  //a2_test_task( );
   a2_user_task( );
+
 #endif /* A2 */
 
   bwprintf( COM2, "First: exiting\n\r");
