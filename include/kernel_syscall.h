@@ -9,7 +9,7 @@ void handle_create( struct global_context_t *gc );
 
 void handle_pass( struct global_context_t *gc );
 
-void handle_kill( struct global_context_t *gc );
+void handle_exit( struct global_context_t *gc );
 
 void handle_my_tid( struct global_context_t *gc );
 

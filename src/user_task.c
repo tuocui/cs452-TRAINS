@@ -41,7 +41,8 @@ void user_send_task( ){
       sizeof(server_reply));
 
   debug( "Send's rtn: %d; replymsg: %c%c", rtn,  server_reply.a, server_reply.b );
-  
+  Exit( );
+
 }
 
 void user_receive_task( ){
@@ -51,19 +52,19 @@ void user_receive_task( ){
   server_reply.a = 'f';
   server_reply.b = 'u';
 
-  //int msglen = sizeof(server_r);
   debug(
-    "tid: %d, msg: %x, msglen: %d", 
+    "tid: %x, msg: %x, msglen: %d",
     &sender_tid, &server_r,  sizeof(server_r)
   );
 
-  //rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  //debug("rtn: %d", rtn);
-  //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
-  //rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  //debug("rtn: %d", rtn);
-  //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
-  rtn = Reply( 31, (char*)&server_reply, sizeof(server_reply)+1 );
+  int msglen = sizeof(server_r);
+  rtn = Receive( &sender_tid, (char *) &server_r, msglen );
+  debug("rtn: %d", rtn);
+  debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+  rtn = Receive( &sender_tid, (char *) &server_r, msglen );
+  debug("rtn: %d", rtn);
+  debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+  rtn = Reply( sender_tid, (char*)&server_reply, sizeof(server_reply) );
   debug("Reply's rtn: %d", rtn );
   Exit( );
 }

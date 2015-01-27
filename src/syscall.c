@@ -116,7 +116,7 @@ void Exit( ) {
   // Also super simple
   asm volatile(
     "swi %0\n\t"
-    :: "i"(SYS_KILL)
+    :: "i"(SYS_EXIT)
   );
 }
 
