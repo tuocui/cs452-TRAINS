@@ -1,14 +1,8 @@
 #include <tools.h>
 #include <user_task.h>
-<<<<<<< HEAD
-#include "syscall.h"
-#include "ts7200.h"
-
-=======
 #include <syscall.h>
 #include <nameserver.h>
 #include <rps.h>
->>>>>>> 72f210eaa8eef1d26641cc53c86fc9c3e6afb9a1
 
 //TODO remove testing struct
 struct Server {
@@ -65,17 +59,7 @@ void user_receive_task( ){
     &sender_tid, &server_r,  sizeof(server_r)
   );
 
-<<<<<<< HEAD
 
-  rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  debug("rtn: %d", rtn);
-  debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
-  //rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  //debug("rtn: %d", rtn);
-  //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
-  rtn = Reply( 31, (char*)&server_reply, sizeof(server_reply)+1 );
-
-=======
   int msglen = sizeof(server_r);
   rtn = Receive( &sender_tid, (char *) &server_r, msglen );
   debug("rtn: %d", rtn);
@@ -86,7 +70,6 @@ void user_receive_task( ){
   char c = bwgetc( COM2 );
   bwputc( COM2, c );
   rtn = Reply( sender_tid, (char*)&server_reply, sizeof(server_reply) );
->>>>>>> 72f210eaa8eef1d26641cc53c86fc9c3e6afb9a1
   debug("Reply's rtn: %d", rtn );
   Exit( );
 }
@@ -108,17 +91,8 @@ void user_receive_task( ){
 //}
 //#endif /* A1 */
 #ifdef A2
-<<<<<<< HEAD
-void a2_user_task( ) {
-  //TODO: change to 40-bit timer 
-  unsigned int * timer = (unsigned int*)TIMER3_BASE;
-  
-
-  //TODO: timer starts here
-=======
 void a2_test_task( ) {
   bwsetfifo( COM2, OFF );
->>>>>>> 72f210eaa8eef1d26641cc53c86fc9c3e6afb9a1
   int receiver_tid = Create( 10, &user_receive_task );
   int sender_tid1 = Create( 1, &user_send_task );
   //TODO: timer ends here, to make it more accurate, put it inside kernel
