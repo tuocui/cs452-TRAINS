@@ -45,7 +45,7 @@ void nameserver_main( ) {
       if( !( request.type > 0 && request.type <= NUM_JOBS ) ) {
         reply_back( reply_tid, &reply, msg_len, ERROR, INVALID_JOB );
       } else {
-        // Register, and reply back
+        // Reply back with the tid
         rtn_tid = jobs[request.type];
         if( rtn_tid == 0 ) {
           reply_back( reply_tid, &reply, msg_len, ERROR, SERVER_NOT_FOUND );
@@ -53,7 +53,6 @@ void nameserver_main( ) {
           reply_back( reply_tid, &reply, msg_len, SUCCESS, rtn_tid );
         }
       }
-      // handle whois's
       break;
     default:
       reply_back( reply_tid, &reply, msg_len, ERROR, INVALID_REQUEST );
