@@ -2,6 +2,7 @@
 #include <user_task.h>
 #include <syscall.h>
 #include <nameserver.h>
+#include <rps.h>
 
 //TODO remove testing struct
 struct Server {
@@ -103,6 +104,18 @@ void a2_user_task( ) {
   // Create nameserver
   int nameserver_tid = Create( 1, &nameserver_main );
   debug( "Nameserver tid: %d", nameserver_tid );
+  int rps_server_tid = Create( 2, &rps_server );
+  debug( "RPS Server tid: %d", rps_server_tid );
+  int rps_client1_tid = Create( 10, &rps_client1 );
+  debug( "RPS client1 tid: %d", rps_client1_tid );
+  int rps_client2_tid = Create( 10, &rps_client1 );
+  debug( "RPS client2 tid: %d", rps_client2_tid );
+  int rps_client3_tid = Create( 10, &rps_client1 );
+  debug( "RPS client3 tid: %d", rps_client3_tid );
+  int rps_client4_tid = Create( 10, &rps_client1 );
+  debug( "RPS client4 tid: %d", rps_client4_tid );
+  int rps_client5_tid = Create( 10, &rps_client1 );
+  debug( "RPS client5 tid: %d", rps_client5_tid );
   // Create RPS server
   // Create RPS clients
   Exit( );

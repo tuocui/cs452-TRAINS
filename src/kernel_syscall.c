@@ -59,7 +59,7 @@ int check_tid( global_context_t *gc, unsigned int tid ) {
 
   // If generation == 0, then impossible
   if( TID_GEN(tid) == 0 ){
-    debug( "heeyyyyy, invalid id" );
+    //debug( "heeyyyyy, invalid id" );
     return -1;
   }
 
@@ -84,8 +84,8 @@ void handle_send( global_context_t *gc ) {
   // replylen_s set
   reply_s = get_message( gc->cur_task->sp, 56, &replylen_s );
 
-  debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
-    tid_s, msg_s, msglen_s, reply_s, replylen_s);
+  //debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
+  //  tid_s, msg_s, msglen_s, reply_s, replylen_s);
 
   int tid_check = check_tid( gc, tid_s );
   if ( tid_check < 0 ) {
@@ -112,7 +112,7 @@ void handle_send( global_context_t *gc ) {
     /* get receiver's arguments: *tid, *msg and msglen */
     ptid_r = (unsigned int *) get_message_tid( td_r->sp, 44 );
     msg_r = get_message( td_r->sp, 48, &msglen_r );
-    debug("RECEIVER: tid_r: %x, msg_r: %x, msglen_r: %d", ptid_r, msg_r, msglen_r);
+    //debug("RECEIVER: tid_r: %x, msg_r: %x, msglen_r: %d", ptid_r, msg_r, msglen_r);
 
     *ptid_r = gc->cur_task->id;
     int msg_copied = min(msglen_s, msglen_r);
@@ -131,7 +131,7 @@ void handle_send( global_context_t *gc ) {
    *       3. ?? something else ?? 
    */
   if ( td_r->first_sender_in_queue == NULL ) {
-    debug( "New Sender on Receive Queue" );
+    //debug( "New Sender on Receive Queue" );
     td_r->first_sender_in_queue = gc->cur_task;
     td_r->last_sender_in_queue = gc->cur_task;
   } else {
@@ -156,10 +156,10 @@ void handle_receive( global_context_t *gc ) {
   task_descriptor_t *r_td = gc->cur_task;
   if ( r_td->first_sender_in_queue == NULL ) {
     r_td->status = TD_SEND_BLOCKED;
-    debug( "receive TD is now blocked" );
+    //debug( "receive TD is now blocked" );
     // Anything else?
   } else {
-    debug( "Receiving a send waiting in queue" );
+    //debug( "Receiving a send waiting in queue" );
     task_descriptor_t *s_td = r_td->first_sender_in_queue;
     assert(s_td->status == TD_RECEIVE_BLOCKED);
     r_td->first_sender_in_queue = s_td->next_sender;
@@ -177,8 +177,8 @@ void handle_receive( global_context_t *gc ) {
     msg_s = get_message( s_td->sp, 48, &msglen_s );
     reply_s = get_message( s_td->sp, 56, &replylen_s );
 
-    debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
-       tid_s, msg_s, msglen_s, reply_s, replylen_s);
+    //debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
+    //   tid_s, msg_s, msglen_s, reply_s, replylen_s);
 
     unsigned int *ptid_r;
     int msglen_r;
@@ -187,7 +187,7 @@ void handle_receive( global_context_t *gc ) {
     /* get receiver's arguments: *tid, *msg and msglen */
     ptid_r = (unsigned int *) get_message_tid( r_td->sp, 44 );
     msg_r = get_message( r_td->sp, 48, &msglen_r );
-    debug("tid: %x, msg: %x, msglen: %d", ptid_r, msg_r, msglen_r);
+    //debug("tid: %x, msg: %x, msglen: %d", ptid_r, msg_r, msglen_r);
 
     *ptid_r = s_td->id;
     int msg_copied = min(msglen_s, msglen_r);
@@ -232,8 +232,8 @@ void handle_reply( global_context_t *gc ) {
   /* get the sender's args: *reply_s, replylen_s */
   reply_s = get_message( target_td->sp, 56, &replylen_s );
 
-  debug("reply_r: %x, replylen_r: %d\n\r reply_s: %x, replylen_s: %d",
-     reply_r, replylen_r, reply_s, replylen_s);
+  //debug("reply_r: %x, replylen_r: %d\n\r reply_s: %x, replylen_s: %d",
+  //   reply_r, replylen_r, reply_s, replylen_s);
 
   if( replylen_s < replylen_r ) {
     gc->cur_task->retval = -4;

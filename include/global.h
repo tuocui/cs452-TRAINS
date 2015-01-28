@@ -26,5 +26,8 @@ typedef unsigned int size_t;
 #define NUM_JOBS 1
 #define JOB_RPS 0
 
+/* timer */
+#define TIMER_LOAD_VAL 50847
+
 #endif
 

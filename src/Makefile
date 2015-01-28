@@ -46,6 +46,12 @@ user_task.s:user_task.c
 nameserver.s: nameserver.c 
 	$(XCC) -S $(CFLAGS) nameserver.c
 
+rps.s: rps.c 
+	$(XCC) -S $(CFLAGS) rps.c
+
+timer.s: timer.c 
+	$(XCC) -S $(CFLAGS) timer.c
+
 
 bwio.o: bwio.s
 	$(AS) $(ASFLAGS) -o bwio.o bwio.s
@@ -74,11 +80,17 @@ user_task.o: user_task.s
 nameserver.o: nameserver.s
 	$(AS) $(ASFLAGS) -o nameserver.o nameserver.s
 
+rps.o: rps.s
+	$(AS) $(ASFLAGS) -o rps.o rps.s
+
+timer.o: timer.s
+	$(AS) $(ASFLAGS) -o timer.o timer.s
+
 
 # MUST add .o file here:
-kernel.elf: kernel.o context_switch.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o bwio.o
+kernel.elf: kernel.o context_switch.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o rps.o timer.o bwio.o
 # MUST add .o file here:
-	$(LD) $(LDFLAGS) -o $@ bwio.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o context_switch.o kernel.o -lgcc #-lbwio
+	$(LD) $(LDFLAGS) -o $@ bwio.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o rps.o timer.o context_switch.o kernel.o -lgcc #-lbwio
 
 clean:
 	-rm -f *.elf *.s *.o *.map ../obj/* ../asm/* ../elf/*

@@ -9,10 +9,11 @@
 #define ERROR 99
 
 /* Errnos */
-#define INVALID_REQUEST -1
-#define MESSAGE_TOO_SHORT -2
-#define INVALID_JOB -3
-#define SERVER_NOT_FOUND -4
+// -1 is reserved for nameserver not found
+#define INVALID_REQUEST -2
+#define MESSAGE_TOO_SHORT -3
+#define INVALID_JOB -4
+#define SERVER_NOT_FOUND -5
 
 typedef struct nameserver_msg_t {
   int type;
@@ -20,5 +21,9 @@ typedef struct nameserver_msg_t {
 } nameserver_msg_t;
 
 void nameserver_main( );
+
+int RegisterAs( char *name );
+
+int WhoIs( char *name );
 
 #endif

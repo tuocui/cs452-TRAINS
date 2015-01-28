@@ -32,21 +32,22 @@ void nameserver_main( ) {
     switch( request.type ) {
     case REGISTER:
       // Invalid job?
-      if( !( request.type > 0 && request.type <= NUM_JOBS ) ) {
+      if( !( request.val >= 0 && request.val < NUM_JOBS ) ) {
         reply_back( reply_tid, &reply, msg_len, ERROR, INVALID_JOB );
       } else {
         // Register, and reply back
-        jobs[request.type] = reply_tid;
-        reply_back( reply_tid, &reply, msg_len, SUCCESS, request.type );
+        jobs[request.val] = reply_tid;
+        reply_back( reply_tid, &reply, msg_len, SUCCESS, 0 );
+        debug( "Woo, a %d server registered with id: %d", request.type, jobs[request.type] );
       }
       break;
     case WHOIS:
       // Invalid job?
-      if( !( request.type > 0 && request.type <= NUM_JOBS ) ) {
+      if( !( request.val >= 0 && request.val < NUM_JOBS ) ) {
         reply_back( reply_tid, &reply, msg_len, ERROR, INVALID_JOB );
       } else {
         // Reply back with the tid
-        rtn_tid = jobs[request.type];
+        rtn_tid = jobs[request.val];
         if( rtn_tid == 0 ) {
           reply_back( reply_tid, &reply, msg_len, ERROR, SERVER_NOT_FOUND );
         } else {
@@ -62,3 +63,34 @@ void nameserver_main( ) {
 
   Exit( );
 }
+
+// I'm currently just going to cast this to a char* when we pass it int
+// and then cast back to an int here. There's gotta be a better way of doing it.
+int RegisterAs( char *name ) {
+  nameserver_msg_t request;
+  nameserver_msg_t reply;
+  request.type = REGISTER;
+  request.val = (int) name;
+  // Currently hard-coding the nameserver tid
+  // TODO: Make the nameserver tid "global"
+  int rtn = Send( 33, (char *)&request, sizeof(request), (char *)&reply, sizeof(reply) );
+  // Nameserver doens't exist
+  if( rtn < 0 ) {
+    return -1;
+  }
+  return reply.val;
+}
+
+int WhoIs( char *name ) {
+  nameserver_msg_t request;
+  nameserver_msg_t reply;
+  request.type = WHOIS;
+  request.val = (int) name;
+  int rtn = Send( 33, (char *)&request, sizeof(request), (char *)&reply, sizeof(reply) );
+  // Nameserver doens't exist
+  if( rtn < 0 ) {
+    return -1;
+  }
+  return reply.val;
+}
+
