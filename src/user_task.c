@@ -1,6 +1,8 @@
 #include <tools.h>
 #include <user_task.h>
 #include "syscall.h"
+#include "ts7200.h"
+
 
 //TODO remove testing struct
 struct Server {
@@ -57,65 +59,73 @@ void user_receive_task( ){
     &sender_tid, &server_r,  sizeof(server_r)
   );
 
-  //rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  //debug("rtn: %d", rtn);
-  //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+
+  rtn = Receive( &sender_tid, (char *) &server_r, msglen );
+  debug("rtn: %d", rtn);
+  debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
   //rtn = Receive( &sender_tid, (char *) &server_r, msglen );
   //debug("rtn: %d", rtn);
   //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
   rtn = Reply( 31, (char*)&server_reply, sizeof(server_reply)+1 );
+
   debug("Reply's rtn: %d", rtn );
   Exit( );
 }
 
 #undef A1
 //#undef A2
-#ifdef A1
-void a1_user_task( ){
-  unsigned int my_tid;
-  unsigned int parent_tid;
-  my_tid = MyTid( );
-  parent_tid = MyParentTid( );
-  bwprintf( COM2, "My TID: %d, Parent TID: %d\n\r", my_tid, parent_tid );
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(my_tid), TID_GEN(my_tid));
-  Pass( );
-  bwprintf( COM2, "My TID: %d, Parent TID: %d\n\r", my_tid, parent_tid );
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(my_tid), TID_GEN(my_tid));
-  Exit( );
-}
-#endif /* A1 */
+//#ifdef A1
+//void a1_user_task( ){
+//  unsigned int my_tid;
+//  unsigned int parent_tid;
+//  my_tid = MyTid( );
+//  parent_tid = MyParentTid( );
+//  bwprintf( COM2, "My TID: %d, Parent TID: %d\n\r", my_tid, parent_tid );
+//  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(my_tid), TID_GEN(my_tid));
+//  Pass( );
+//  bwprintf( COM2, "My TID: %d, Parent TID: %d\n\r", my_tid, parent_tid );
+//  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(my_tid), TID_GEN(my_tid));
+//  Exit( );
+//}
+//#endif /* A1 */
 #ifdef A2
 void a2_user_task( ) {
+  //TODO: change to 40-bit timer 
+  unsigned int * timer = (unsigned int*)TIMER3_BASE;
+  
+
+  //TODO: timer starts here
   int receiver_tid = Create( 10, &user_receive_task );
   int sender_tid1 = Create( 1, &user_send_task );
-  int sender_tid2 = Create( 1, &user_send_task );
+  //TODO: timer ends here, to make it more accurate, put it inside kernel
+  //int sender_tid2 = Create( 1, &user_send_task );
   debug( "Receiver tid: %d, sender1 tid: %d, sender2 tid: %d", receiver_tid, sender_tid1, sender_tid2 );
   Exit( );
 }
 #endif /* A2 */
 
 void first_user_task( ){
-#ifdef A1
-  int first_tid = MyTid( );
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(first_tid), TID_GEN(first_tid));
-
-  int created_tid;
-  created_tid = Create( 10, &a1_user_task );
-  bwprintf( COM2, "Created: %d, Priority: Lower than First\n\r", created_tid);
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
-
-  created_tid = Create( 10, &a1_user_task );
-  bwprintf( COM2, "Created: %d, Priority: Lower than First\n\r", created_tid);
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
-
-  created_tid = Create( 1, &a1_user_task );
-  bwprintf( COM2, "Created: %d, Priority: Higher than First\n\r", created_tid);
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
-
-  created_tid = Create( 1, &a1_user_task );
-  bwprintf( COM2, "Created: %d, Priority: Higher than First\n\r", created_tid);
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
-#endif /* A1 */
+///#ifdef A1
+///  int first_tid = MyTid( );
+///  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(first_tid), TID_GEN(first_tid));
+///
+///  int created_tid;
+///  created_tid = Create( 10, &a1_user_task );
+///  bwprintf( COM2, "Created: %d, Priority: Lower than First\n\r", created_tid);
+///  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
+///
+///  created_tid = Create( 10, &a1_user_task );
+///  bwprintf( COM2, "Created: %d, Priority: Lower than First\n\r", created_tid);
+///  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
+///
+///  created_tid = Create( 1, &a1_user_task );
+///  bwprintf( COM2, "Created: %d, Priority: Higher than First\n\r", created_tid);
+///  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
+///
+///  created_tid = Create( 1, &a1_user_task );
+///  bwprintf( COM2, "Created: %d, Priority: Higher than First\n\r", created_tid);
+///  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
+///#endif /* A1 */
 
 #ifdef A2
   a2_user_task( );
