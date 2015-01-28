@@ -1,8 +1,14 @@
 #include <tools.h>
 #include <user_task.h>
+<<<<<<< HEAD
 #include "syscall.h"
 #include "ts7200.h"
 
+=======
+#include <syscall.h>
+#include <nameserver.h>
+#include <rps.h>
+>>>>>>> 72f210eaa8eef1d26641cc53c86fc9c3e6afb9a1
 
 //TODO remove testing struct
 struct Server {
@@ -43,7 +49,8 @@ void user_send_task( ){
       sizeof(server_reply));
 
   debug( "Send's rtn: %d; replymsg: %c%c", rtn,  server_reply.a, server_reply.b );
-  
+  Exit( );
+
 }
 
 void user_receive_task( ){
@@ -53,12 +60,12 @@ void user_receive_task( ){
   server_reply.a = 'f';
   server_reply.b = 'u';
 
-  //int msglen = sizeof(server_r);
   debug(
-    "tid: %d, msg: %x, msglen: %d", 
+    "tid: %x, msg: %x, msglen: %d",
     &sender_tid, &server_r,  sizeof(server_r)
   );
 
+<<<<<<< HEAD
 
   rtn = Receive( &sender_tid, (char *) &server_r, msglen );
   debug("rtn: %d", rtn);
@@ -68,6 +75,18 @@ void user_receive_task( ){
   //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
   rtn = Reply( 31, (char*)&server_reply, sizeof(server_reply)+1 );
 
+=======
+  int msglen = sizeof(server_r);
+  rtn = Receive( &sender_tid, (char *) &server_r, msglen );
+  debug("rtn: %d", rtn);
+  debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+  rtn = Receive( &sender_tid, (char *) &server_r, msglen );
+  debug("rtn: %d", rtn);
+  debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+  char c = bwgetc( COM2 );
+  bwputc( COM2, c );
+  rtn = Reply( sender_tid, (char*)&server_reply, sizeof(server_reply) );
+>>>>>>> 72f210eaa8eef1d26641cc53c86fc9c3e6afb9a1
   debug("Reply's rtn: %d", rtn );
   Exit( );
 }
@@ -89,17 +108,44 @@ void user_receive_task( ){
 //}
 //#endif /* A1 */
 #ifdef A2
+<<<<<<< HEAD
 void a2_user_task( ) {
   //TODO: change to 40-bit timer 
   unsigned int * timer = (unsigned int*)TIMER3_BASE;
   
 
   //TODO: timer starts here
+=======
+void a2_test_task( ) {
+  bwsetfifo( COM2, OFF );
+>>>>>>> 72f210eaa8eef1d26641cc53c86fc9c3e6afb9a1
   int receiver_tid = Create( 10, &user_receive_task );
   int sender_tid1 = Create( 1, &user_send_task );
   //TODO: timer ends here, to make it more accurate, put it inside kernel
   //int sender_tid2 = Create( 1, &user_send_task );
   debug( "Receiver tid: %d, sender1 tid: %d, sender2 tid: %d", receiver_tid, sender_tid1, sender_tid2 );
+  Exit( );
+}
+
+void a2_user_task( ) {
+  bwsetfifo( COM2, OFF );
+  // Create nameserver
+  int nameserver_tid = Create( 1, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid );
+  int rps_server_tid = Create( 2, &rps_server );
+  debug( "RPS Server tid: %d", rps_server_tid );
+  int rps_client1_tid = Create( 10, &rps_client1 );
+  debug( "RPS client1 tid: %d", rps_client1_tid );
+  int rps_client2_tid = Create( 10, &rps_client1 );
+  debug( "RPS client2 tid: %d", rps_client2_tid );
+  int rps_client3_tid = Create( 10, &rps_client1 );
+  debug( "RPS client3 tid: %d", rps_client3_tid );
+  int rps_client4_tid = Create( 10, &rps_client1 );
+  debug( "RPS client4 tid: %d", rps_client4_tid );
+  int rps_client5_tid = Create( 10, &rps_client1 );
+  debug( "RPS client5 tid: %d", rps_client5_tid );
+  // Create RPS server
+  // Create RPS clients
   Exit( );
 }
 #endif /* A2 */
@@ -128,7 +174,9 @@ void first_user_task( ){
 ///#endif /* A1 */
 
 #ifdef A2
+  //a2_test_task( );
   a2_user_task( );
+
 #endif /* A2 */
 
   bwprintf( COM2, "First: exiting\n\r");

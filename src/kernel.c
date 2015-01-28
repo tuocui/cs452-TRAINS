@@ -64,8 +64,8 @@ void handle( global_context_t *gc, int request_type ) {
   case SYS_PASS:
     handle_pass( gc );
     break;
-  case SYS_KILL:
-    handle_kill( gc );
+  case SYS_EXIT:
+    handle_exit( gc );
     break;
   default:
     break;
@@ -81,10 +81,11 @@ int main(int argc, char *argv[]) {
   bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
   global_context_t gc;
   kernel_init( &gc );
-  bwputstr( COM2, "FINISHED INITIALIZATION. WOO!\r\n" );
 
   task_descriptor_t *first_td = tds_create_td(&gc, 5, (int)&first_user_task);
   add_to_priority( &gc, first_td );
+
+  bwputstr( COM2, "FINISHED INITIALIZATION. WOO!\r\n" );
 
   FOREVER {
     task_descriptor_t *scheduled_td = schedule( &gc );
