@@ -18,7 +18,10 @@ void kernel_init( global_context_t *gc) {
 
   
   init_kernelentry();
+#ifdef CACHE
+  bwprintf( COM2, "TURNING ON CACHE ...\n\r " );
   cache_init( );
+#endif
 
   tds_init(gc);
   init_schedulers(gc);

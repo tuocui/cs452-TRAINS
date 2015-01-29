@@ -26,26 +26,29 @@ int Send( int tid, char *msg, int msglen, char *reply, int replylen ) {
 
   //TODO: make macro to handle optimization 
   
+#ifndef OPT
+  //debug("optimiazaion is on");
   /* without optimization */
-  //asm volatile(
-  //  /* store arguments in ascending order regarding the stack */
-  //  "ldr r0, [fp, #-20]\n\t"    // tid
-  //  "stmfd sp!, {r0}\n\t"
-  //  "ldr r0, [fp, #4]\n\t"      // replylen
-  //  "stmfd sp!, {r0}\n\t"
-  //  "ldr r0, [fp, #-32]\n\t"    // reply
-  //  "stmfd sp!, {r0}\n\t"
-  //  "ldr r0, [fp, #-28]\n\t"    // msglen
-  //  "stmfd sp!, {r0}\n\t"
-  //  "ldr r0, [fp, #-24]\n\t"    // msg
-  //  "stmfd sp!, {r0}\n\t"
-  //  "swi %1\n\t"
-  //  "mov %0, r0\n\t"
-  //  "add sp, sp, #20\n\t"
-  //  : "+r"(retval_reg)
-  //  : "i"(SYS_SEND)
-  //);
+  asm volatile(
+    /* store arguments in ascending order regarding the stack */
+    "ldr r0, [fp, #-20]\n\t"    // tid
+    "stmfd sp!, {r0}\n\t"
+    "ldr r0, [fp, #4]\n\t"      // replylen
+    "stmfd sp!, {r0}\n\t"
+    "ldr r0, [fp, #-32]\n\t"    // reply
+    "stmfd sp!, {r0}\n\t"
+    "ldr r0, [fp, #-28]\n\t"    // msglen
+    "stmfd sp!, {r0}\n\t"
+    "ldr r0, [fp, #-24]\n\t"    // msg
+    "stmfd sp!, {r0}\n\t"
+    "swi %1\n\t"
+    "mov %0, r0\n\t"
+    "add sp, sp, #20\n\t"
+    : "+r"(retval_reg)
+    : "i"(SYS_SEND)
+  );
 
+#else
   /* with optimization */
   asm volatile(
     /* store arguments in ascending order regarding the stack */
@@ -59,6 +62,7 @@ int Send( int tid, char *msg, int msglen, char *reply, int replylen ) {
     : "+r"(retval_reg)
     : "i"(SYS_SEND)
   );
+#endif
 
   retval = retval_reg;
 

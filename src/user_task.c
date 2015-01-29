@@ -9,7 +9,7 @@
 
 //TODO remove testing struct
 struct Server {
-  char arr[64];
+  char arr[4];
 };
 
 void gen_user_task( ){
@@ -62,7 +62,7 @@ void user_send_task( ){
   struct Server server_reply;
   //int my_tid = MyTid( );
   //int receiver_tid = 34;
-  int receiver_tid = Create( 4, &user_receive_task );
+  int receiver_tid = Create( 1, &user_receive_task );
   int cycles;
   int rtn;
   cycles = CYCLES;
@@ -98,7 +98,6 @@ void a1_user_task( ){
 #endif /* A1 */
 #ifdef A2
 void a2_test_task( ) {
-  bwsetfifo( COM2, OFF );
   start_clock( TIMER_LOAD_VAL );
 
   int  sender_tid1;
@@ -139,6 +138,7 @@ void a2_user_task( ) {
 #endif /* A2 */
 
 void first_user_task( ){
+  bwsetfifo( COM2, OFF );
 #ifdef A1
   int first_tid = MyTid( );
   debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(first_tid), TID_GEN(first_tid));
@@ -162,8 +162,8 @@ void first_user_task( ){
 #endif /* A1 */
 
 #ifdef A2
-  a2_test_task( );
-  //a2_user_task( );
+  //a2_test_task( );
+  a2_user_task( );
 
 #endif /* A2 */
 
