@@ -3,11 +3,11 @@
 #include <syscall.h>
 #include <nameserver.h>
 #include <rps.h>
+#include "timer.h"
 
 //TODO remove testing struct
 struct Server {
-  char a;
-  char b;
+  char arr[16];
 };
 
 void gen_user_task( ){
@@ -24,54 +24,56 @@ void gen_user_task( ){
   debug("tid: %x, msg: %x, msglen: %d", &tid, &server_r, msglen);
   int rtn = Receive( &tid, (char *) &server_r, msglen );
   debug("rtn: %d", rtn);
-  debug("server_r.a: %c, server_r.b: %c", server_r.a, server_r.b);
+  //debug("server_r.a: %c, server_r.b: %c", server_r.a, server_r.b);
   Exit( );
 }
+
+void user_receive_task( ){
+  int sender_tid;
+  struct Server server_r;
+  struct Server server_reply;
+  int cycles = 1000;
+
+  //debug( "tid: %x, msg: %x, msglen: %d", &sender_tid, &server_r,  sizeof(server_r));
+
+  int msglen = sizeof(server_r);
+
+  while(--cycles >= 0){
+    Receive( &sender_tid, (char *) &server_r, msglen );
+    //debug("rtn: %d", rtn);
+    //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+    Reply( sender_tid, (char*)&server_reply, sizeof(server_reply) );
+    //debug("Reply's rtn: %d", rtn );
+  }
+  //rtn = Receive( &sender_tid, (char *) &server_r, msglen );
+  //debug("rtn: %d", rtn);
+  //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+  //char c = bwgetc( COM2 );
+  //bwputc( COM2, c );
+  Exit( );
+}
+
 
 void user_send_task( ){
   struct Server server_s;
   struct Server server_reply;
-  int my_tid = MyTid( );
-  int receiver_tid = 33;
-  server_s.a = (char) my_tid;
-  server_s.b = (char) my_tid;
-  debug(
-    "tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d", 
-    receiver_tid, &server_s,  sizeof(server_s), &server_reply,  sizeof(server_reply)
-  );
-  int rtn = Send( receiver_tid, (char *) &server_s,  sizeof(server_s), (char *) &server_reply,
-      sizeof(server_reply));
+  //int my_tid = MyTid( );
+  //int receiver_tid = 34;
+  int receiver_tid = Create( 4, &user_receive_task );
+  int cycles;
+  cycles = 1000;
+  //server_s.a = (char) my_tid;
+  //server_s.b = (char) my_tid;
+  //debug("tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d", receiver_tid, &server_s,  sizeof(server_s), &server_reply,  sizeof(server_reply) );
+  
 
-  debug( "Send's rtn: %d; replymsg: %c%c", rtn,  server_reply.a, server_reply.b );
+  while(--cycles >= 0){
+    Send( receiver_tid, (char *) &server_s,  sizeof(server_s), (char *) &server_reply, sizeof(server_reply));
+    //debug( "Send's rtn: %d", rtn );
+  }
+
   Exit( );
 
-}
-
-void user_receive_task( ){
-  int sender_tid, rtn;
-  struct Server server_r;
-  struct Server server_reply;
-  server_reply.a = 'f';
-  server_reply.b = 'u';
-
-  debug(
-    "tid: %x, msg: %x, msglen: %d",
-    &sender_tid, &server_r,  sizeof(server_r)
-  );
-
-
-  int msglen = sizeof(server_r);
-  rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  debug("rtn: %d", rtn);
-  debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
-  rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  debug("rtn: %d", rtn);
-  debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
-  char c = bwgetc( COM2 );
-  bwputc( COM2, c );
-  rtn = Reply( sender_tid, (char*)&server_reply, sizeof(server_reply) );
-  debug("Reply's rtn: %d", rtn );
-  Exit( );
 }
 
 #undef A1
@@ -93,11 +95,19 @@ void user_receive_task( ){
 #ifdef A2
 void a2_test_task( ) {
   bwsetfifo( COM2, OFF );
-  int receiver_tid = Create( 10, &user_receive_task );
-  int sender_tid1 = Create( 1, &user_send_task );
+  start_clock( TIMER_LOAD_VAL );
+
+  int  sender_tid1;
+  unsigned int start_tick, end_tick; 
+  
+  start_tick = (unsigned int)get_timer_val( );
+  sender_tid1 = Create( 2, &user_send_task );
+  end_tick = (unsigned int)get_timer_val( );
+
+  bwprintf( COM2, "average duration in ticks:: %d\n\r", (start_tick - end_tick) );
   //TODO: timer ends here, to make it more accurate, put it inside kernel
   //int sender_tid2 = Create( 1, &user_send_task );
-  debug( "Receiver tid: %d, sender1 tid: %d, sender2 tid: %d", receiver_tid, sender_tid1, sender_tid2 );
+  //debug( "Receiver tid: %d, sender1 tid: %d, sender2 tid: %d", receiver_tid, sender_tid1, sender_tid2 );
   Exit( );
 }
 
@@ -148,8 +158,8 @@ void first_user_task( ){
 ///#endif /* A1 */
 
 #ifdef A2
-  //a2_test_task( );
-  a2_user_task( );
+  a2_test_task( );
+  //a2_user_task( );
 
 #endif /* A2 */
 
