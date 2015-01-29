@@ -29,5 +29,9 @@ typedef unsigned int size_t;
 /* timer */
 #define TIMER_LOAD_VAL 100000000 
 
+/* hardware */
+#define CACHE_ON  1
+#define CACHE_OFF 0 
+
 #endif
 

@@ -7,6 +7,7 @@ XCC=gcc
 AS=as
 LD=ld
 CFLAGS=-c ${DEBUG} -fPIC -Wall -Werror -I. -I../include/ -mcpu=arm920t -msoft-float 
+CFLAGS_O=-c ${DEBUG} -O2 -fPIC -Wall -Werror -I. -I../include/ -mcpu=arm920t -msoft-float 
 # -g: include hooks for gdb
 # -c: only compile
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -26,31 +27,31 @@ bwio.s: bwio.c
 	$(XCC) -S $(CFLAGS) bwio.c
 
 kernel.s: kernel.c 
-	$(XCC) -S $(CFLAGS) kernel.c
+	$(XCC) -S $(CFLAGS_O) kernel.c
 
 task_descriptor.s: task_descriptor.c 
-	$(XCC) -S $(CFLAGS) task_descriptor.c
+	$(XCC) -S $(CFLAGS_O) task_descriptor.c
 
 scheduler.s: scheduler.c 
-	$(XCC) -S $(CFLAGS) scheduler.c
+	$(XCC) -S $(CFLAGS_O) scheduler.c
 
 syscall.s: syscall.c 
-	$(XCC) -S $(CFLAGS) syscall.c
+	$(XCC) -S $(CFLAGS_O) syscall.c
 
 kernel_syscall.s: kernel_syscall.c 
-	$(XCC) -S $(CFLAGS) kernel_syscall.c
+	$(XCC) -S $(CFLAGS_O) kernel_syscall.c
 
 user_task.s:user_task.c 
-	$(XCC) -S $(CFLAGS) user_task.c
+	$(XCC) -S $(CFLAGS_O) user_task.c
 
 nameserver.s: nameserver.c 
-	$(XCC) -S $(CFLAGS) nameserver.c
+	$(XCC) -S $(CFLAGS_O) nameserver.c
 
 rps.s: rps.c 
-	$(XCC) -S $(CFLAGS) rps.c
+	$(XCC) -S $(CFLAGS_O) rps.c
 
 timer.s: timer.c 
-	$(XCC) -S $(CFLAGS) timer.c
+	$(XCC) -S $(CFLAGS_O) timer.c
 
 
 bwio.o: bwio.s

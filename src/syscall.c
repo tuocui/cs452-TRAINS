@@ -23,19 +23,36 @@ int Send( int tid, char *msg, int msglen, char *reply, int replylen ) {
    */
   register int retval_reg asm("r0");
   int retval;
+
+  //TODO: make macro to handle optimization 
   
+  /* without optimization */
+  //asm volatile(
+  //  /* store arguments in ascending order regarding the stack */
+  //  "ldr r0, [fp, #-20]\n\t"    // tid
+  //  "stmfd sp!, {r0}\n\t"
+  //  "ldr r0, [fp, #4]\n\t"      // replylen
+  //  "stmfd sp!, {r0}\n\t"
+  //  "ldr r0, [fp, #-32]\n\t"    // reply
+  //  "stmfd sp!, {r0}\n\t"
+  //  "ldr r0, [fp, #-28]\n\t"    // msglen
+  //  "stmfd sp!, {r0}\n\t"
+  //  "ldr r0, [fp, #-24]\n\t"    // msg
+  //  "stmfd sp!, {r0}\n\t"
+  //  "swi %1\n\t"
+  //  "mov %0, r0\n\t"
+  //  "add sp, sp, #20\n\t"
+  //  : "+r"(retval_reg)
+  //  : "i"(SYS_SEND)
+  //);
+
+  /* with optimization */
   asm volatile(
     /* store arguments in ascending order regarding the stack */
-    "ldr r0, [fp, #4]\n\t"      // replylen
-    "stmfd sp!, {r0}\n\t"
-    "ldr r0, [fp, #-32]\n\t"    // reply
-    "stmfd sp!, {r0}\n\t"
-    "ldr r0, [fp, #-28]\n\t"    // msglen
-    "stmfd sp!, {r0}\n\t"
-    "ldr r0, [fp, #-24]\n\t"    // msg
-    "stmfd sp!, {r0}\n\t"
-    "ldr r0, [fp, #-20]\n\t"    // tid
-    "stmfd sp!, {r0}\n\t"
+    "stmfd sp!, {r0}\n\t"            // tid 
+    "ldr r0, [sp, #4]\n\t"           
+    "stmfd sp!, {r0}\n\t"            //replylen
+    "stmfd sp!, {r1, r2, r3}\n\t"   // reply, msglen, msg
     "swi %1\n\t"
     "mov %0, r0\n\t"
     "add sp, sp, #20\n\t"

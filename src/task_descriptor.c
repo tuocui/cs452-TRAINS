@@ -2,9 +2,9 @@
 #include <kernel.h>
 
 void tds_init(global_context_t *gc) {
+  int i = 0;
   /* loading bar */ 
   // TODO: should combine it with screen layout in the future
-  int i = 0;
   int bar_size = 40;
   int block_size = USER_SPACE_SIZE / bar_size;
   int block_step = 0;
@@ -19,7 +19,8 @@ void tds_init(global_context_t *gc) {
   task_descriptor_t *cur_td;  
 
     for( ; i < USER_SPACE_SIZE ; ++i ) {
-    (gc->user_space)[i] = 0;
+      (gc->user_space)[i] = 0;
+      //debug("init i: %d", i);
 
     /* loading bar */
     if(block_step == block_size) {
@@ -60,7 +61,7 @@ void tds_init(global_context_t *gc) {
 
 task_descriptor_t * tds_create_td(global_context_t *gc, unsigned int priority, int code_addr) { 
   if(gc->td_first_free == NULL) {
-    assert(gc->td_free_num == 0);
+    //assert(gc->td_free_num == 0);
     return NULL;
   }
 
@@ -82,7 +83,7 @@ task_descriptor_t * tds_create_td(global_context_t *gc, unsigned int priority, i
 
   /* insanity check */
   --(gc->td_free_num);
-  assert(gc->td_free_num >= 0);
+  //assert(gc->td_free_num >= 0);
 
   return td_out;
 }

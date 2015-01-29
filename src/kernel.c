@@ -1,12 +1,24 @@
 #include <tools.h>
 #include <kernel.h>
 
+
+// TODO: integrate it with makefile
+void cache_init( ) {
+  asm volatile( 
+    "MRC p15, 0, r0, c1, c0, 0\n\t" // read cp15 to r0
+    "ORR r0, r0, #0x5\n\t"         //, MMU, D-cache
+    "ORR r0, r0, #0x1000\n\t"         //, MMU, D-cache and I-cache
+    "MCR p15, 0, r0, c1, c0, 0\n\t" // store the new value
+  ); 
+}
+
 void kernel_init( global_context_t *gc) {
   gc->cur_task = NULL;
   gc->priority_bitmap = 0;
 
-  init_regs();
+  
   init_kernelentry();
+  cache_init( );
 
   tds_init(gc);
   init_schedulers(gc);
@@ -98,7 +110,7 @@ int main(int argc, char *argv[]) {
     handle( &gc, request_type );
   }
 
-  bwprintf(COM2, "\n\rGoodbye\n\r");
+  bwprintf(COM2, "\n\rExit Main\n\r");
 
   return 0;
 }
