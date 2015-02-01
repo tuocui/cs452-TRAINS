@@ -24,22 +24,22 @@ kernel_exit:
   stmfd sp!, {r3-r12, r14}
   @ Set spsr to saved value
   msr spsr, r2
+  @ load the user pc into r14 (svc_lr)
+  ldmfd r1!, {r14}
   @ 2. switch to system mode
   msr cpsr_c, #0xdf
   @ 3. get retval, sp from TD
   mov sp, r1
-  @ load the pc into r1
-  ldmfd sp!, {r1}
   @ r0 is already retval
   @ 4. pop the registers of the active task 
-  ldmfd sp!, {r4-r12, r14}
+  ldmfd sp!, {r1-r12, r14}
   @ 6. return to svc state
   msr cpsr_c, #0xd3
   @ 8. install the pc of the active task and change modes
-  movs pc, r1
+  movs pc, r14
   @ldmfd sp, {r3-r12, pc}
 
-
+@ TODO: Move r0 to r3, r3 is now user's r0, use that for hwi.
 @.align 2
 @.global kernel_entry
 @.type kernel_entry, %function
@@ -47,7 +47,7 @@ kernelentry:
   @ 3. change to system state, sp lr are in user
   msr cpsr_c, #0xdf
   @ 5. store user's registers values onto user stack
-  stmfd sp!, {r4-r12, r14}
+  stmfd sp!, {r1-r12, r14}
   @ 6. save active user task's sp in r1
   mov r1, sp
   @ 7. back to service state

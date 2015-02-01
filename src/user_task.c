@@ -62,6 +62,7 @@ void user_send_task( ){
   struct Server server_reply;
   //int my_tid = MyTid( );
   //int receiver_tid = 34;
+  debug( "In Send" );
   int receiver_tid = Create( 1, &user_receive_task );
   int cycles;
   int rtn;
@@ -80,8 +81,8 @@ void user_send_task( ){
 
 }
 
-#undef A1
-//#undef A2
+//#undef A1
+#undef A2
 #ifdef A1
 void a1_user_task( ){
   unsigned int my_tid;
@@ -162,8 +163,9 @@ void first_user_task( ){
 #endif /* A1 */
 
 #ifdef A2
-  //a2_test_task( );
-  a2_user_task( );
+  debug( "First User Task" );
+  a2_test_task( );
+  //a2_user_task( );
 
 #endif /* A2 */
 
