@@ -8,21 +8,38 @@ USER="$(whoami)"
 DEST="/u/cs452/tftp/ARM/${USER}/"
 PROJECT_SOURCE_DIR=./src
 DEBUG=""
+OPT=""
+OPT_LEVEL=""
+CACHE=""
 
 cd ${PROJECT_SOURCE_DIR}
 
 if [ "$1" == "clean" ]; then
   make clean
 else
+  
+  for var in "$@"
+    do
 
-  if [ "$1" == "-d" ]; then
-    DEBUG="DEBUG=-DDEBUG"
-  fi
+    if [ "$var" == "-d" ]; then
+      DEBUG="DEBUG=-DDEBUG"
+    fi
+
+    if [ "$var" == "-c" ]; then
+      CACHE="CACHE=-DCACHE"
+    fi
+
+    if [ "$var" == "-o" ]; then
+      OPT="OPT=-DOPT"
+      OPT_LEVEL="OPT_LEVEL=-O2"
+    fi
+
+  done
 
   make clean
   cp context_switch.s.in context_switch.s
   
-  make ${DEBUG}
+  make ${DEBUG} ${CACHE} ${OPT} ${OPT_LEVEL}
   if [ $? -ne 0 ]; then
     echo -e "${red}FAILED to build!!${wht}"
     exit -1;

@@ -12,6 +12,8 @@ void kmemcpy( char * dst, const char * src, size_t len ) {
 }
 
 int get_message_tid( unsigned int *sp, int offset ) {
+  debug("sp, *sp: %x, %x", sp, *sp);
+  debug("offset: %d", offset);
   register unsigned int  int_reg     asm("r1");
   register int           offset_reg  asm("r2") = offset;
   register unsigned int  *cur_sp_reg asm("r3") = sp;
@@ -78,14 +80,14 @@ void handle_send( global_context_t *gc ) {
   int msglen_s, replylen_s;
   char *msg_s, *reply_s;
 
-  tid_s = get_message_tid( gc->cur_task->sp, 56 );
+  tid_s = get_message_tid( gc->cur_task->sp, 72 );
   // msglen_s set
-  msg_s = get_message( gc->cur_task->sp, 60, &msglen_s );
+  msg_s = get_message( gc->cur_task->sp, 56, &msglen_s );
   // replylen_s set
-  reply_s = get_message( gc->cur_task->sp, 68, &replylen_s );
+  reply_s = get_message( gc->cur_task->sp, 64, &replylen_s );
 
-  //debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
-  //  tid_s, msg_s, msglen_s, reply_s, replylen_s);
+  debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
+    tid_s, msg_s, msglen_s, reply_s, replylen_s);
 
   int tid_check = check_tid( gc, tid_s );
   if ( tid_check < 0 ) {
@@ -173,12 +175,12 @@ void handle_receive( global_context_t *gc ) {
     char *msg_s, *reply_s;
 
     /* get the first two arguments: tid and *msg */
-    tid_s = get_message_tid( s_td->sp, 56 );
-    msg_s = get_message( s_td->sp, 60, &msglen_s );
-    reply_s = get_message( s_td->sp, 68, &replylen_s );
+    tid_s = get_message_tid( s_td->sp, 72 );
+    msg_s = get_message( s_td->sp, 56, &msglen_s );
+    reply_s = get_message( s_td->sp, 64, &replylen_s );
 
-    //debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
-    //   tid_s, msg_s, msglen_s, reply_s, replylen_s);
+    debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
+       tid_s, msg_s, msglen_s, reply_s, replylen_s);
 
     unsigned int *ptid_r;
     int msglen_r;
@@ -230,7 +232,7 @@ void handle_reply( global_context_t *gc ) {
   reply_r = get_message( gc->cur_task->sp, 60, &replylen_r );
 
   /* get the sender's args: *reply_s, replylen_s */
-  reply_s = get_message( target_td->sp, 68, &replylen_s );
+  reply_s = get_message( target_td->sp, 64, &replylen_s );
 
   //debug("reply_r: %x, replylen_r: %d\n\r reply_s: %x, replylen_s: %d",
   //   reply_r, replylen_r, reply_s, replylen_s);
