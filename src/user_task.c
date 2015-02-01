@@ -92,7 +92,9 @@ void a1_user_task( ){
 #ifdef A2
 void a2_test_task( ) {
   bwsetfifo( COM2, OFF );
+  debug( "Test task" );
   int receiver_tid = Create( 10, &user_receive_task );
+  debug( "Created receiver" );
   int sender_tid1 = Create( 1, &user_send_task );
   int sender_tid2 = Create( 1, &user_send_task );
   debug( "Receiver tid: %d, sender1 tid: %d, sender2 tid: %d", receiver_tid, sender_tid1, sender_tid2 );
@@ -146,8 +148,9 @@ void first_user_task( ){
 #endif /* A1 */
 
 #ifdef A2
-  //a2_test_task( );
-  a2_user_task( );
+  debug( "First User Task" );
+  a2_test_task( );
+  //a2_user_task( );
 
 #endif /* A2 */
 

@@ -19,7 +19,7 @@ int get_message_tid( unsigned int *sp, int offset ) {
   /* get the first argument: tid */
   asm volatile( 
     "msr cpsr_c, #0xdf\n\t"       // switch to system mode
-    "add r3, %1, %2\n\t"          // 10 registers + pc saved
+    "add r3, %1, %2\n\t"
     "ldmfd r3!, {%0}\n\t"         // load tid arg
     "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
     : "+r"(int_reg), "+r"(cur_sp_reg)
@@ -38,7 +38,7 @@ char *get_message( unsigned int *sp, int offset, int *msglen ) {
   char *msg;
   asm volatile( 
     "msr cpsr_c, #0xdf\n\t"       // switch to system mode
-    "add r3, %2, %3\n\t"          // 10 registers + pc saved
+    "add r3, %2, %3\n\t"
     "ldmfd r3!, {%0, %1}\n\t"     // store two args
     "msr cpsr_c, #0xd3\n\t"       // switch to svc mode
     : "+r"(char_reg), "+r"(int_reg), "+r"(cur_sp_reg)
@@ -78,11 +78,11 @@ void handle_send( global_context_t *gc ) {
   int msglen_s, replylen_s;
   char *msg_s, *reply_s;
 
-  tid_s = get_message_tid( gc->cur_task->sp, 44 );
+  tid_s = get_message_tid( gc->cur_task->sp, 56 );
   // msglen_s set
-  msg_s = get_message( gc->cur_task->sp, 48, &msglen_s );
+  msg_s = get_message( gc->cur_task->sp, 60, &msglen_s );
   // replylen_s set
-  reply_s = get_message( gc->cur_task->sp, 56, &replylen_s );
+  reply_s = get_message( gc->cur_task->sp, 68, &replylen_s );
 
   //debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
   //  tid_s, msg_s, msglen_s, reply_s, replylen_s);
@@ -110,8 +110,8 @@ void handle_send( global_context_t *gc ) {
     char *msg_r;
 
     /* get receiver's arguments: *tid, *msg and msglen */
-    ptid_r = (unsigned int *) get_message_tid( td_r->sp, 44 );
-    msg_r = get_message( td_r->sp, 48, &msglen_r );
+    ptid_r = (unsigned int *) get_message_tid( td_r->sp, 56 );
+    msg_r = get_message( td_r->sp, 60, &msglen_r );
     //debug("RECEIVER: tid_r: %x, msg_r: %x, msglen_r: %d", ptid_r, msg_r, msglen_r);
 
     *ptid_r = gc->cur_task->id;
@@ -173,9 +173,9 @@ void handle_receive( global_context_t *gc ) {
     char *msg_s, *reply_s;
 
     /* get the first two arguments: tid and *msg */
-    tid_s = get_message_tid( s_td->sp, 44 );
-    msg_s = get_message( s_td->sp, 48, &msglen_s );
-    reply_s = get_message( s_td->sp, 56, &replylen_s );
+    tid_s = get_message_tid( s_td->sp, 56 );
+    msg_s = get_message( s_td->sp, 60, &msglen_s );
+    reply_s = get_message( s_td->sp, 68, &replylen_s );
 
     //debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
     //   tid_s, msg_s, msglen_s, reply_s, replylen_s);
@@ -185,8 +185,8 @@ void handle_receive( global_context_t *gc ) {
     char *msg_r;
 
     /* get receiver's arguments: *tid, *msg and msglen */
-    ptid_r = (unsigned int *) get_message_tid( r_td->sp, 44 );
-    msg_r = get_message( r_td->sp, 48, &msglen_r );
+    ptid_r = (unsigned int *) get_message_tid( r_td->sp, 56 );
+    msg_r = get_message( r_td->sp, 60, &msglen_r );
     //debug("tid: %x, msg: %x, msglen: %d", ptid_r, msg_r, msglen_r);
 
     *ptid_r = s_td->id;
@@ -205,7 +205,7 @@ void handle_reply( global_context_t *gc ) {
   char *reply_r, *reply_s;
 
   /* get replyer's arg: target tid */
-  target_tid = get_message_tid( gc->cur_task->sp, 44 );
+  target_tid = get_message_tid( gc->cur_task->sp, 56 );
   
   int tid_check = check_tid( gc, target_tid );
   if ( tid_check < 0 ) {
@@ -227,10 +227,10 @@ void handle_reply( global_context_t *gc ) {
   }
 
   /* get the next two replyer's arguments: *reply, and replylen*/
-  reply_r = get_message( gc->cur_task->sp, 48, &replylen_r );
+  reply_r = get_message( gc->cur_task->sp, 60, &replylen_r );
 
   /* get the sender's args: *reply_s, replylen_s */
-  reply_s = get_message( target_td->sp, 56, &replylen_s );
+  reply_s = get_message( target_td->sp, 68, &replylen_s );
 
   //debug("reply_r: %x, replylen_r: %d\n\r reply_s: %x, replylen_s: %d",
   //   reply_r, replylen_r, reply_s, replylen_s);
@@ -259,7 +259,7 @@ void handle_create( global_context_t *gc ) {
 
   asm volatile(
     "msr cpsr_c, #0xdf\n\t"
-    "add r3, %2, #44\n\t" // 10 registers + pc saved
+    "add r3, %2, #56\n\t" // 14 registers + pc + retval saved
     "ldmfd r3, {%0, %1}\n\t"
     "msr cpsr_c, #0xd3\n\t"
     : "+r"(priority_reg), "+r"(code_reg), "+r"(cur_sp_reg)

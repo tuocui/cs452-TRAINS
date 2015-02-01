@@ -76,9 +76,9 @@ task_descriptor_t * tds_create_td(global_context_t *gc, unsigned int priority, i
   td_out->next_free = NULL;
 
   // Set initial pc;
-  *(td_out->sp - 10) = code_addr + REDBOOT_OFFSET;
+  *(td_out->sp - 13) = code_addr + REDBOOT_OFFSET;
   *(td_out->sp - 2) = (unsigned int)(td_out->sp);
-  td_out->sp -= 10;
+  td_out->sp -= 13;
 
   /* insanity check */
   --(gc->td_free_num);
