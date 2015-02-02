@@ -51,19 +51,19 @@ kernel_exit:
 @            values so we push them on and pop them off of the kernel stack.
 @            Later on kernelentry will naively pick up these two values.
 hwikernelentry:
-  @testing
-  @mrs r1, cpsr
+  @testing user's r0
+  @mov r1, r0
   @mov r0, #1
   @bl bwputr
-  @ 1. witch to svc mode
+  @ 1. switch to svc mode
   msr cpsr_c, #0xd3
-  @ 3. store magic number in lr_svc, we use lr_svc as a temp var
-  mov lr, #0xab
-  @ 4. store lr to hwi_request_flag location
-  @ QUESTION: this works, but why are there 13 things stored on kstack
-  str lr, [sp, #52]
-  @ 5. store user r0, r1 to svc stack for now, so we can use r0, r1 to transfer lr's 
-  stmfd sp!, {r0, r1}
+  @ 2. store user r0-r2 to svc stack for now, so we can use r0-r2 to transfer data
+  stmfd sp!, {r0, r1, r2}
+  @ 3. store magic number in r2
+  mov r2, #0xab
+  @ 4. store magic in hwi_request_flag location
+  @ QUESTION: this works, but why are there 13 things stored on kstack, bfr r0-r3?
+  str r2, [sp, #64]
   @ 6. switch to irq mode, grab its lr_irq, which stores user's next pc, and spsr
   msr cpsr_c, #0x92 
   mov r0, lr 
@@ -73,8 +73,8 @@ hwikernelentry:
   mov lr, r0
   msr spsr, r1
   @ 8. restore original user's r0, r1
-  ldmfd sp!, {r0, r1}
-  @mov r1, sp
+  ldmfd sp!, {r0, r1, r2}
+  @mov r1, r0
   @mov r0, #1
   @bl bwputr
 

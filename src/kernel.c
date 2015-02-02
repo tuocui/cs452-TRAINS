@@ -11,24 +11,27 @@ void cache_init( ) {
   ); 
 }
 
-void hwi_init( ) {
+void hwi_cleanup( ) {
   /* clear all interrupt bits */
   *((unsigned int *)(VIC1_BASE + VICX_INT_ENCLEAR_OFFSET)) = CLEAR_ALL;
   *((unsigned int *)(VIC2_BASE + VICX_INT_ENCLEAR_OFFSET)) = CLEAR_ALL;
-  
+}
+
+void hwi_init( ) {
   /* turn on timer3 interrupt, select as IRQ*/
   *((unsigned int *)(VIC2_BASE + VICX_INT_SELECT_OFFSET)) &= TIMER3_IRQ_MASK;
   *((unsigned int *)(VIC2_BASE + VICX_INT_ENABLE_OFFSET)) |= TIMER3_INT_ON;
-
 }
+
 
 void kernel_init( global_context_t *gc) {
   gc->cur_task = NULL;
   gc->priority_bitmap = 0;
 
+  hwi_cleanup( );
+  hwi_init( );
   
   init_kernelentry();
-  hwi_init( );
 #ifdef CACHE
   bwprintf( COM2, "TURNING ON CACHE ...\n\r " );
   cache_init( );
@@ -45,6 +48,7 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   register int          user_r0_reg       asm("r3"); // absolute
   int                   request_type;
   int                   hwi_request_flag = -1;
+  debug("hwi_request_flag addr: %x", &hwi_request_flag );
 
   gc->cur_task = td;
 
@@ -65,11 +69,11 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   td->retval = user_r0_reg;
 
   assert( hwi_request_flag == HWI_MAGIC || hwi_request_flag == -1 );
+  debug( "hwi flag: %x", hwi_request_flag );
   /* if hwi request type is set, we update request_type */
   if( hwi_request_flag == HWI_MAGIC) {
-    debug( "HWI triggered!" );
-    //TODO: get hardware interrupt types
-    request_type = 111;
+    debug( "HWI triggered!, user's r0: %x", td->retval );
+    request_type = HWI;
   }
 
   /* reset hwi request info */
@@ -82,6 +86,9 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
 
 void handle( global_context_t *gc, int request_type ) {
   switch( request_type ) {
+  //case HWI:
+  //  handle_hwi( gc );
+  //  break;
   case SYS_CREATE:
     handle_create( gc );
     break;
@@ -137,6 +144,8 @@ int main(int argc, char *argv[]) {
     handle( &gc, request_type );
   }
 
+  /* remove this to screw up the next team, lol */
+  hwi_cleanup( );
   bwprintf(COM2, "\n\rExit Main\n\r");
 
   return 0;

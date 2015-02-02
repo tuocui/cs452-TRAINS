@@ -22,6 +22,9 @@ typedef unsigned int size_t;
 #define SYS_REPLY 7
 #define SYS_EXIT 99
 
+/* should not be in this scope, but for the sake of seeing all interrupt values */
+#define HWI 100
+
 /* server jobs */
 #define NUM_JOBS 1
 #define JOB_RPS 0

@@ -15,6 +15,7 @@
 #define HWI_MAGIC 0xab
 #define USER_SPACE_SIZE (TD_MAX * TD_SIZE)
 #define PRIORITY_MAX 16
+#define HWI_INTERRUPT 
 
 // "Global" variables used by the kernel
 typedef struct global_context_t {

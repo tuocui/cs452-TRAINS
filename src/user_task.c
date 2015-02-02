@@ -173,7 +173,7 @@ void first_user_task( ){
 
 #ifdef A3
   debug( "hwi test" );
-  start_clock( 1 );
+  start_clock( 2 );
 
 #endif /* A3 */
 
