@@ -12,6 +12,7 @@
 
 #define TD_SIZE 0x3000
 #define TD_MAGIC 0x3b1a4ef5
+#define HWI_MAGIC 0xab
 #define USER_SPACE_SIZE (TD_MAX * TD_SIZE)
 #define PRIORITY_MAX 16
 

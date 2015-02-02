@@ -28,7 +28,7 @@ void kernel_init( global_context_t *gc) {
 
   
   init_kernelentry();
-  //hwi_init( );
+  hwi_init( );
 #ifdef CACHE
   bwprintf( COM2, "TURNING ON CACHE ...\n\r " );
   cache_init( );
@@ -39,12 +39,12 @@ void kernel_init( global_context_t *gc) {
 }
 
 int activate( global_context_t *gc, task_descriptor_t *td ) {
-#ifndef CLANG /* to avoid semantics checking by CLANG compiler, does not do anything to our project */
   register int          request_type_reg  asm("r0"); // absolute 
   register unsigned int *new_sp_reg       asm("r1"); // absolute 
   register unsigned int new_spsr_reg      asm("r2"); // absolute 
-  register int          user_r0_reg       asm("r3");
+  register int          user_r0_reg       asm("r3"); // absolute
   int                   request_type;
+  int                   hwi_request_flag = -1;
 
   gc->cur_task = td;
 
@@ -64,10 +64,20 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   td->spsr = new_spsr_reg;
   td->retval = user_r0_reg;
 
+  assert( hwi_request_flag == HWI_MAGIC || hwi_request_flag == -1 );
+  /* if hwi request type is set, we update request_type */
+  if( hwi_request_flag == HWI_MAGIC) {
+    debug( "HWI triggered!" );
+    //TODO: get hardware interrupt types
+    request_type = 111;
+  }
+
+  /* reset hwi request info */
+  hwi_request_flag = -1;
+
   /* check td magic, failures indicate user stack is too small */
   assert(*(td->orig_sp - (TD_SIZE - 1)) == gc->td_magic);
   return request_type;
-#endif /* CLANG */
 }
 
 void handle( global_context_t *gc, int request_type ) {

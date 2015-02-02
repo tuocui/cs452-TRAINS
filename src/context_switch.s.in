@@ -45,11 +45,36 @@ kernel_exit:
   movs pc, r14
 
 
+@ logistics: set hwi_flag on so in C we can detect hwi interrupt. Also need to
+@            transfer lr_irq and spsr_irq to lr_svc and spsr_svc, we do this by
+@            using scratch r0 and r1. However, we must persist their original 
+@            values so we push them on and pop them off of the kernel stack.
+@            Later on kernelentry will naively pick up these two values.
 hwikernelentry:
-@ //TODO: Move r0 to r3, r3 is now user's r0, use that for hwi.
-
   @testing
-  @mov r1, #9
+  @mrs r1, cpsr
+  @mov r0, #1
+  @bl bwputr
+  @ 1. witch to svc mode
+  msr cpsr_c, #0xd3
+  @ 3. store magic number in lr_svc, we use lr_svc as a temp var
+  mov lr, #0xab
+  @ 4. store lr to hwi_request_flag location
+  @ QUESTION: this works, but why are there 13 things stored on kstack
+  str lr, [sp, #52]
+  @ 5. store user r0, r1 to svc stack for now, so we can use r0, r1 to transfer lr's 
+  stmfd sp!, {r0, r1}
+  @ 6. switch to irq mode, grab its lr_irq, which stores user's next pc, and spsr
+  msr cpsr_c, #0x92 
+  mov r0, lr 
+  mrs r1, spsr
+  @ 7. switch to svc mode, move r0, r1's values to svc lr and spsr
+  msr cpsr_c, #0xd3
+  mov lr, r0
+  msr spsr, r1
+  @ 8. restore original user's r0, r1
+  ldmfd sp!, {r0, r1}
+  @mov r1, sp
   @mov r0, #1
   @bl bwputr
 
@@ -58,6 +83,8 @@ kernelentry:
   msr cpsr_c, #0xdf
   @ 2. store user's registers values onto user stack
   stmfd sp!, {r1-r12, r14}
+  @ 3. move user's r0 value to r3
+  mov r3, r0 
   @ 4. save active user task's sp in r1
   mov r1, sp
   @ 7. back to service state
@@ -67,9 +94,9 @@ kernelentry:
   ldr r0, [lr,#-4]
   @ Mask off top 8 bits of instruction to give SWI number.
   bic r0, r0,#0xFF000000
-  @ save user's next pc to stack which is stored in lr_svc, set by swi
+  @ stack user's next pc, it's stored in lr_svc by swi or hwikernelentry 
   stmfd r1!, {lr}
-  @ 8. getting spsr, user's values were set by swi
+  @ 8. get spsr, which is user's cpsr set by swi or hwikernelentry 
   mrs r2, spsr
   @ 9. pop kernel registers from stack, jump to kernel's lr instruction
   ldmfd sp!, {r4-r12, r14}
@@ -78,5 +105,5 @@ kernelentry:
   @ r0: request_type,
   @ r1: user sp, 
   @ r2: user spsr, 
-  @ r3: user's r0, used as default retval for hwi,
+  @ r3: user's r0, used as default retval for hwi, ovewritten by swi
   @ user's arguments on user stack

@@ -7,8 +7,9 @@
 
 #define CYCLES 1000
 
-#undef A1
-//#undef A2
+//#define A1 1
+//#define A2 1 
+#define A3 1
 
 //TODO remove testing struct
 struct Server {
@@ -140,7 +141,7 @@ void a2_user_task( ) {
 #endif /* A2 */
 
 void first_user_task( ){
-  bwsetfifo( COM2, OFF );
+  //bwsetfifo( COM2, OFF );
 #ifdef A1
   int first_tid = MyTid( );
   debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(first_tid), TID_GEN(first_tid));
@@ -166,9 +167,15 @@ void first_user_task( ){
 #ifdef A2
   debug( "First User Task" );
   //a2_test_task( );
-  a2_user_task( );
+  //a2_user_task( );
 
 #endif /* A2 */
+
+#ifdef A3
+  debug( "hwi test" );
+  start_clock( 1 );
+
+#endif /* A3 */
 
   bwprintf( COM2, "First: exiting\n\r");
   Exit( );
