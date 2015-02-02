@@ -12,6 +12,7 @@ void kmemcpy( char * dst, const char * src, size_t len ) {
 }
 
 int get_message_tid( unsigned int *sp, int offset ) {
+#ifndef CLANG
   debug("sp, *sp: %x, %x", sp, *sp);
   debug("offset: %d", offset);
   register unsigned int  int_reg     asm("r1");
@@ -29,9 +30,11 @@ int get_message_tid( unsigned int *sp, int offset ) {
   );
   rtn = int_reg;
   return rtn;
+#endif
 }
 
 char *get_message( unsigned int *sp, int offset, int *msglen ) {
+#ifndef CLANG
   /* get the next two arguments: *msg, and msglen */
   register char          *char_reg   asm("r0");
   register unsigned int  int_reg     asm("r1");
@@ -49,6 +52,7 @@ char *get_message( unsigned int *sp, int offset, int *msglen ) {
   *msglen = int_reg;
   msg = char_reg;
   return msg;
+#endif
 }
 
 // TODO: Errno's
@@ -253,6 +257,7 @@ void handle_reply( global_context_t *gc ) {
 }
 
 void handle_create( global_context_t *gc ) {
+#ifndef CLANG
   register unsigned int priority_reg asm("r0");
   unsigned int priority;
   register void (*code_reg)() asm("r1");
@@ -287,6 +292,7 @@ void handle_create( global_context_t *gc ) {
   }
   /* add current task back to queue regardless */
   add_to_priority( gc, gc->cur_task );
+#endif
 }
 
 void handle_pass( global_context_t *gc ) {

@@ -47,6 +47,7 @@ kernel_exit:
 
 hwikernelentry:
 @ //TODO: Move r0 to r3, r3 is now user's r0, use that for hwi.
+
   @testing
   @mov r1, #9
   @mov r0, #1
@@ -61,6 +62,7 @@ kernelentry:
   mov r1, sp
   @ 7. back to service state
   msr cpsr_c, #0xd3
+  @ //TODO: move this to inline asm
   @ Calculate address of SWI instruction and load it into r0.
   ldr r0, [lr,#-4]
   @ Mask off top 8 bits of instruction to give SWI number.

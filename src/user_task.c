@@ -7,8 +7,8 @@
 
 #define CYCLES 1000
 
-//#undef A1
-#undef A2
+#undef A1
+//#undef A2
 
 //TODO remove testing struct
 struct Server {
@@ -165,8 +165,8 @@ void first_user_task( ){
 
 #ifdef A2
   debug( "First User Task" );
-  a2_test_task( );
-  //a2_user_task( );
+  //a2_test_task( );
+  a2_user_task( );
 
 #endif /* A2 */
 

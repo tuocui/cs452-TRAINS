@@ -40,12 +40,12 @@ void kernel_init( global_context_t *gc) {
 
 int activate( global_context_t *gc, task_descriptor_t *td ) {
 #ifndef CLANG /* to avoid semantics checking by CLANG compiler, does not do anything to our project */
-  register int request_type_reg asm("r0"); // absolute 
-  int request_type;
-  register unsigned int *new_sp_reg asm("r1"); // absolute 
-  unsigned int *new_sp;
-  register unsigned int new_spsr_reg asm("r2"); // absolute 
-  unsigned int new_spsr;
+  register int          request_type_reg  asm("r0"); // absolute 
+  register unsigned int *new_sp_reg       asm("r1"); // absolute 
+  register unsigned int new_spsr_reg      asm("r2"); // absolute 
+  register int          user_r0_reg       asm("r3");
+  int                   request_type;
+
   gc->cur_task = td;
 
   kernel_exit(td->retval, td->sp, td->spsr);
@@ -54,14 +54,15 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
     "mov %0, r0\n\t"
     "mov %1, r1\n\t"
     "mov %2, r2\n\t"
-  : "+r"(request_type_reg), "+r"(new_sp_reg), "+r"(new_spsr_reg)
+    "mov %3, r3\n\t"
+  : "+r"(request_type_reg), "+r"(new_sp_reg), 
+    "+r"(new_spsr_reg), "+r"(user_r0_reg)
   );
 
   request_type = request_type_reg;
-  new_sp = new_sp_reg;
-  td->sp = new_sp;
-  new_spsr = new_spsr_reg;
-  td->spsr = new_spsr;
+  td->sp = new_sp_reg;
+  td->spsr = new_spsr_reg;
+  td->retval = user_r0_reg;
 
   /* check td magic, failures indicate user stack is too small */
   assert(*(td->orig_sp - (TD_SIZE - 1)) == gc->td_magic);
