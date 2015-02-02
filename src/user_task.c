@@ -173,12 +173,13 @@ void first_user_task( ){
 
 #ifdef A3
   debug( "hwi test" );
-  start_clock( 2 );
+  start_clock( 50800 );
 
+  FOREVER {
+    //debug("inside forever");
+  }
 #endif /* A3 */
 
   bwprintf( COM2, "First: exiting\n\r");
   Exit( );
 }
-
-

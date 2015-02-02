@@ -256,6 +256,11 @@ void handle_reply( global_context_t *gc ) {
   add_to_priority( gc, gc->cur_task );
 }
 
+void handle_hwi( global_context_t *gc ) {
+  //TODO: asm to get hwi type
+  //for now it's only the timer, so clear timer's interrupt bit
+}
+
 void handle_create( global_context_t *gc ) {
 #ifndef CLANG
   register unsigned int priority_reg asm("r0");

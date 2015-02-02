@@ -21,4 +21,6 @@ void handle_receive( struct global_context_t *gc );
 
 void handle_reply( struct global_context_t *gc );
 
+void handle_hwi( struct global_context_t *gc );
+
 #endif
