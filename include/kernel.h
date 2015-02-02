@@ -1,13 +1,14 @@
 #ifndef __KERNEL_H__
 #define __KERNEL_H__
 
-#include <global.h>
-#include <task_descriptor.h>
-#include <scheduler.h>
-#include <kernel_syscall.h>
-#include <user_task.h>
-#include <context_switch.h>
-//#include <nameserver.h>
+#include "ts7200.h"
+
+#include "global.h"
+#include "task_descriptor.h"
+#include "scheduler.h"
+#include "kernel_syscall.h"
+#include "user_task.h"
+#include "context_switch.h"
 
 #define TD_SIZE 0x3000
 #define TD_MAGIC 0x3b1a4ef5

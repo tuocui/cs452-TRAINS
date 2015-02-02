@@ -43,7 +43,7 @@ void tds_init(global_context_t *gc) {
     cur_td->sp = gc->user_space + (TD_SIZE * (i + 1)) - 1;
     cur_td->orig_sp = cur_td->sp;
   *(cur_td->orig_sp - (TD_SIZE - 1)) = gc->td_magic; // set magic number
-    cur_td->spsr = 0xd0;
+    cur_td->spsr = 0x10;
     cur_td->retval = 0;
     cur_td->id = i;
     cur_td->parent_id = 0;

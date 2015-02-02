@@ -7,6 +7,9 @@
 
 #define CYCLES 1000
 
+//#undef A1
+#undef A2
+
 //TODO remove testing struct
 struct Server {
   char arr[4];
@@ -81,8 +84,6 @@ void user_send_task( ){
 
 }
 
-//#undef A1
-#undef A2
 #ifdef A1
 void a1_user_task( ){
   unsigned int my_tid;

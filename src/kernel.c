@@ -1,8 +1,7 @@
-#include <tools.h>
-#include <kernel.h>
+#include "tools.h"
+#include "kernel.h"
 
 
-// TODO: integrate it with makefile
 void cache_init( ) {
   asm volatile( 
     "MRC p15, 0, r0, c1, c0, 0\n\t" // read cp15 to r0
@@ -12,12 +11,24 @@ void cache_init( ) {
   ); 
 }
 
+void hwi_init( ) {
+  /* clear all interrupt bits */
+  *((unsigned int *)(VIC1_BASE + VICX_INT_ENCLEAR_OFFSET)) = CLEAR_ALL;
+  *((unsigned int *)(VIC2_BASE + VICX_INT_ENCLEAR_OFFSET)) = CLEAR_ALL;
+  
+  /* turn on timer3 interrupt, select as IRQ*/
+  *((unsigned int *)(VIC2_BASE + VICX_INT_SELECT_OFFSET)) &= TIMER3_IRQ_MASK;
+  *((unsigned int *)(VIC2_BASE + VICX_INT_ENABLE_OFFSET)) |= TIMER3_INT_ON;
+
+}
+
 void kernel_init( global_context_t *gc) {
   gc->cur_task = NULL;
   gc->priority_bitmap = 0;
 
   
   init_kernelentry();
+  //hwi_init( );
 #ifdef CACHE
   bwprintf( COM2, "TURNING ON CACHE ...\n\r " );
   cache_init( );
@@ -28,6 +39,7 @@ void kernel_init( global_context_t *gc) {
 }
 
 int activate( global_context_t *gc, task_descriptor_t *td ) {
+#ifndef CLANG /* to avoid semantics checking by CLANG compiler, does not do anything to our project */
   register int request_type_reg asm("r0"); // absolute 
   int request_type;
   register unsigned int *new_sp_reg asm("r1"); // absolute 
@@ -54,6 +66,7 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   /* check td magic, failures indicate user stack is too small */
   assert(*(td->orig_sp - (TD_SIZE - 1)) == gc->td_magic);
   return request_type;
+#endif /* CLANG */
 }
 
 void handle( global_context_t *gc, int request_type ) {
