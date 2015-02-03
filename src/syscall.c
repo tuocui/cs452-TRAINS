@@ -23,8 +23,6 @@ int Send( int tid, char *msg, int msglen, char *reply, int replylen ) {
    */
   register int retval_reg asm("r0");
   int retval;
-
-  //TODO: make macro to handle optimization 
   
 #ifndef OPT
   //debug("optimiazaion is on");

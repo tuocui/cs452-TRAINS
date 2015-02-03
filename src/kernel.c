@@ -15,6 +15,9 @@ void hwi_cleanup( ) {
   /* clear all interrupt bits */
   *((unsigned int *)(VIC1_BASE + VICX_INT_ENCLEAR_OFFSET)) = CLEAR_ALL;
   *((unsigned int *)(VIC2_BASE + VICX_INT_ENCLEAR_OFFSET)) = CLEAR_ALL;
+  /* Clear timer interrupt bit */
+  int *timer_base = (int *)(TIMER3_BASE + CLR_OFFSET);
+  *timer_base = 1;
 }
 
 void hwi_init( ) {
@@ -48,11 +51,9 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   register int          user_r0_reg       asm("r3"); // absolute
   int                   request_type;
   int                   hwi_request_flag = -1;
-  debug("hwi_request_flag addr: %x", &hwi_request_flag );
-
   gc->cur_task = td;
 
-  kernel_exit(td->retval, td->sp, td->spsr);
+  kernel_exit(td->retval, td->sp, td->spsr, &hwi_request_flag);
 
   asm volatile(
     "mov %0, r0\n\t"
@@ -85,6 +86,7 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
 }
 
 void handle( global_context_t *gc, int request_type ) {
+  debug( "request_type: %d", request_type );
   switch( request_type ) {
   case HWI:
     handle_hwi( gc );
