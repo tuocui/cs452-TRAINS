@@ -20,6 +20,6 @@ task_descriptor_t *schedule( struct global_context_t *gc);
 
 void add_to_priority( struct global_context_t *gc, struct task_descriptor_t *td );
 
-int get_highest_priority( struct global_context_t *gc );
+//int get_highest_priority( struct global_context_t *gc );
 
 #endif

@@ -44,6 +44,14 @@ void kernel_init( global_context_t *gc) {
   init_schedulers(gc);
 }
 
+/* TODO: Move this to helper file */
+int get_lowest_set_bit( global_context_t *gc, int bm ) {
+  // Thanks Wikipedia
+  int rtn;
+  rtn = gc->de_bruijn_bit_positions[(((bm & -bm) * 0x077CB531U)) >> 27];
+  return rtn;
+}
+
 int activate( global_context_t *gc, task_descriptor_t *td ) {
   register int          request_type_reg  asm("r0"); // absolute 
   register unsigned int *new_sp_reg       asm("r1"); // absolute 
@@ -52,7 +60,7 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   int                   request_type;
   int                   hwi_request_flag = -1;
   gc->cur_task = td;
-
+  debug( "&hwi_request_flag: %x", &hwi_request_flag );
   kernel_exit(td->retval, td->sp, td->spsr, &hwi_request_flag);
 
   asm volatile(
@@ -69,6 +77,7 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   td->spsr = new_spsr_reg;
   td->retval = user_r0_reg;
 
+  debug( "sp: %x", td->sp );
   assert( hwi_request_flag == HWI_MAGIC || hwi_request_flag == -1 );
   debug( "hwi flag: %x", hwi_request_flag );
   /* if hwi request type is set, we update request_type */
@@ -87,9 +96,23 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
 
 void handle( global_context_t *gc, int request_type ) {
   debug( "request_type: %d", request_type );
+  int hwi_type;
+  int vic_src_num = 0;
+  int *vic_base;
   switch( request_type ) {
   case HWI:
-    handle_hwi( gc );
+    while( vic_src_num < 2 ) {
+      vic_base = (int *)(VIC1_BASE + (vic_src_num * 0x10000));
+      debug( "vic_src_num: %d", vic_src_num );
+      debug( "vic_base: %x", vic_base );
+      while( ( hwi_type = get_lowest_set_bit( gc, *vic_base ) ) ) {
+        debug( "hwi_type: %d", hwi_type );
+        hwi_type += ( vic_src_num * 32 );
+        debug( "hwi_type: %d", hwi_type );
+        handle_hwi( gc, hwi_type );
+      }
+      ++vic_src_num;
+    }
     break;
   case SYS_CREATE:
     handle_create( gc );
@@ -142,7 +165,7 @@ int main(int argc, char *argv[]) {
       break;    
     }
 
-    debug( "BEFORE activate" );
+    //debug( "BEFORE activate" );
     request_type = activate( &gc, scheduled_td );
     handle( &gc, request_type );
   }

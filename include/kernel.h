@@ -16,6 +16,10 @@
 #define USER_SPACE_SIZE (TD_MAX * TD_SIZE)
 #define PRIORITY_MAX 16
 
+#define NUM_INTS 1
+#define TIMER3_INT 51
+#define TIMER3_INT_IND 0
+
 // "Global" variables used by the kernel
 typedef struct global_context_t {
 
@@ -33,7 +37,11 @@ typedef struct global_context_t {
   unsigned int priority_bitmap;
   int de_bruijn_bit_positions[32];
 
+  scheduler_t interrupts[NUM_INTS];
+
 } global_context_t;
+
+int get_lowest_set_bit( global_context_t *gc, int bm );
 
 void kernel_init( struct global_context_t *gc);
 

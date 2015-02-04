@@ -256,11 +256,22 @@ void handle_reply( global_context_t *gc ) {
   add_to_priority( gc, gc->cur_task );
 }
 
-// TODO: Get the interrupt type and switch on that
-void handle_hwi( global_context_t *gc ) {
-  int *timer_base = (int *)(TIMER3_BASE + CLR_OFFSET);
-  *timer_base = 1;
+void handle_timer_int( global_context_t *gc ) {
+  // TODO: notify timer notifier
+  int *timer_clr = (int *)(TIMER3_BASE + CLR_OFFSET);
+  *timer_clr = 1;
   add_to_priority( gc, gc->cur_task );
+}
+
+// TODO: Get the interrupt type and switch on that
+void handle_hwi( global_context_t *gc, int hwi_type ) {
+  switch( hwi_type ) {
+  case TIMER3_INT:
+    handle_timer_int( gc );
+    break;
+  default:
+    break;
+  }
 }
 
 void handle_create( global_context_t *gc ) {

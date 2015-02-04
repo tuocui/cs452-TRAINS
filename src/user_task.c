@@ -175,12 +175,12 @@ void first_user_task( ){
   debug( "hwi test" );
   start_clock( 5080 );
   unsigned int i = 0, j = 0;
-  while( i < 1000 ) {
-    bwprintf( COM2, "i: %d\r\n", i );
+  while( i < 1000000 && j < 1000000 ) {
+    //bwprintf( COM2, "i: %d\r\n", i );
     ++i;
     ++j;
   }
-  debug( "j: %d, i: %d", j, i );
+  debug( "j: %x, i: %x", j, i );
 #endif /* A3 */
 
   bwprintf( COM2, "First: exiting\n\r");

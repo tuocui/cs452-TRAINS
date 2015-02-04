@@ -1,14 +1,6 @@
 #include <tools.h>
 #include <kernel.h>
 
-int get_highest_priority( global_context_t *gc ) {
-  // Thanks Wikipedia
-  unsigned int bm = gc->priority_bitmap;
-  int rtn;
-  rtn = gc->de_bruijn_bit_positions[(((bm & -bm) * 0x077CB531U)) >> 27];
-  return rtn;
-}
-
 void init_schedulers( global_context_t* gc ) {
   int i = 0;
   for ( ; i <= PRIORITY_MAX; ++i ) {
@@ -77,7 +69,7 @@ void add_to_priority( global_context_t *gc, task_descriptor_t *td ) {
 }
 
 task_descriptor_t *schedule( global_context_t *gc) {
-  int highest_priority = get_highest_priority( gc );
+  int highest_priority = get_lowest_set_bit( gc, gc->priority_bitmap );
   if ( highest_priority == 0 ) {
     return NULL;  
   }

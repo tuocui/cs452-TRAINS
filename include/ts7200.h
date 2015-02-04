@@ -84,10 +84,11 @@
 
 /* HWI Registers */
 // Source: http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/ep93xx-user-guide.pdf
+#define TIMER3_BIT_ON   (1 << 19)
+#define TIMER3_BIT_OFF  (0 << 19)
+
 #define VIC1_BASE 0x800B0000
 #define VIC2_BASE 0x800C0000
-  #define TIMER3_BIT_ON   (1 << 19)
-  #define TIMER3_BIT_OFF  (0 << 19)
 
 #define VICX_IRQ_STATUS_OFFSET      0x0
 #define VICX_FIQ_STATUS_OFFSET      0x4
