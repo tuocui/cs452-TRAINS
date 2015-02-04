@@ -2,15 +2,18 @@
 # Makefile for kernel 
 # DEBUG flag is set by nmake
 #
-SRCS=bwio.c kernel.c task_descriptor.c scheduler.c syscall.c kernel_syscall.c user_task.c nameserver.c rps.c timer.c
-ASMS=$(SRCS:.c=.s) context_switch.s
-OBJS=$(SRCS:.c=.o) context_switch.o
+
+# MUST add .c file here:
+SRCS=$(wildcard src/*c) #bwio.c kernel.c task_descriptor.c scheduler.c syscall.c kernel_syscall.c user_task.c nameserver.c rps.c timer.c
+_ASMS=$(addprefix src/, $(notdir $(SRCS:.c=.s))) 
+ASMS=$(_ASMS) context_switch.s
+OBJS=$(addprefix src/, $(notdir $(SRCS:.c=.o))) src/context_switch.o
 
 XCC=gcc
 AS=as
 LD=ld
-CFLAGS=-c ${DEBUG} ${CACHE} -fPIC -Wall -Werror -I. -I../include/ -mcpu=arm920t -msoft-float 
-CFLAGS_O=-c ${DEBUG} ${CACHE} ${OPT} ${OPT_LEVEL} -fPIC -Wall -Werror -I. -I../include/ -mcpu=arm920t -msoft-float 
+CFLAGS=-c ${DEBUG} ${CACHE} -fPIC -Wall -Werror -I./include/ -I../include/ -mcpu=arm920t -msoft-float 
+CFLAGS_O=-c ${DEBUG} ${CACHE} ${OPT} ${OPT_LEVEL} -fPIC -Wall -Werror -I./include -I../include/ -mcpu=arm920t -msoft-float 
 # -g: include hooks for gdb
 # -c: only compile
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -24,52 +27,17 @@ LDFLAGS = -init main -N -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0
 
 .PHONY: clean, all
 
-all:  kernel.s kernel.s kernel.elf
 
-%.s: %.c
+all: $(_ASMS) kernel.elf
+
+src/%.s: src/%.c
 	$(XCC) -S $(CFLAGS_O) $<
 
-##%.o: %.s
-##	$(AS) $(ASFLAGS) -o $@ $<
-
-bwio.o: bwio.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-context_switch.o: context_switch.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-kernel.o: kernel.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-task_descriptor.o: task_descriptor.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-scheduler.o: scheduler.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-syscall.o: syscall.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-kernel_syscall.o: kernel_syscall.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-user_task.o: user_task.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-nameserver.o: nameserver.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-rps.o: rps.s
-	$(AS) $(ASFLAGS) -o $@ $<
-
-timer.o: timer.s
+src/%.o: src/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
 
-# MUST add .o file here:
-#kernel.elf: kernel.o context_switch.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o rps.o timer.o bwio.o
-kernel.elf: $(OBJS)
-# MUST add .o file here:
+src/kernel.elf: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS) -lgcc #-lbwio
 
 clean:
