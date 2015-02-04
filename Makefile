@@ -4,10 +4,10 @@
 #
 
 # MUST add .c file here:
-SRCS=bwio.c kernel.c task_descriptor.c scheduler.c syscall.c kernel_syscall.c user_task.c nameserver.c rps.c timer.c
-_ASMS=$(SRCS:.c=.s) 
+SRCS=$(wildcard src/*c) #bwio.c kernel.c task_descriptor.c scheduler.c syscall.c kernel_syscall.c user_task.c nameserver.c rps.c timer.c
+_ASMS=$(addprefix src/,$(notdir $(SRCS:.c=.s)))
 ASMS=$(_ASMS) context_switch.s
-OBJS=$(SRCS:.c=.o) context_switch.o
+OBJS=$(addprefix src/, $(notdir $(SRCS:.c=.o))) src/context_switch.o
 
 XCC=gcc
 AS=as
@@ -28,17 +28,21 @@ LDFLAGS = -init main -N -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0
 .PHONY: clean, all
 
 
-all: $(_ASMS) kernel.elf
+all: $(_ASMS) src/kernel.elf
 
-%.s: %.c
+src/%.s: src/%.c
 	$(XCC) -S $(CFLAGS_O) $<
 
-%.o: %.s
+src/%.s: %.s
+	cp $< $@
+	rm -f $<
+
+src/%.o: src/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
 
-kernel.elf: $(OBJS)
+src/kernel.elf: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS) -lgcc #-lbwio
 
 clean:
-	-rm -f *.elf *.s *.o *.map ../obj/* ../asm/* ../elf/*
+	-rm -f src/*.elf src/*.s src/*.o src/*.map obj/* asm/* elf/*
