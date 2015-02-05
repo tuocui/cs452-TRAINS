@@ -49,5 +49,7 @@ int activate( global_context_t *gc, task_descriptor_t *td );
 
 void handle( global_context_t *gc, int request_type );
 
+inline void clean_set_bit( int * bm, int offset ); 
+
 
 #endif

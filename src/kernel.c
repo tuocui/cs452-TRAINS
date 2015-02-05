@@ -52,6 +52,11 @@ int get_lowest_set_bit( global_context_t *gc, int bm ) {
   return rtn;
 }
 
+inline void clean_set_bit( int *bm , int offset ) {
+  debug("CLEAN_SET_BIT");
+  *bm = *bm ^ ( 1 << offset );
+}
+
 int activate( global_context_t *gc, task_descriptor_t *td ) {
   register int          request_type_reg  asm("r0"); // absolute 
   register unsigned int *new_sp_reg       asm("r1"); // absolute 
@@ -61,6 +66,8 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   int                   hwi_request_flag = -1;
   gc->cur_task = td;
   debug( "&hwi_request_flag: %x", &hwi_request_flag );
+
+  debug("EXITING KERNEL!!!!!!!!!!");
   kernel_exit(td->retval, td->sp, td->spsr, &hwi_request_flag);
 
   asm volatile(
@@ -77,9 +84,9 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   td->spsr = new_spsr_reg;
   td->retval = user_r0_reg;
 
-  debug( "sp: %x", td->sp );
+  //debug( "sp: %x", td->sp );
   assert( hwi_request_flag == HWI_MAGIC || hwi_request_flag == -1 );
-  debug( "hwi flag: %x", hwi_request_flag );
+  debug( "BACK TO KERNEL: hwi flag: %x", hwi_request_flag );
   /* if hwi request type is set, we update request_type */
   if( hwi_request_flag == HWI_MAGIC) {
     debug( "HWI triggered!, user's r0: %x", td->retval );
@@ -95,24 +102,32 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
 }
 
 void handle( global_context_t *gc, int request_type ) {
-  debug( "request_type: %d", request_type );
+  debug( "HANDLE interrupt REQUEST request_type: %d", request_type );
   int hwi_type;
   int vic_src_num = 0;
-  int *vic_base;
+  int vic_base; // make this a local copy so we can modify its value
   switch( request_type ) {
   case HWI:
     while( vic_src_num < 2 ) {
-      vic_base = (int *)(VIC1_BASE + (vic_src_num * 0x10000));
+      vic_base = (int)(*((int*)(VIC1_BASE + vic_src_num * 0x10000)));
       debug( "vic_src_num: %d", vic_src_num );
       debug( "vic_base: %x", vic_base );
-      while( ( hwi_type = get_lowest_set_bit( gc, *vic_base ) ) ) {
+      while( ( hwi_type = get_lowest_set_bit( gc, vic_base ) ) ) {
+        debug("INSIDE WHILE");
+        debug("hwi_bit: %d", (vic_base));
         debug( "hwi_type: %d", hwi_type );
+        clean_set_bit( &vic_base, hwi_type );
         hwi_type += ( vic_src_num * 32 );
         debug( "hwi_type: %d", hwi_type );
         handle_hwi( gc, hwi_type );
       }
+      
+      assert( vic_base == 0 );
       ++vic_src_num;
+
+      /* should have reset vic register at this point */
     }
+
     break;
   case SYS_CREATE:
     handle_create( gc );

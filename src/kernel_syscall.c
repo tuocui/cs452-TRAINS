@@ -257,7 +257,12 @@ void handle_reply( global_context_t *gc ) {
 }
 
 void handle_timer_int( global_context_t *gc ) {
+  
+  debug("@@@@@@@@@@@@@@@@@@@@handle_timer_init");
+
   // TODO: notify timer notifier
+  
+  /* turn off interrupt on TC3 */
   int *timer_clr = (int *)(TIMER3_BASE + CLR_OFFSET);
   *timer_clr = 1;
   add_to_priority( gc, gc->cur_task );

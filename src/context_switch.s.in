@@ -85,8 +85,6 @@ hwikernelentry:
   @bl bwputr
 
 kernelentry:
-  @ pop the hwi_flag off service stack
-  ldmfd sp!, {r3}
   @ 1. change to system state, sp lr are in user
   msr cpsr_c, #0xdf
   @ 2. store user's registers values onto user stack
@@ -107,6 +105,8 @@ kernelentry:
   @ 8. get spsr, which is user's cpsr set by swi or hwikernelentry 
   mrs r2, spsr
   @ 9. pop kernel registers from stack, jump to kernel's lr instruction
+  @ pop off the hwi_flag off service stack
+  add sp, sp, #4
   ldmfd sp!, {r4-r12, r14}
   mov sp, ip
   mov pc, lr
