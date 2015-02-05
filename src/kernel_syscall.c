@@ -13,8 +13,6 @@ void kmemcpy( char * dst, const char * src, size_t len ) {
 
 int get_message_tid( unsigned int *sp, int offset ) {
 #ifndef CLANG
-  debug("sp, *sp: %x, %x", sp, *sp);
-  debug("offset: %d", offset);
   register unsigned int  int_reg     asm("r1");
   register int           offset_reg  asm("r2") = offset;
   register unsigned int  *cur_sp_reg asm("r3") = sp;
@@ -65,7 +63,6 @@ int check_tid( global_context_t *gc, unsigned int tid ) {
 
   // If generation == 0, then impossible
   if( TID_GEN(tid) == 0 ){
-    //debug( "heeyyyyy, invalid id" );
     return -1;
   }
 
@@ -89,9 +86,6 @@ void handle_send( global_context_t *gc ) {
   msg_s = get_message( gc->cur_task->sp, 56, &msglen_s );
   // replylen_s set
   reply_s = get_message( gc->cur_task->sp, 64, &replylen_s );
-
-  debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
-    tid_s, msg_s, msglen_s, reply_s, replylen_s);
 
   int tid_check = check_tid( gc, tid_s );
   if ( tid_check < 0 ) {
@@ -257,9 +251,6 @@ void handle_reply( global_context_t *gc ) {
 }
 
 void handle_timer_int( global_context_t *gc ) {
-  
-  debug("@@@@@@@@@@@@@@@@@@@@handle_timer_init");
-
   // TODO: notify timer notifier
   
   /* turn off interrupt on TC3 */
@@ -270,7 +261,7 @@ void handle_timer_int( global_context_t *gc ) {
 
 // TODO: Get the interrupt type and switch on that
 void handle_hwi( global_context_t *gc, int hwi_type ) {
-  switch( hwi_type ) {
+  switch( hwi_type ){
   case TIMER3_INT:
     handle_timer_int( gc );
     break;

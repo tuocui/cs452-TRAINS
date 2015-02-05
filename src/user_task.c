@@ -175,7 +175,7 @@ void first_user_task( ){
   debug( "hwi test" );
   start_clock( 5080 );
   unsigned int i = 0, j = 0;
-  while( i < 100 && j < 100 ) {
+  while( i < 50000 && j < 50000 ) {
     bwprintf( COM2, "IIIIIIIIIIIIIIIIIIIIIIII: %d\r\n", i );
     ++i;
     ++j;

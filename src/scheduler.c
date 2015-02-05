@@ -47,9 +47,6 @@ void init_schedulers( global_context_t* gc ) {
 }
 
 void add_to_priority( global_context_t *gc, task_descriptor_t *td ) {
-  
-  debug("!!!!!!!!!!!!!!!!!!!!!add_to_priority");
-
   unsigned int priority = td->priority;
   assert(priority != 0, "ERROR: should not pass in priority = 0");
   scheduler_t *scheduler = &((gc->priorities)[priority]);
@@ -64,7 +61,7 @@ void add_to_priority( global_context_t *gc, task_descriptor_t *td ) {
   td->status = TD_READY;
   gc->priority_bitmap = gc->priority_bitmap | ( 1 << priority );
   scheduler->last_in_queue = td;  
-
+  
   ++(scheduler->num_in_queue);
 
   assert(scheduler->num_in_queue > 0);
@@ -72,8 +69,6 @@ void add_to_priority( global_context_t *gc, task_descriptor_t *td ) {
 }
 
 task_descriptor_t *schedule( global_context_t *gc) {
-
-  debug("?????????????????????scheduling");
 
   int highest_priority = get_lowest_set_bit( gc, gc->priority_bitmap );
   if ( highest_priority == 0 ) {

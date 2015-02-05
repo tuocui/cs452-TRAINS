@@ -53,7 +53,6 @@ int get_lowest_set_bit( global_context_t *gc, int bm ) {
 }
 
 inline void clean_set_bit( int *bm , int offset ) {
-  debug("CLEAN_SET_BIT");
   *bm = *bm ^ ( 1 << offset );
 }
 
@@ -65,9 +64,6 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   int                   request_type;
   int                   hwi_request_flag = -1;
   gc->cur_task = td;
-  debug( "&hwi_request_flag: %x", &hwi_request_flag );
-
-  debug("EXITING KERNEL!!!!!!!!!!");
   kernel_exit(td->retval, td->sp, td->spsr, &hwi_request_flag);
 
   asm volatile(
@@ -86,10 +82,8 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
 
   //debug( "sp: %x", td->sp );
   assert( hwi_request_flag == HWI_MAGIC || hwi_request_flag == -1 );
-  debug( "BACK TO KERNEL: hwi flag: %x", hwi_request_flag );
   /* if hwi request type is set, we update request_type */
   if( hwi_request_flag == HWI_MAGIC) {
-    debug( "HWI triggered!, user's r0: %x", td->retval );
     request_type = HWI;
   }
 
@@ -102,7 +96,6 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
 }
 
 void handle( global_context_t *gc, int request_type ) {
-  debug( "HANDLE interrupt REQUEST request_type: %d", request_type );
   int hwi_type;
   int vic_src_num = 0;
   int vic_base; // make this a local copy so we can modify its value
@@ -110,15 +103,10 @@ void handle( global_context_t *gc, int request_type ) {
   case HWI:
     while( vic_src_num < 2 ) {
       vic_base = (int)(*((int*)(VIC1_BASE + vic_src_num * 0x10000)));
-      debug( "vic_src_num: %d", vic_src_num );
-      debug( "vic_base: %x", vic_base );
       while( ( hwi_type = get_lowest_set_bit( gc, vic_base ) ) ) {
-        debug("INSIDE WHILE");
-        debug("hwi_bit: %d", (vic_base));
-        debug( "hwi_type: %d", hwi_type );
+        //debug("INSIDE WHILE");
         clean_set_bit( &vic_base, hwi_type );
         hwi_type += ( vic_src_num * 32 );
-        debug( "hwi_type: %d", hwi_type );
         handle_hwi( gc, hwi_type );
       }
       
