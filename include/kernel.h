@@ -14,11 +14,10 @@
 #define TD_MAGIC 0x3b1a4ef5
 #define HWI_MAGIC 0xab
 #define USER_SPACE_SIZE (TD_MAX * TD_SIZE)
-#define PRIORITY_MAX 16
 
+/* interrupts */
 #define NUM_INTS 1
 #define TIMER3_INT 51
-#define TIMER3_INT_IND 0
 
 // "Global" variables used by the kernel
 typedef struct global_context_t {
@@ -31,13 +30,14 @@ typedef struct global_context_t {
   unsigned int td_magic;
   unsigned int td_free_num;
   unsigned int user_space[TD_MAX * TD_SIZE];
+  int num_tasks;
 
   /* scheduler */
-  scheduler_t priorities[PRIORITY_MAX];
+  scheduler_t priorities[PRIORITY_MAX + 1];
   unsigned int priority_bitmap;
   int de_bruijn_bit_positions[32];
 
-  scheduler_t interrupts[NUM_INTS];
+  task_descriptor_t *interrupts[NUM_INTS];
 
 } global_context_t;
 

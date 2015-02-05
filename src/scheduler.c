@@ -71,12 +71,15 @@ void add_to_priority( global_context_t *gc, task_descriptor_t *td ) {
 task_descriptor_t *schedule( global_context_t *gc) {
 
   int highest_priority = get_lowest_set_bit( gc, gc->priority_bitmap );
-  if ( highest_priority == 0 ) {
+  if( highest_priority == 0 ) {
     return NULL;  
   }
   scheduler_t *scheduler = &((gc->priorities)[highest_priority]);
   
   task_descriptor_t *td = scheduler->first_in_queue;
+  if( td->status != TD_READY ) {
+    return NULL;
+  }
   scheduler->first_in_queue = td->next_in_priority;
   if (scheduler->first_in_queue == NULL) {
     scheduler->last_in_queue = NULL;

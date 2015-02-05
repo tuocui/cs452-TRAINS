@@ -30,6 +30,11 @@ void hwi_init( ) {
 void kernel_init( global_context_t *gc) {
   gc->cur_task = NULL;
   gc->priority_bitmap = 0;
+  int i = 0;
+  for( ; i < NUM_INTS; ++i ) {
+    (gc->interrupts)[i] = NULL;
+  }
+  gc->num_tasks = 0;
 
   hwi_cleanup( );
   hwi_init( );
@@ -138,6 +143,9 @@ void handle( global_context_t *gc, int request_type ) {
   case SYS_PASS:
     handle_pass( gc );
     break;
+  case SYS_AWAIT_EVENT:
+    handle_await_event( gc );
+    break;
   case SYS_EXIT:
     handle_exit( gc );
     break;
@@ -157,6 +165,7 @@ int main(int argc, char *argv[]) {
   kernel_init( &gc );
 
   task_descriptor_t *first_td = tds_create_td(&gc, 5, (int)&first_user_task);
+  ++(gc.num_tasks);
   add_to_priority( &gc, first_td );
 
   bwputstr( COM2, "FINISHED INITIALIZATION. WOO!\r\n" );

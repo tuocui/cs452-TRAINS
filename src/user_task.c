@@ -16,6 +16,13 @@ struct Server {
   char arr[4];
 };
 
+void idle_task( ) {
+  FOREVER {
+    debug( "IN IDLE TASK" );
+  }
+  Exit( );
+}
+
 void gen_user_task( ){
   struct Server server_r;
   int i = 0;
@@ -140,6 +147,24 @@ void a2_user_task( ) {
 }
 #endif /* A2 */
 
+#ifdef A3
+
+void a3_test_task( ) {
+  start_clock( 5080 );
+  debug( "hwi test" );
+  unsigned int i = 0, j = 0, ae_rtn;
+  while( i < 5000 && j < 5000 ) {
+    ae_rtn = AwaitEvent( TIMER3_INT_IND );
+    ++i;
+    ++j;
+    debug( "j: %d, i: %d, rtn: %d", j, i, ae_rtn );
+  }
+  debug( "After loop: j: %d, i: %d", j, i );
+  Exit( );
+}
+
+#endif /* A3 */
+
 void first_user_task( ){
   //bwsetfifo( COM2, OFF );
 #ifdef A1
@@ -172,15 +197,11 @@ void first_user_task( ){
 #endif /* A2 */
 
 #ifdef A3
-  debug( "hwi test" );
-  start_clock( 5080 );
-  unsigned int i = 0, j = 0;
-  while( i < 50000 && j < 50000 ) {
-    bwprintf( COM2, "IIIIIIIIIIIIIIIIIIIIIIII: %d\r\n", i );
-    ++i;
-    ++j;
-  }
-  debug( "j: %d, i: %d", j, i );
+  int idle_id;
+  idle_id = Create( PRIORITY_MAX, &idle_task );
+  int test_id;
+  test_id = Create( 6, &a3_test_task );
+  bwprintf( COM2, "idle_id: %d, test_id: %d\r\n", idle_id, test_id );
 #endif /* A3 */
 
   bwprintf( COM2, "First: exiting\n\r");
