@@ -153,7 +153,7 @@ void a3_test_task( ) {
   start_clock( 5080 );
   debug( "hwi test" );
   unsigned int i = 0, j = 0, ae_rtn;
-  while( i < 5000 && j < 5000 ) {
+  while( i < 3000 && j < 3000 ) {
     ae_rtn = AwaitEvent( TIMER3_INT_IND );
     ++i;
     ++j;

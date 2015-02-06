@@ -35,6 +35,7 @@ void kernel_init( global_context_t *gc) {
     (gc->interrupts)[i] = NULL;
   }
   gc->num_tasks = 0;
+  gc->num_missed_clock_cycles = 0;
 
   hwi_cleanup( );
   hwi_init( );

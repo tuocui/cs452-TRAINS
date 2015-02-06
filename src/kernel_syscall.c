@@ -355,13 +355,14 @@ void handle_timer_int( global_context_t *gc ) {
   int *timer_clr = (int *)(TIMER3_BASE + CLR_OFFSET);
   task_descriptor_t *td = gc->interrupts[TIMER3_INT_IND];
   if( td != NULL ) {
-    td->retval = 1;
+    td->retval = gc->num_missed_clock_cycles + 1;
     (gc->interrupts)[TIMER3_INT_IND] = NULL;
+    gc->num_missed_clock_cycles = 0;
     add_to_priority( gc, td );
-    if( td != gc->cur_task ) {
-      add_to_priority( gc, gc->cur_task );
-    }
+    add_to_priority( gc, gc->cur_task );
+    // assert( td != gc->cur_task );
   } else {
+    ++(gc->num_missed_clock_cycles);
     add_to_priority( gc, gc->cur_task );
   }
   *timer_clr = 1;

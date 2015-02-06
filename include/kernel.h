@@ -38,6 +38,7 @@ typedef struct global_context_t {
   int de_bruijn_bit_positions[32];
 
   task_descriptor_t *interrupts[NUM_INTS];
+  unsigned int num_missed_clock_cycles;
 
 } global_context_t;
 
