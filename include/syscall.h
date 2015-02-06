@@ -3,7 +3,6 @@
 
 #include <global.h>
 
-
 int Create( int priority, void (*code) ( ) );
 
 int MyTid( );
@@ -19,5 +18,7 @@ int Send( int tid, char *msg, int msglen, char *reply, int replylen );
 int Receive( int *tid, char *msg, int msglen );
 
 int Reply( int tid, char *reply, int replylen );
+
+int AwaitEvent( int eventid );
 
 #endif
