@@ -9,7 +9,7 @@ void reply_back( unsigned int tid, nameserver_msg_t *reply, int msg_len, int typ
 }
 
 void nameserver_main( ) {
-  unsigned int jobs[NUM_JOBS];
+  unsigned int jobs[SERVER_MAX];
   int i = 0;
   int reply_tid;
   int rtn_tid;
@@ -18,7 +18,7 @@ void nameserver_main( ) {
   int msg_len = sizeof(request);
   int rcv_len;
 
-  for( ; i < NUM_JOBS; ++i ) {
+  for( ; i < SERVER_MAX; ++i ) {
     jobs[i] = 0;
   }
   debug( "INITIALIZED NAMESERVER" );
@@ -32,7 +32,7 @@ void nameserver_main( ) {
     switch( request.type ) {
     case REGISTER:
       // Invalid job?
-      if( !( request.val >= 0 && request.val < NUM_JOBS ) ) {
+      if( !( request.val >= 0 && request.val < SERVER_MAX) ) {
         reply_back( reply_tid, &reply, msg_len, ERROR, INVALID_JOB );
       } else {
         // Register, and reply back
@@ -43,7 +43,7 @@ void nameserver_main( ) {
       break;
     case WHOIS:
       // Invalid job?
-      if( !( request.val >= 0 && request.val < NUM_JOBS ) ) {
+      if( !( request.val >= 0 && request.val < SERVER_MAX ) ) {
         reply_back( reply_tid, &reply, msg_len, ERROR, INVALID_JOB );
       } else {
         // Reply back with the tid

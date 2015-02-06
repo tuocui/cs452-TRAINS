@@ -5,25 +5,25 @@
 #define NOTIFIER_MAGIC 0x12
 
 typedef struct clock_msg_t {
-  int request_type;
-  int ticks;
-}
+  int value;
+
+  enum {
+    CM_TIME,
+    CM_DELAY,
+    CM_DELAY_UNTIL,
+    CM_UPDATE,
+    CM_REPLY,
+  } request_type ;
+
+} clock_msg_t ;
 
 typedef struct clock_client_t {
 
-  unsigned int future_ticks;
-
   unsigned int c_tid;
 
-  struct clock_client_t *next_client_q;
-  struct clock_client_t *next_client_free;
+  unsigned int future_ticks;
 
-  enum {
-    CC_INACTIVE,
-    CC_TIME,
-    CC_DELAY,
-    CC_DELAY_UNTIL,
-  } request_type ;
+  struct clock_client_t *next_client_q;
 
 } clock_client_t ;
 

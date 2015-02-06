@@ -1,4 +1,5 @@
 #
+#
 # Makefile for kernel 
 # DEBUG flag is set by nmake
 #
@@ -20,7 +21,7 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 LDFLAGS = -init main -N -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L../../lib
 
 
-all:  kernel.s kernel.s kernel.elf
+all: kernel.s kernel.elf
 
 
 bwio.s: bwio.c
@@ -54,7 +55,7 @@ timer.s: timer.c
 	$(XCC) -S $(CFLAGS_O) timer.c
 
 clock_server.s: clock_server.c 
-	$(XCC) -S $(CFLAGS_O) timer.c
+	$(XCC) -S $(CFLAGS_O) clock_server.c
 
 
 
@@ -91,11 +92,14 @@ rps.o: rps.s
 timer.o: timer.s
 	$(AS) $(ASFLAGS) -o timer.o timer.s
 
+clock_server.o: clock_server.s
+	$(AS) $(ASFLAGS) -o clock_server.o clock_server.s
+
 
 # MUST add .o file here:
-kernel.elf: kernel.o context_switch.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o rps.o timer.o bwio.o
+kernel.elf: kernel.o context_switch.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o rps.o timer.o bwio.o clock_server.o
 # MUST add .o file here:
-	$(LD) $(LDFLAGS) -o $@ bwio.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o rps.o timer.o context_switch.o kernel.o -lgcc #-lbwio
+	$(LD) $(LDFLAGS) -o $@ bwio.o task_descriptor.o scheduler.o syscall.o kernel_syscall.o user_task.o nameserver.o rps.o timer.o context_switch.o kernel.o clock_server.o -lgcc #-lbwio
 
 clean:
 	-rm -f *.elf *.s *.o *.map ../obj/* ../asm/* ../elf/*
