@@ -53,6 +53,10 @@ rps.s: rps.c
 timer.s: timer.c 
 	$(XCC) -S $(CFLAGS_O) timer.c
 
+clock_server.s: clock_server.c 
+	$(XCC) -S $(CFLAGS_O) timer.c
+
+
 
 bwio.o: bwio.s
 	$(AS) $(ASFLAGS) -o bwio.o bwio.s
