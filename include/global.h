@@ -6,6 +6,10 @@
 #define NULL ((void *) 0)
 typedef unsigned int size_t;
 
+/* scheduling */
+/* NOTE: Lowest priority reserved for idle task */
+#define PRIORITY_MAX 16
+
 /* task descriptor related */
 #define TD_BIT 5 // TODO: change to 7 (td0 ~ td127) 
 #define TD_MAX (1 << TD_BIT) 
@@ -13,14 +17,15 @@ typedef unsigned int size_t;
 #define TID_GEN( id ) ( id >> TD_BIT )
 
 /* syscall numbers */
-#define SYS_CREATE 1
-#define SYS_MY_TID 2
-#define SYS_MY_PARENT_TID 3
-#define SYS_PASS 4
-#define SYS_SEND 5
-#define SYS_RECEIVE 6
-#define SYS_REPLY 7
-#define SYS_EXIT 99
+#define SYS_CREATE          1
+#define SYS_MY_TID          2
+#define SYS_MY_PARENT_TID   3
+#define SYS_PASS            4
+#define SYS_SEND            5
+#define SYS_RECEIVE         6
+#define SYS_REPLY           7
+#define SYS_AWAIT_EVENT     8
+#define SYS_EXIT            99
 
 /* should not be in this scope, but for the sake of seeing all interrupt values */
 #define HWI 100
@@ -39,5 +44,8 @@ typedef unsigned int size_t;
 /* hardware */
 #define CACHE_ON  1
 #define CACHE_OFF 0 
+
+/* interrupts */
+#define TIMER3_INT_IND 0
 
 #endif

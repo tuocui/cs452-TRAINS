@@ -250,26 +250,6 @@ void handle_reply( global_context_t *gc ) {
   add_to_priority( gc, gc->cur_task );
 }
 
-void handle_timer_int( global_context_t *gc ) {
-  // TODO: notify timer notifier
-  
-  /* turn off interrupt on TC3 */
-  int *timer_clr = (int *)(TIMER3_BASE + CLR_OFFSET);
-  *timer_clr = 1;
-  add_to_priority( gc, gc->cur_task );
-}
-
-// TODO: Get the interrupt type and switch on that
-void handle_hwi( global_context_t *gc, int hwi_type ) {
-  switch( hwi_type ){
-  case TIMER3_INT:
-    handle_timer_int( gc );
-    break;
-  default:
-    break;
-  }
-}
-
 void handle_create( global_context_t *gc ) {
 #ifndef CLANG
   register unsigned int priority_reg asm("r0");
@@ -302,6 +282,7 @@ void handle_create( global_context_t *gc ) {
     else {
       (gc->cur_task)->retval = new_td->id;
       add_to_priority( gc, new_td );
+      ++(gc->num_tasks);
     }
   }
   /* add current task back to queue regardless */
@@ -329,6 +310,13 @@ void handle_exit( global_context_t *gc ) {
     send_td = send_td->next_sender;
   }
   (gc->cur_task)->status = TD_ZOMBIE;
+
+  --(gc->num_tasks);
+  /* Only idle task not exited */
+  if( gc->num_tasks <= 1 ) {
+    ((gc->priorities)[PRIORITY_MAX]).first_in_queue = NULL;
+    ((gc->priorities)[PRIORITY_MAX]).last_in_queue = NULL;
+  }
 }
 
 void handle_my_tid( global_context_t *gc ){
@@ -342,3 +330,52 @@ void handle_my_parent_tid( global_context_t *gc ) {
   td->retval = td->parent_id;
   add_to_priority( gc, gc->cur_task );
 }
+
+void handle_await_event( global_context_t *gc ) {
+  //debug( "In handle await event" );
+  register int event_type_reg asm("r0");
+  int event_type;
+  register unsigned int *cur_sp_reg asm("r3") = (gc->cur_task)->sp;
+
+  asm volatile(
+    "msr cpsr_c, #0xdf\n\t"
+    "add r3, %1, #56\n\t" // 14 registers + pc + retval saved
+    "ldmfd r3, {%0}\n\t"
+    "msr cpsr_c, #0xd3\n\t"
+    : "+r"(event_type_reg), "+r"(cur_sp_reg)
+  );
+  event_type = event_type_reg;
+  //debug( "Obtained event_type: %d", event_type );
+  (gc->interrupts)[event_type] = gc->cur_task;
+  (gc->cur_task)->status = TD_EVENT_BLOCKED;
+}
+
+void handle_timer_int( global_context_t *gc ) {
+  /* turn off interrupt on TC3 */
+  int *timer_clr = (int *)(TIMER3_BASE + CLR_OFFSET);
+  task_descriptor_t *td = gc->interrupts[TIMER3_INT_IND];
+  if( td != NULL ) {
+    td->retval = gc->num_missed_clock_cycles + 1;
+    (gc->interrupts)[TIMER3_INT_IND] = NULL;
+    gc->num_missed_clock_cycles = 0;
+    add_to_priority( gc, td );
+    add_to_priority( gc, gc->cur_task );
+    // assert( td != gc->cur_task );
+  } else {
+    ++(gc->num_missed_clock_cycles);
+    add_to_priority( gc, gc->cur_task );
+  }
+  *timer_clr = 1;
+}
+
+void handle_hwi( global_context_t *gc, int hwi_type ) {
+  switch( hwi_type ){
+  case TIMER3_INT:
+    handle_timer_int( gc );
+    break;
+  default:
+    break;
+  }
+}
+
+

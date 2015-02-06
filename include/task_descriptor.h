@@ -20,6 +20,7 @@ typedef struct task_descriptor_t{
     TD_RECEIVE_BLOCKED,   // Sender's state
     TD_REPLY_BLOCKED,     // Sender's state
     TD_SEND_BLOCKED,      // Recver's state
+    TD_EVENT_BLOCKED,     // Event blocked
     TD_ZOMBIE,            // Exited already
   } status;//: 8;
 
