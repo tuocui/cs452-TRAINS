@@ -77,9 +77,6 @@ task_descriptor_t *schedule( global_context_t *gc) {
   scheduler_t *scheduler = &((gc->priorities)[highest_priority]);
   
   task_descriptor_t *td = scheduler->first_in_queue;
-  if( td->status != TD_READY ) {
-    return NULL;
-  }
   scheduler->first_in_queue = td->next_in_priority;
   if (scheduler->first_in_queue == NULL) {
     scheduler->last_in_queue = NULL;

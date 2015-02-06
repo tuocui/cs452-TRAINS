@@ -314,7 +314,8 @@ void handle_exit( global_context_t *gc ) {
   --(gc->num_tasks);
   /* Only idle task not exited */
   if( gc->num_tasks <= 1 ) {
-    (((gc->priorities)[PRIORITY_MAX]).first_in_queue)->status = TD_ZOMBIE;
+    ((gc->priorities)[PRIORITY_MAX]).first_in_queue = NULL;
+    ((gc->priorities)[PRIORITY_MAX]).last_in_queue = NULL;
   }
 }
 
