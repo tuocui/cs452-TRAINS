@@ -4,6 +4,11 @@
 #define UPDATE_TIME 0x11
 #define NOTIFIER_MAGIC 0x12
 
+typedef struct clock_msg_t {
+  int request_type;
+  int ticks;
+}
+
 typedef struct clock_client_t {
 
   unsigned int future_ticks;
