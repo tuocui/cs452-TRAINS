@@ -18,8 +18,8 @@ struct Server {
 };
 
 void idle_task( ) {
+  debug( "IN IDLE TASK" );
   FOREVER {
-    debug( "IN IDLE TASK" );
   }
   Exit( );
 }
@@ -164,10 +164,39 @@ void a3_test_task( ) {
   Exit( );
 }
 
+void a3_user_task( ) {
+  //bwsetfifo( COM2, OFF );
+  // Create nameserver
+  int nameserver_tid = Create( 2, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid );
+  // Create idle
+  int idle_id = Create( PRIORITY_MAX, &idle_task );
+  debug( "Idle tid: %d", idle_id );
+  // Create clock server
+  int clock_server_tid = Create( 2, &clock_server );
+  debug( "Clock Server tid: %d", clock_server_tid );
+  // Create Clients
+  int clock_client_tid1 = Create( 3, &clock_client );
+  debug( "Clock Client1 tid: %d", clock_client_tid1 );
+  int client_tid;
+  int msg;
+  int msg_len = sizeof(msg);
+  clock_client_msg_t rpl;
+  int rpl_len = sizeof(rpl);
+  Receive( &client_tid, (char *)&msg, msg_len );
+  debug( "received from: %d, %d, %d", msg, client_tid, clock_client_tid1 );
+  if( client_tid == msg && client_tid == clock_client_tid1 ) {
+    rpl.delay_time = 10;
+    rpl.num_delays = 20;
+    Reply( client_tid, (char *)&rpl, rpl_len );
+  }
+  Exit( );
+}
+
 #endif /* A3 */
 
 void first_user_task( ){
-  //bwsetfifo( COM2, OFF );
+  bwsetfifo( COM2, OFF );
 #ifdef A1
   int first_tid = MyTid( );
   debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(first_tid), TID_GEN(first_tid));
@@ -198,11 +227,10 @@ void first_user_task( ){
 #endif /* A2 */
 
 #ifdef A3
-  int idle_id;
-  idle_id = Create( PRIORITY_MAX, &idle_task );
-  int test_id;
-  test_id = Create( 6, &a3_test_task );
-  bwprintf( COM2, "idle_id: %d, test_id: %d\r\n", idle_id, test_id );
+  a3_user_task( );
+  //int test_id;
+  //test_id = Create( 6, &a3_test_task );
+  //bwprintf( COM2, "idle_id: %d, test_id: %d\r\n", idle_id, test_id );
 #endif /* A3 */
 
   bwprintf( COM2, "First: exiting\n\r");

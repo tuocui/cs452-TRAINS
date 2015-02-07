@@ -3,6 +3,7 @@
 
 #define UPDATE_TIME 0x11
 #define NOTIFIER_MAGIC 0x12
+#define TICKS_TEN_MS 5080
 
 typedef struct clock_msg_t {
   int value;
@@ -27,11 +28,15 @@ typedef struct clock_client_t {
 
 } clock_client_t ;
 
+typedef struct clock_client_msg_t {
+  int delay_time;
+  int num_delays;
+} clock_client_msg_t;
 
-//TODO: make a msg struct
-
-void clock_server_init( );
-
-void clock_clients_init( );
+void clock_server( );
+void clock_client( );
+int Delay( int ticks );
+int DelayUntil( int ticks );
+int Time( );
 
 #endif

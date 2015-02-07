@@ -30,9 +30,6 @@ typedef unsigned int size_t;
 /* should not be in this scope, but for the sake of seeing all interrupt values */
 #define HWI 100
 
-/* hwi interrupt eventid */
-#define TIMER_INTERRUPT 1
-
 /* server jobs */
 #define SERVER_MAX 2
 #define RPS_SERVER 0

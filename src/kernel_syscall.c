@@ -177,8 +177,8 @@ void handle_receive( global_context_t *gc ) {
     msg_s = get_message( s_td->sp, 56, &msglen_s );
     reply_s = get_message( s_td->sp, 64, &replylen_s );
 
-    debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
-       tid_s, msg_s, msglen_s, reply_s, replylen_s);
+    //debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
+    //   tid_s, msg_s, msglen_s, reply_s, replylen_s);
 
     unsigned int *ptid_r;
     int msglen_r;
