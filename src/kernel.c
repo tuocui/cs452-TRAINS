@@ -2,6 +2,29 @@
 #include "kernel.h"
 
 
+void print_env( ) {
+  bwprintf( COM2, "#################################\n\r" );
+  #ifdef OPT
+  bwprintf( COM2, "#\tOPT:\tON\t\t#\n\r" );
+  #else
+  bwprintf( COM2, "#\tOPT:\tOFF\t\t#\n\r" );
+  #endif
+  
+  #ifdef CACHE
+  bwprintf( COM2, "#\tCACHE:\tON\t\t#\n\r" );
+  #else
+  bwprintf( COM2, "#\tCACHE:\tOFF\t\t#\n\r" );
+  #endif
+  
+  #if AST_LEVEL >= 0
+  bwprintf( COM2, "#\tASSERT:\tLEVEL %d\t\t#\n\r", AST_LEVEL );
+  #else
+  bwprintf( COM2, "#\tASSERT:\tOFF\t\t#\n\r" );
+  #endif 
+  bwprintf( COM2, "#################################\n\r" );
+
+}
+
 void cache_init( ) {
   asm volatile( 
     "MRC p15, 0, r0, c1, c0, 0\n\t" // read cp15 to r0
@@ -42,7 +65,6 @@ void kernel_init( global_context_t *gc) {
   
   init_kernelentry();
 #ifdef CACHE
-  bwprintf( COM2, "TURNING ON CACHE ...\n\r " );
   cache_init( );
 #endif
 
@@ -87,7 +109,7 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   td->retval = user_r0_reg;
 
   //debug( "sp: %x", td->sp );
-  assert( hwi_request_flag == HWI_MAGIC || hwi_request_flag == -1 );
+  assert(0, hwi_request_flag == HWI_MAGIC || hwi_request_flag == -1 );
   /* if hwi request type is set, we update request_type */
   if( hwi_request_flag == HWI_MAGIC) {
     request_type = HWI;
@@ -97,7 +119,7 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   hwi_request_flag = -1;
 
   /* check td magic, failures indicate user stack is too small */
-  assert(*(td->orig_sp - (TD_SIZE - 1)) == gc->td_magic);
+  assert(0, *(td->orig_sp - (TD_SIZE - 1)) == gc->td_magic);
   return request_type;
 }
 
@@ -116,7 +138,7 @@ void handle( global_context_t *gc, int request_type ) {
         handle_hwi( gc, hwi_type );
       }
       
-      assert( vic_base == 0 );
+      assert(1, vic_base == 0 );
       ++vic_src_num;
 
       /* should have reset vic register at this point */
@@ -157,12 +179,15 @@ void handle( global_context_t *gc, int request_type ) {
 
 int main(int argc, char *argv[]) {
 
+  print_env( );
+
   debug("TD_BIT: %d", TD_BIT);
   debug("TD_MAX: %d", TD_MAX);
 
   int request_type;
-  bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
   global_context_t gc;
+
+  bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
   kernel_init( &gc );
 
   task_descriptor_t *first_td = tds_create_td(&gc, 5, (int)&first_user_task);
@@ -178,12 +203,10 @@ int main(int argc, char *argv[]) {
       break;    
     }
 
-    //debug( "BEFORE activate" );
     request_type = activate( &gc, scheduled_td );
     handle( &gc, request_type );
   }
 
-  /* remove this to screw up the next team, lol */
   hwi_cleanup( );
   bwprintf(COM2, "\n\rExit Main\n\r");
 

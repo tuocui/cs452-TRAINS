@@ -7,8 +7,8 @@
 XCC=gcc
 AS=as
 LD=ld
-CFLAGS=-c ${DEBUG} ${CACHE} -fPIC -Wall -Werror -I. -I../include/ -mcpu=arm920t -msoft-float 
-CFLAGS_O=-c ${DEBUG} ${CACHE} ${OPT} ${OPT_LEVEL} -fPIC -Wall -Werror -I. -I../include/ -mcpu=arm920t -msoft-float 
+CFLAGS=-c ${DEBUG} ${CACHE} ${AST} -fPIC -Wall -Werror -I. -I../include/ -mcpu=arm920t -msoft-float 
+CFLAGS_O=-c ${DEBUG} ${CACHE} ${AST} ${OPT} ${OPT_LEVEL} -fPIC -Wall -Werror -I. -I../include/ -mcpu=arm920t -msoft-float 
 # -g: include hooks for gdb
 # -c: only compile
 # -mcpu=arm920t: generate code for the 920t architecture

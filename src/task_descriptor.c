@@ -61,7 +61,7 @@ void tds_init(global_context_t *gc) {
 
 task_descriptor_t * tds_create_td(global_context_t *gc, unsigned int priority, int code_addr) { 
   if(gc->td_first_free == NULL) {
-    //assert(gc->td_free_num == 0);
+    assert(0, gc->td_free_num == 0);
     return NULL;
   }
 
@@ -83,7 +83,7 @@ task_descriptor_t * tds_create_td(global_context_t *gc, unsigned int priority, i
 
   /* insanity check */
   --(gc->td_free_num);
-  //assert(gc->td_free_num >= 0);
+  assert(0, gc->td_free_num >= 0);
 
   return td_out;
 }

@@ -17,7 +17,6 @@ void clock_clients_init( clock_client_t *clients) {
 void notifier( ) {
   int clock_server_tid = MyParentTid( );
   //TODO: this should be a level 1 assert
-  //assert( clock_server_tid == WhoIs( (char *)CLOCK_SERVER ));
   
   clock_msg_t msg;
   int msg_size = sizeof(msg);
@@ -27,13 +26,11 @@ void notifier( ) {
   FOREVER {
     msg.value = AwaitEvent( TIMER3_INT_IND );
 
-    //TODO: level 1 assert
-    assert( msg.value > 0, "ERROR: interrupt eventid is incorrect" );
+    assert(0, msg.value > 0, "ERROR: interrupt eventid is incorrect" );
 
     Send( clock_server_tid, (char*)&msg, msg_size, &rpl, 1 );
     
-    //TODO: should be level 1 assert 
-    // assert( rpl == (char)NOTIFIER_MAGIC );
+    // assert(1, rpl == (char)NOTIFIER_MAGIC );
   }
 }
 

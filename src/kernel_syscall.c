@@ -58,8 +58,8 @@ int check_tid( global_context_t *gc, unsigned int tid ) {
   /* if task_id's index is not valid , return -1 */
   // all id_idx are possible in this kernel
   int tid_idx = TID_IDX( tid );
-  assert( tid_idx >= 0 );
-  assert( tid_idx <= ( TD_MAX - 1 ));
+  assert(0, tid_idx >= 0 );
+  assert(0, tid_idx <= ( TD_MAX - 1 ));
 
   // If generation == 0, then impossible
   if( TID_GEN(tid) == 0 ){
@@ -72,6 +72,8 @@ int check_tid( global_context_t *gc, unsigned int tid ) {
     td->status == TD_ZOMBIE ) {
     return -2;
   }
+
+  //TODO: think about -3 return val
 
   return 0;
 }
@@ -161,7 +163,7 @@ void handle_receive( global_context_t *gc ) {
   } else {
     //debug( "Receiving a send waiting in queue" );
     task_descriptor_t *s_td = r_td->first_sender_in_queue;
-    assert(s_td->status == TD_RECEIVE_BLOCKED);
+    assert(0, s_td->status == TD_RECEIVE_BLOCKED);
     r_td->first_sender_in_queue = s_td->next_sender;
     s_td->next_sender = NULL;
     if (r_td->first_sender_in_queue == NULL) {
@@ -360,7 +362,7 @@ void handle_timer_int( global_context_t *gc ) {
     gc->num_missed_clock_cycles = 0;
     add_to_priority( gc, td );
     add_to_priority( gc, gc->cur_task );
-    // assert( td != gc->cur_task );
+    assert(0, td != gc->cur_task );
   } else {
     ++(gc->num_missed_clock_cycles);
     add_to_priority( gc, gc->cur_task );
