@@ -5,5 +5,4 @@ void start_clock( int load_val );
 
 int get_timer_val( );
 
-
 #endif

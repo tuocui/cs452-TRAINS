@@ -1,7 +1,7 @@
 #include <tools.h>
 #include <rps.h>
 #include <nameserver.h>
-#include <timer.h>
+#include <clock_server.h>
 #include <syscall.h>
 
 void initialize_clients( client_t *clients ) {

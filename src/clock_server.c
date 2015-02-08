@@ -1,10 +1,22 @@
+#include "ts7200.h" 
 #include "tools.h"
-//TODO, modularize kernel service such as nameserver and syscall
-#include "nameserver.h"
 #include "syscall.h"
+#include "nameserver.h"
 #include "clock_server.h"
-#include "ts7200.h"
-#include "timer.h"
+
+// TODO: integrate clock and clock_server if necessary
+void start_clock( int load_val ) {
+	// load a value to TIMER3_BASE
+	*((int *)(TIMER3_BASE + LDR_OFFSET)) = load_val;
+
+	// Enable, set mode, and use 508MHz
+	*((int *)(TIMER3_BASE + CRTL_OFFSET)) |= ENABLE_MASK | MODE_MASK | CLKSEL_MASK;
+}
+
+// Get value from value register
+int get_timer_val( ) {
+	return *((int *)(TIMER3_BASE + VAL_OFFSET));
+}
 
 void clock_clients_init( clock_client_t *clients) {
   int i = 0;

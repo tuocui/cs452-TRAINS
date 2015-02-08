@@ -5,6 +5,14 @@
 #define NOTIFIER_MAGIC 0x12
 #define TICKS_TEN_MS 5080
 
+
+/* timer stuff */ // TODO: shouldn't provide this interface 
+void start_clock( int load_val );
+
+int get_timer_val( );
+
+
+/* clock server stuff */
 typedef struct clock_msg_t {
   int value;
 
@@ -34,9 +42,11 @@ typedef struct clock_client_msg_t {
 } clock_client_msg_t;
 
 void clock_server( );
-void clock_client( );
+
 int Delay( int ticks );
+
 int DelayUntil( int ticks );
+
 int Time( );
 
-#endif
+#endif /* __CLOCK_SERVER__ */

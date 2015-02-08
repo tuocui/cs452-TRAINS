@@ -3,7 +3,6 @@
 #include <syscall.h>
 #include <nameserver.h>
 #include <rps.h>
-#include "timer.h"
 #include "clock_server.h"
 
 #define CYCLES 1000
