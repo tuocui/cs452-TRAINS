@@ -185,25 +185,3 @@ int Time( ) {
   Send( clock_server_id, (char *)&msg, msg_len, (char *)&rpl, msg_len );
   return rpl.value;
 }
-
-void clock_client( ) {
-  int my_tid = MyTid();
-  int msg = my_tid;
-  int msg_len = sizeof(msg);
-  clock_client_msg_t rpl;
-  int rpl_len = sizeof(rpl);
-  int parent_id = MyParentTid( );
-  Send( parent_id, (char *)&msg, msg_len, (char *)&rpl, rpl_len );
-  int delay_time = rpl.delay_time;
-  int num_delays = rpl.num_delays;
-  debug( "got back from first user task: %d, %d", delay_time, num_delays );
-  int i = 0;
-  int errno;
-  for( ; i < num_delays; ++i ) {
-    errno = Delay( delay_time );
-    bwprintf( COM2, "Task: %d, with delay time %d, delayed %d times!\r\n", my_tid, delay_time, i );
-  }
-  Exit( );
-}
-
-

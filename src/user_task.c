@@ -150,6 +150,28 @@ void a2_user_task( ) {
 
 #ifdef A3
 
+void clock_client( ) {
+  int my_tid = MyTid();
+  int msg = my_tid;
+  int msg_len = sizeof(msg);
+
+  clock_client_msg_t rpl;
+  int rpl_len = sizeof(rpl);
+  int parent_id = MyParentTid( );
+
+  Send( parent_id, (char *)&msg, msg_len, (char *)&rpl, rpl_len );
+  int delay_time = rpl.delay_time;
+  int num_delays = rpl.num_delays;
+  debug( "got back from first user task: %d, %d", delay_time, num_delays );
+  int i = 0;
+  int errno;
+  for( ; i < num_delays; ++i ) {
+    errno = Delay( delay_time );
+    bwprintf( COM2, "Task: %d, with delay time %d, delayed %d times!\r\n", my_tid, delay_time, i+1 );
+  }
+  Exit( );
+}
+
 void a3_test_task( ) {
   start_clock( 5080 );
   debug( "hwi test" );
@@ -161,36 +183,48 @@ void a3_test_task( ) {
     debug( "j: %d, i: %d, rtn: %d", j, i, ae_rtn );
   }
   debug( "After loop: j: %d, i: %d", j, i );
-  Exit( );
 }
 
 void a3_user_task( ) {
   //bwsetfifo( COM2, OFF );
+  //
   // Create nameserver
   int nameserver_tid = Create( 2, &nameserver_main );
   debug( "Nameserver tid: %d", nameserver_tid );
+
   // Create idle
   int idle_id = Create( PRIORITY_MAX, &idle_task );
   debug( "Idle tid: %d", idle_id );
+
   // Create clock server
   int clock_server_tid = Create( 2, &clock_server );
   debug( "Clock Server tid: %d", clock_server_tid );
+
   // Create Clients
-  int clock_client_tid1 = Create( 3, &clock_client );
-  debug( "Clock Client1 tid: %d", clock_client_tid1 );
   int client_tid;
   int msg;
   int msg_len = sizeof(msg);
   clock_client_msg_t rpl;
   int rpl_len = sizeof(rpl);
-  Receive( &client_tid, (char *)&msg, msg_len );
-  debug( "received from: %d, %d, %d", msg, client_tid, clock_client_tid1 );
-  if( client_tid == msg && client_tid == clock_client_tid1 ) {
-    rpl.delay_time = 10;
-    rpl.num_delays = 20;
-    Reply( client_tid, (char *)&rpl, rpl_len );
-  }
-  Exit( );
+
+#define CLOCK_CLIENT_WAIT( _priority, _delay_time, _num_delays) {         \
+  int clock_client_tid##_priority = Create( _priority, &clock_client );   \
+  debug( "Clock Client##priority tid: %d", clock_client_tid##_priority ); \
+  Receive( &client_tid, (char *)&msg, msg_len );                          \
+  debug( "Received from: %d, %d, %d", msg, client_tid,                    \
+      clock_client_tid##_priority );                                      \
+  if( client_tid == msg && client_tid == clock_client_tid##_priority ) {  \
+    rpl.delay_time = _delay_time;                                         \
+    rpl.num_delays = _num_delays;                                         \
+    Reply( client_tid, (char *)&rpl, rpl_len );                           \
+  }                                                                       \
+}
+
+  CLOCK_CLIENT_WAIT( 3, 10, 20 );
+  CLOCK_CLIENT_WAIT( 4, 23, 9 );
+  CLOCK_CLIENT_WAIT( 5, 33, 6 );
+  CLOCK_CLIENT_WAIT( 6, 71, 3 );
+
 }
 
 #endif /* A3 */
@@ -227,12 +261,13 @@ void first_user_task( ){
 #endif /* A2 */
 
 #ifdef A3
+
   a3_user_task( );
   //int test_id;
   //test_id = Create( 6, &a3_test_task );
   //bwprintf( COM2, "idle_id: %d, test_id: %d\r\n", idle_id, test_id );
 #endif /* A3 */
 
-  bwprintf( COM2, "First: exiting\n\r");
+  bwprintf( COM2, "Exit first_user_task\n\r");
   Exit( );
 }

@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
   bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
   kernel_init( &gc );
 
-  task_descriptor_t *first_td = tds_create_td(&gc, 5, (int)&first_user_task);
+  task_descriptor_t *first_td = tds_create_td(&gc, 8, (int)&first_user_task);
   ++(gc.num_tasks);
   add_to_priority( &gc, first_td );
 
