@@ -9,7 +9,7 @@
 /* timer stuff */ // TODO: shouldn't provide this interface 
 void start_clock( int load_val );
 
-int get_timer_val( );
+inline int get_timer_val( );
 
 
 /* clock server stuff */

@@ -14,7 +14,7 @@ void start_clock( int load_val ) {
 }
 
 // Get value from value register
-int get_timer_val( ) {
+inline int get_timer_val( ) {
 	return *((int *)(TIMER3_BASE + VAL_OFFSET));
 }
 
@@ -66,6 +66,23 @@ void insert_client( clock_client_t **new_client, clock_client_t **first_client_q
   }
  
 }
+
+#define INSERT_CLIENT( _new_client, _first_client_q )                             \
+  if( _first_client_q == NULL ) {                                                 \
+    _first_client_q = _new_client;                                                \
+  } else if( (_new_client)->future_ticks <= (_first_client_q)->future_ticks ) {   \
+    (_new_client)->next_client_q = (_first_client_q);                             \
+    (_first_client_q) = (_new_client);                                            \
+  } else {                                                                        \
+    clock_client_t * cur_client = (_first_client_q);                              \
+    while( cur_client->next_client_q != NULL &&                                   \
+        (_new_client)->future_ticks > cur_client->next_client_q->future_ticks ) { \
+      cur_client = cur_client->next_client_q;                                     \
+    }                                                                             \
+                                                                                  \
+    (_new_client)->next_client_q = cur_client->next_client_q;                     \
+    cur_client->next_client_q = (_new_client);                                    \
+  }
 
 void clock_server( ) {
   if( RegisterAs( (char *)CLOCK_SERVER ) == -1) {
@@ -125,7 +142,8 @@ void clock_server( ) {
         new_client->c_tid = client_tid;
         new_client->future_ticks = clock_ticks + receive_msg.value;
         
-        insert_client(&new_client, &first_client_q);
+        //insert_client(&new_client, &first_client_q);
+        INSERT_CLIENT(new_client, first_client_q);
         break;
       }
     case CM_DELAY_UNTIL:
