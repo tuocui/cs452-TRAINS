@@ -164,9 +164,12 @@ void clock_client( ) {
   debug( "got back from first user task: %d, %d", delay_time, num_delays );
   int i = 0;
   int errno;
+  int total_ticks;
   for( ; i < num_delays; ++i ) {
     errno = Delay( delay_time );
-    bwprintf( COM2, "Task: %d, with delay time %d, delayed %d times!\r\n", my_tid, delay_time, i+1 );
+    total_ticks = Time( );
+    bwprintf( COM2, "Total_time: %d\tTid: %d, with delay time %d, delayed %d/%d times\r\n",
+        total_ticks, my_tid, delay_time, i+1, num_delays);
   }
   Exit( );
 }

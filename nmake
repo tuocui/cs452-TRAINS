@@ -5,7 +5,7 @@ grn='\e[32m'
 wht='\e[0m'
 
 USER="$(whoami)"
-DEST="/u/cs452/tftp/ARM/${USER}/"
+DEST="/u/cs452/tftp/ARM/${USER}"
 PROJECT_SOURCE_DIR=./src
 EXTRA_FLAGS=""
 
@@ -48,7 +48,7 @@ else
   ELF="$(find -name *.elf)"
   
   rm ${DEST}/*elf
-  cp *.elf ${DEST}
+  cp *.elf ${DEST}/
   if [ $? -ne 0 ]; then
     echo -e "${red}FAILED to copy elf file to ${DEST}${wht}"
   fi
