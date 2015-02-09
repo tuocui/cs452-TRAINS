@@ -1,10 +1,11 @@
 #
+#
 # Makefile for kernel 
 # DEBUG flag is set by nmake
 #
 
 # MUST add .c file here:
-SRCS=bwio.c kernel.c task_descriptor.c scheduler.c syscall.c kernel_syscall.c user_task.c nameserver.c rps.c timer.c
+SRCS=clock_server.c bwio.c kernel.c task_descriptor.c scheduler.c syscall.c kernel_syscall.c user_task.c nameserver.c rps.c 
 _ASMS=$(SRCS:.c=.s) 
 ASMS=$(_ASMS) context_switch.s
 OBJS=$(SRCS:.c=.o) context_switch.o
@@ -12,8 +13,8 @@ OBJS=$(SRCS:.c=.o) context_switch.o
 XCC=gcc
 AS=as
 LD=ld
-CFLAGS=-c ${DEBUG} ${CACHE} -fPIC -Wall -Werror -I./include/ -I../include/ -mcpu=arm920t -msoft-float 
-CFLAGS_O=-c ${DEBUG} ${CACHE} ${OPT} ${OPT_LEVEL} -fPIC -Wall -Werror -I./include -I../include/ -mcpu=arm920t -msoft-float 
+CFLAGS=-c ${DEBUG} ${CACHE} ${AST} -fPIC -Wall -Werror -I. -I../include/ -mcpu=arm920t -msoft-float 
+CFLAGS_O=-c ${DEBUG} ${CACHE} ${AST} ${OPT} ${OPT_LEVEL} -fPIC -Wall -Werror -I. -I../include/ -mcpu=arm920t -msoft-float 
 # -g: include hooks for gdb
 # -c: only compile
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -35,7 +36,6 @@ all: $(_ASMS) kernel.elf
 
 %.o: %.s
 	$(AS) $(ASFLAGS) -o $@ $<
-
 
 kernel.elf: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS) -lgcc #-lbwio

@@ -5,14 +5,10 @@ grn='\e[32m'
 wht='\e[0m'
 
 USER="$(whoami)"
-DEST="/u/cs452/tftp/ARM/${USER}/"
+DEST="/u/cs452/tftp/ARM/${USER}"
 PROJECT_SOURCE_DIR=./src
-DEBUG=""
-OPT=""
-OPT_LEVEL=""
-CACHE=""
+EXTRA_FLAGS=""
 
-cd ${PROJECT_SOURCE_DIR}
 
 if [ "$1" == "clean" ]; then
   make clean
@@ -22,24 +18,27 @@ else
     do
 
     if [ "$var" == "-d" ]; then
-      DEBUG="DEBUG=-DDEBUG"
+      EXTRA_FLAGS=${EXTRA_FLAGS}" DEBUG=-DDEBUG"
     fi
 
     if [ "$var" == "-c" ]; then
-      CACHE="CACHE=-DCACHE"
+      EXTRA_FLAGS=${EXTRA_FLAGS}" CACHE=-DCACHE"
     fi
 
     if [ "$var" == "-o" ]; then
-      OPT="OPT=-DOPT"
-      OPT_LEVEL="OPT_LEVEL=-O2"
+      EXTRA_FLAGS=${EXTRA_FLAGS}" OPT=-DOPT OPT_LEVEL=-O2"
+    fi
+
+    if [[ "$var" =~ ^-[0-9]+$ ]]; then
+      EXTRA_FLAGS=${EXTRA_FLAGS}" AST=-DAST_LEVEL=${var:1}"
     fi
 
   done
 
   make clean
-  cp context_switch.s.in context_switch.s
+  #cp context_switch.s.in context_switch.s
   
-  make ${DEBUG} ${CACHE} ${OPT} ${OPT_LEVEL}
+  make ${EXTRA_FLAGS} 
   if [ $? -ne 0 ]; then
     echo -e "${red}FAILED to build!!${wht}"
     exit -1;
@@ -48,15 +47,12 @@ else
   ELF="$(find -name *.elf)"
   
   rm ${DEST}/*elf
-  cp *.elf ${DEST}
+  cp elf/*.elf ${DEST}/
   if [ $? -ne 0 ]; then
     echo -e "${red}FAILED to copy elf file to ${DEST}${wht}"
   fi
   
   chmod 777 ${DEST}/*.elf
-  mv *.o ../obj/
-  mv *.s ../asm/
-  mv *.elf ../elf/
   
   echo -e "${grn}Finished building, file name: \e[3;33m ${ELF} ${wht}"
 

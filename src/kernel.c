@@ -2,6 +2,29 @@
 #include "kernel.h"
 
 
+void print_env( ) {
+  bwprintf( COM2, "#################################\n\r" );
+  #ifdef OPT
+  bwprintf( COM2, "#\tOPT:\tON\t\t#\n\r" );
+  #else
+  bwprintf( COM2, "#\tOPT:\tOFF\t\t#\n\r" );
+  #endif
+  
+  #ifdef CACHE
+  bwprintf( COM2, "#\tCACHE:\tON\t\t#\n\r" );
+  #else
+  bwprintf( COM2, "#\tCACHE:\tOFF\t\t#\n\r" );
+  #endif
+  
+  #if AST_LEVEL >= 0
+  bwprintf( COM2, "#\tASSERT:\tLEVEL %d\t\t#\n\r", AST_LEVEL );
+  #else
+  bwprintf( COM2, "#\tASSERT:\tOFF\t\t#\n\r" );
+  #endif 
+  bwprintf( COM2, "#################################\n\r" );
+
+}
+
 void cache_init( ) {
   asm volatile( 
     "MRC p15, 0, r0, c1, c0, 0\n\t" // read cp15 to r0
@@ -15,6 +38,9 @@ void hwi_cleanup( ) {
   /* clear all interrupt bits */
   *((unsigned int *)(VIC1_BASE + VICX_INT_ENCLEAR_OFFSET)) = CLEAR_ALL;
   *((unsigned int *)(VIC2_BASE + VICX_INT_ENCLEAR_OFFSET)) = CLEAR_ALL;
+  /* Clear timer interrupt bit */
+  int *timer_base = (int *)(TIMER3_BASE + CLR_OFFSET);
+  *timer_base = 1;
 }
 
 void hwi_init( ) {
@@ -27,18 +53,35 @@ void hwi_init( ) {
 void kernel_init( global_context_t *gc) {
   gc->cur_task = NULL;
   gc->priority_bitmap = 0;
+  int i = 0;
+  for( ; i < NUM_INTS; ++i ) {
+    (gc->interrupts)[i] = NULL;
+  }
+  gc->num_tasks = 0;
+  gc->num_missed_clock_cycles = 0;
 
   hwi_cleanup( );
   hwi_init( );
   
   init_kernelentry();
 #ifdef CACHE
-  bwprintf( COM2, "TURNING ON CACHE ...\n\r " );
   cache_init( );
 #endif
 
   tds_init(gc);
   init_schedulers(gc);
+}
+
+/* TODO: Move this to helper file */
+int get_lowest_set_bit( global_context_t *gc, int bm ) {
+  // Thanks Wikipedia
+  int rtn;
+  rtn = gc->de_bruijn_bit_positions[(((bm & -bm) * 0x077CB531U)) >> 27];
+  return rtn;
+}
+
+inline void clean_set_bit( int *bm , int offset ) {
+  *bm = *bm ^ ( 1 << offset );
 }
 
 int activate( global_context_t *gc, task_descriptor_t *td ) {
@@ -48,11 +91,8 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   register int          user_r0_reg       asm("r3"); // absolute
   int                   request_type;
   int                   hwi_request_flag = -1;
-  debug("hwi_request_flag addr: %x", &hwi_request_flag );
-
   gc->cur_task = td;
-
-  kernel_exit(td->retval, td->sp, td->spsr);
+  kernel_exit(td->retval, td->sp, td->spsr, &hwi_request_flag);
 
   asm volatile(
     "mov %0, r0\n\t"
@@ -68,11 +108,10 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   td->spsr = new_spsr_reg;
   td->retval = user_r0_reg;
 
-  assert( hwi_request_flag == HWI_MAGIC || hwi_request_flag == -1 );
-  debug( "hwi flag: %x", hwi_request_flag );
+  //debug( "sp: %x", td->sp );
+  assert(0, hwi_request_flag == HWI_MAGIC || hwi_request_flag == -1 );
   /* if hwi request type is set, we update request_type */
   if( hwi_request_flag == HWI_MAGIC) {
-    debug( "HWI triggered!, user's r0: %x", td->retval );
     request_type = HWI;
   }
 
@@ -80,14 +119,31 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   hwi_request_flag = -1;
 
   /* check td magic, failures indicate user stack is too small */
-  assert(*(td->orig_sp - (TD_SIZE - 1)) == gc->td_magic);
+  assert(0, *(td->orig_sp - (TD_SIZE - 1)) == gc->td_magic);
   return request_type;
 }
 
 void handle( global_context_t *gc, int request_type ) {
+  int hwi_type;
+  int vic_src_num = 0;
+  int vic_base; // make this a local copy so we can modify its value
   switch( request_type ) {
   case HWI:
-    handle_hwi( gc );
+    while( vic_src_num < 2 ) {
+      vic_base = (int)(*((int*)(VIC1_BASE + vic_src_num * 0x10000)));
+      while( ( hwi_type = get_lowest_set_bit( gc, vic_base ) ) ) {
+        //debug("INSIDE WHILE");
+        clean_set_bit( &vic_base, hwi_type );
+        hwi_type += ( vic_src_num * 32 );
+        handle_hwi( gc, hwi_type );
+      }
+      
+      assert(1, vic_base == 0 );
+      ++vic_src_num;
+
+      /* should have reset vic register at this point */
+    }
+
     break;
   case SYS_CREATE:
     handle_create( gc );
@@ -110,6 +166,9 @@ void handle( global_context_t *gc, int request_type ) {
   case SYS_PASS:
     handle_pass( gc );
     break;
+  case SYS_AWAIT_EVENT:
+    handle_await_event( gc );
+    break;
   case SYS_EXIT:
     handle_exit( gc );
     break;
@@ -120,15 +179,19 @@ void handle( global_context_t *gc, int request_type ) {
 
 int main(int argc, char *argv[]) {
 
+  print_env( );
+
   debug("TD_BIT: %d", TD_BIT);
   debug("TD_MAX: %d", TD_MAX);
 
   int request_type;
-  bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
   global_context_t gc;
+
+  bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
   kernel_init( &gc );
 
-  task_descriptor_t *first_td = tds_create_td(&gc, 5, (int)&first_user_task);
+  task_descriptor_t *first_td = tds_create_td(&gc, 8, (int)&first_user_task);
+  ++(gc.num_tasks);
   add_to_priority( &gc, first_td );
 
   bwputstr( COM2, "FINISHED INITIALIZATION. WOO!\r\n" );
@@ -140,12 +203,10 @@ int main(int argc, char *argv[]) {
       break;    
     }
 
-    debug( "BEFORE activate" );
     request_type = activate( &gc, scheduled_td );
     handle( &gc, request_type );
   }
 
-  /* remove this to screw up the next team, lol */
   hwi_cleanup( );
   bwprintf(COM2, "\n\rExit Main\n\r");
 

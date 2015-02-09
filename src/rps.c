@@ -1,7 +1,7 @@
 #include <tools.h>
 #include <rps.h>
 #include <nameserver.h>
-#include <timer.h>
+#include <clock_server.h>
 #include <syscall.h>
 
 void initialize_clients( client_t *clients ) {
@@ -18,7 +18,7 @@ void initialize_clients( client_t *clients ) {
 
 void rps_server( ) {
   int errno;
-  errno = RegisterAs( (char *) JOB_RPS );
+  errno = RegisterAs( (char *)RPS_SERVER );
   debug( "Woo, registered" );
   if( errno < 0 ) {
     bwputstr( COM2, "Error registering RPS server, aborting." );
@@ -263,7 +263,7 @@ void rps_client1( ) {
   int i = 0;
   int cmd;
   int timer_val;
-  int rps_server_tid = WhoIs( (char *)JOB_RPS );
+  int rps_server_tid = WhoIs( (char *)RPS_SERVER);
   rps_msg_t message;
   rps_msg_t reply;
   int msg_size = sizeof(message);
