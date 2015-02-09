@@ -9,6 +9,27 @@ DEST="/u/cs452/tftp/ARM/${USER}"
 PROJECT_SOURCE_DIR=./src
 EXTRA_FLAGS=""
 
+if [ ! -d "build" ]; then
+  mkdir build
+fi
+
+if [ ! -d "build/kern" ]; then
+  mkdir build/kern
+fi
+
+if [ ! -d "build/user" ]; then
+  mkdir build/user
+fi
+
+if [ ! -d "build/serv" ]; then
+  mkdir build/serv
+fi
+
+if [ ! -d "build/util" ]; then
+  mkdir build/util
+fi
+
+
 
 if [ "$1" == "clean" ]; then
   make clean
