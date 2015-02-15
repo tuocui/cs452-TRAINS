@@ -31,9 +31,10 @@ typedef unsigned int size_t;
 #define HWI 100
 
 /* server jobs */
-#define SERVER_MAX 2
+#define SERVER_MAX 3
 #define RPS_SERVER 0
 #define CLOCK_SERVER 1
+#define COM1_OUT_SERVER 2
 
 /* timer */
 #define TIMER_LOAD_VAL 50800 
