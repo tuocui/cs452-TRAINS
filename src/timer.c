@@ -2,6 +2,8 @@
 #include <timer.h>
 #include <ts7200.h>
 
+
+// TODO: integrate clock and clock_server if necessary
 void start_clock( int load_val ) {
 	// load a value to TIMER3_BASE
 	int *timer_base = (int *)TIMER3_BASE;

@@ -1,14 +1,6 @@
 #include <tools.h>
 #include <kernel.h>
 
-int get_highest_priority( global_context_t *gc ) {
-  // Thanks Wikipedia
-  unsigned int bm = gc->priority_bitmap;
-  int rtn;
-  rtn = gc->de_bruijn_bit_positions[(((bm & -bm) * 0x077CB531U)) >> 27];
-  return rtn;
-}
-
 void init_schedulers( global_context_t* gc ) {
   int i = 0;
   for ( ; i <= PRIORITY_MAX; ++i ) {
@@ -56,7 +48,7 @@ void init_schedulers( global_context_t* gc ) {
 
 void add_to_priority( global_context_t *gc, task_descriptor_t *td ) {
   unsigned int priority = td->priority;
-  assert(priority != 0, "ERROR: should not pass in priority = 0");
+  assert(0, priority != 0, "ERROR: should not pass in priority = 0");
   scheduler_t *scheduler = &((gc->priorities)[priority]);
   task_descriptor_t *last_td = scheduler->last_in_queue;
   if ( last_td != NULL ) {
@@ -69,16 +61,17 @@ void add_to_priority( global_context_t *gc, task_descriptor_t *td ) {
   td->status = TD_READY;
   gc->priority_bitmap = gc->priority_bitmap | ( 1 << priority );
   scheduler->last_in_queue = td;  
-
+  
   ++(scheduler->num_in_queue);
 
-  assert(scheduler->num_in_queue > 0);
-  assert(scheduler->num_in_queue <= TD_MAX);
+  assert(0, scheduler->num_in_queue > 0);
+  assert(0, scheduler->num_in_queue <= TD_MAX);
 }
 
 task_descriptor_t *schedule( global_context_t *gc) {
-  int highest_priority = get_highest_priority( gc );
-  if ( highest_priority == 0 ) {
+
+  int highest_priority = get_lowest_set_bit( gc, gc->priority_bitmap );
+  if( highest_priority == 0 ) {
     return NULL;  
   }
   scheduler_t *scheduler = &((gc->priorities)[highest_priority]);
@@ -92,7 +85,7 @@ task_descriptor_t *schedule( global_context_t *gc) {
   td->next_in_priority = NULL;
   --(scheduler->num_in_queue);
   
-  assert(scheduler->num_in_queue >= 0);
+  assert(0, scheduler->num_in_queue >= 0);
 
   return td;
 }

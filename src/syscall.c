@@ -23,8 +23,6 @@ int Send( int tid, char *msg, int msglen, char *reply, int replylen ) {
    */
   register int retval_reg asm("r0");
   int retval;
-
-  //TODO: make macro to handle optimization 
   
 #ifndef OPT
   //debug("optimiazaion is on");
@@ -141,3 +139,17 @@ void Exit( ) {
   );
 }
 
+int AwaitEvent( int eventid ) {
+  register int retval_reg asm("r0");
+  int retval;
+  asm volatile(
+    "stmfd sp!, {r0}\n\t"
+    "swi %1\n\t"
+    "mov %0, r0\n\t"
+    "add sp, sp, #4\n\t"
+    : "+r"(retval_reg)
+    : "i"(SYS_AWAIT_EVENT)
+  );
+  retval = retval_reg;
+  return retval;
+}

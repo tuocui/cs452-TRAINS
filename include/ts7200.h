@@ -82,3 +82,26 @@
 #define UART_HDLCSTS_OFFSET	0x21c
 
 
+/* HWI Registers */
+// Source: http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/ep93xx-user-guide.pdf
+#define TIMER3_BIT_ON   (1 << 19)
+#define TIMER3_BIT_OFF  (0 << 19)
+
+#define VIC1_BASE 0x800B0000
+#define VIC2_BASE 0x800C0000
+
+#define VICX_IRQ_STATUS_OFFSET      0x0
+#define VICX_FIQ_STATUS_OFFSET      0x4
+#define VICX_RAW_INTR_OFFSET        0x8
+
+#define VICX_INT_SELECT_OFFSET      0xC
+  #define TIMER3_IRQ_MASK           0x0
+  #define TIMER3_FIQ_MASK           0x1
+
+#define VICX_INT_ENABLE_OFFSET      0x10
+  #define TIMER3_INT_ON             TIMER3_BIT_ON
+
+#define VICX_INT_ENCLEAR_OFFSET     0x14
+  #define CLEAR_ALL                 0xFFFFFFFF 
+  #define CLEAR_TIMER3              TIMER3_BIT_ON
+

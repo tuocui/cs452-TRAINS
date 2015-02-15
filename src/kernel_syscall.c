@@ -12,8 +12,7 @@ void kmemcpy( char * dst, const char * src, size_t len ) {
 }
 
 int get_message_tid( unsigned int *sp, int offset ) {
-  debug("sp, *sp: %x, %x", sp, *sp);
-  debug("offset: %d", offset);
+#ifndef CLANG
   register unsigned int  int_reg     asm("r1");
   register int           offset_reg  asm("r2") = offset;
   register unsigned int  *cur_sp_reg asm("r3") = sp;
@@ -29,9 +28,11 @@ int get_message_tid( unsigned int *sp, int offset ) {
   );
   rtn = int_reg;
   return rtn;
+#endif
 }
 
 char *get_message( unsigned int *sp, int offset, int *msglen ) {
+#ifndef CLANG
   /* get the next two arguments: *msg, and msglen */
   register char          *char_reg   asm("r0");
   register unsigned int  int_reg     asm("r1");
@@ -49,6 +50,7 @@ char *get_message( unsigned int *sp, int offset, int *msglen ) {
   *msglen = int_reg;
   msg = char_reg;
   return msg;
+#endif
 }
 
 // TODO: Errno's
@@ -56,12 +58,11 @@ int check_tid( global_context_t *gc, unsigned int tid ) {
   /* if task_id's index is not valid , return -1 */
   // all id_idx are possible in this kernel
   int tid_idx = TID_IDX( tid );
-  assert( tid_idx >= 0 );
-  assert( tid_idx <= ( TD_MAX - 1 ));
+  assert(0, tid_idx >= 0 );
+  assert(0, tid_idx <= ( TD_MAX - 1 ));
 
   // If generation == 0, then impossible
   if( TID_GEN(tid) == 0 ){
-    //debug( "heeyyyyy, invalid id" );
     return -1;
   }
 
@@ -71,6 +72,8 @@ int check_tid( global_context_t *gc, unsigned int tid ) {
     td->status == TD_ZOMBIE ) {
     return -2;
   }
+
+  //TODO: think about -3 return val
 
   return 0;
 }
@@ -85,9 +88,6 @@ void handle_send( global_context_t *gc ) {
   msg_s = get_message( gc->cur_task->sp, 56, &msglen_s );
   // replylen_s set
   reply_s = get_message( gc->cur_task->sp, 64, &replylen_s );
-
-  debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
-    tid_s, msg_s, msglen_s, reply_s, replylen_s);
 
   int tid_check = check_tid( gc, tid_s );
   if ( tid_check < 0 ) {
@@ -163,7 +163,7 @@ void handle_receive( global_context_t *gc ) {
   } else {
     //debug( "Receiving a send waiting in queue" );
     task_descriptor_t *s_td = r_td->first_sender_in_queue;
-    assert(s_td->status == TD_RECEIVE_BLOCKED);
+    assert(0, s_td->status == TD_RECEIVE_BLOCKED);
     r_td->first_sender_in_queue = s_td->next_sender;
     s_td->next_sender = NULL;
     if (r_td->first_sender_in_queue == NULL) {
@@ -179,8 +179,8 @@ void handle_receive( global_context_t *gc ) {
     msg_s = get_message( s_td->sp, 56, &msglen_s );
     reply_s = get_message( s_td->sp, 64, &replylen_s );
 
-    debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
-       tid_s, msg_s, msglen_s, reply_s, replylen_s);
+    //debug("SENDER: tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d",
+    //   tid_s, msg_s, msglen_s, reply_s, replylen_s);
 
     unsigned int *ptid_r;
     int msglen_r;
@@ -253,6 +253,7 @@ void handle_reply( global_context_t *gc ) {
 }
 
 void handle_create( global_context_t *gc ) {
+#ifndef CLANG
   register unsigned int priority_reg asm("r0");
   unsigned int priority;
   register void (*code_reg)() asm("r1");
@@ -283,10 +284,12 @@ void handle_create( global_context_t *gc ) {
     else {
       (gc->cur_task)->retval = new_td->id;
       add_to_priority( gc, new_td );
+      ++(gc->num_tasks);
     }
   }
   /* add current task back to queue regardless */
   add_to_priority( gc, gc->cur_task );
+#endif
 }
 
 void handle_pass( global_context_t *gc ) {
@@ -309,6 +312,13 @@ void handle_exit( global_context_t *gc ) {
     send_td = send_td->next_sender;
   }
   (gc->cur_task)->status = TD_ZOMBIE;
+
+  --(gc->num_tasks);
+  /* Only idle task not exited */
+  if( gc->num_tasks <= 1 ) {
+    ((gc->priorities)[PRIORITY_MAX]).first_in_queue = NULL;
+    ((gc->priorities)[PRIORITY_MAX]).last_in_queue = NULL;
+  }
 }
 
 void handle_my_tid( global_context_t *gc ){
@@ -322,3 +332,52 @@ void handle_my_parent_tid( global_context_t *gc ) {
   td->retval = td->parent_id;
   add_to_priority( gc, gc->cur_task );
 }
+
+void handle_await_event( global_context_t *gc ) {
+  //debug( "In handle await event" );
+  register int event_type_reg asm("r0");
+  int event_type;
+  register unsigned int *cur_sp_reg asm("r3") = (gc->cur_task)->sp;
+
+  asm volatile(
+    "msr cpsr_c, #0xdf\n\t"
+    "add r3, %1, #56\n\t" // 14 registers + pc + retval saved
+    "ldmfd r3, {%0}\n\t"
+    "msr cpsr_c, #0xd3\n\t"
+    : "+r"(event_type_reg), "+r"(cur_sp_reg)
+  );
+  event_type = event_type_reg;
+  //debug( "Obtained event_type: %d", event_type );
+  (gc->interrupts)[event_type] = gc->cur_task;
+  (gc->cur_task)->status = TD_EVENT_BLOCKED;
+}
+
+void handle_timer_int( global_context_t *gc ) {
+  /* turn off interrupt on TC3 */
+  int *timer_clr = (int *)(TIMER3_BASE + CLR_OFFSET);
+  task_descriptor_t *td = gc->interrupts[TIMER3_INT_IND];
+  if( td != NULL ) {
+    td->retval = gc->num_missed_clock_cycles + 1;
+    (gc->interrupts)[TIMER3_INT_IND] = NULL;
+    gc->num_missed_clock_cycles = 0;
+    add_to_priority( gc, td );
+    add_to_priority( gc, gc->cur_task );
+    assert(0, td != gc->cur_task );
+  } else {
+    ++(gc->num_missed_clock_cycles);
+    add_to_priority( gc, gc->cur_task );
+  }
+  *timer_clr = 1;
+}
+
+void handle_hwi( global_context_t *gc, int hwi_type ) {
+  switch( hwi_type ){
+  case TIMER3_INT:
+    handle_timer_int( gc );
+    break;
+  default:
+    break;
+  }
+}
+
+

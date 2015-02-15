@@ -8,15 +8,22 @@
 #include "global.h"
 
 #define FOREVER for( ; ; )
-#define A1 1
-#define A2 1
 
-#define assert( cond, ... )                                      \
-  do {                                                           \
-  if( !( cond ) )                                                \
+
+#ifndef AST_LEVEL
+#define AST_LEVEL -1
+#endif
+#define __assert__( cond, ... )                                  \
+  if( !( cond ) ) {                                              \
     bwprintf(COM2,"Assert failed (%s:%d):\t%s\n\r\n\r",__FILE__, \
         __LINE__, ## __VA_ARGS__);                               \
-  } while( 0 )
+  } else { ; }
+
+#define assert( level, cond, ... )                              \
+  if( level <= AST_LEVEL ) {                                    \
+    __assert__( cond, ## __VA_ARGS__  );                        \
+  } else { ; }                                                  
+
 
 /* to enable debug print
  * call nmake with -d; ./nmake -d
@@ -28,7 +35,7 @@
 #define debug( fmt, ... )                                     \
   do {                                                        \
     if( DEBUG ) {                                             \
-      bwprintf(COM2, "DEBUG (%s: %d):\t"#fmt"\n\r", __FILE__, \
+      bwprintf(COM2, "DEBUG (%s:%d):\t"fmt"\n\r", __FILE__, \
           __LINE__, ## __VA_ARGS__ );                         \
     }                                                         \
   } while( 0 )
