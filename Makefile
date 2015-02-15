@@ -51,8 +51,12 @@ build/%.c: src/%.c
 	cp -f $< $@
 	cp -f src/kern/context_switch.s.in build/kern/context_switch.s
 
+
 build/%.s: build/%.c
 	$(XCC) -S $(CFLAGS_O) -o $@ $< 
+
+build/util/bwio.s: build/util/bwio.c
+	$(XCC) -S $(CFLAGS) -o $@ $< 
 
 
 build/%.o: build/%.s
