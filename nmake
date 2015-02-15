@@ -9,7 +9,27 @@ DEST="/u/cs452/tftp/ARM/${USER}"
 PROJECT_SOURCE_DIR=./src
 EXTRA_FLAGS=""
 
-cd ${PROJECT_SOURCE_DIR}
+if [ ! -d "build" ]; then
+  mkdir build
+fi
+
+if [ ! -d "build/kern" ]; then
+  mkdir build/kern
+fi
+
+if [ ! -d "build/user" ]; then
+  mkdir build/user
+fi
+
+if [ ! -d "build/serv" ]; then
+  mkdir build/serv
+fi
+
+if [ ! -d "build/util" ]; then
+  mkdir build/util
+fi
+
+
 
 if [ "$1" == "clean" ]; then
   make clean
@@ -37,7 +57,7 @@ else
   done
 
   make clean
-  cp context_switch.s.in context_switch.s
+  #cp context_switch.s.in context_switch.s
   
   make ${EXTRA_FLAGS} 
   if [ $? -ne 0 ]; then
@@ -48,15 +68,12 @@ else
   ELF="$(find -name *.elf)"
   
   rm ${DEST}/*elf
-  cp *.elf ${DEST}/
+  cp elf/*.elf ${DEST}/
   if [ $? -ne 0 ]; then
     echo -e "${red}FAILED to copy elf file to ${DEST}${wht}"
   fi
   
   chmod 777 ${DEST}/*.elf
-  mv *.o ../obj/
-  mv *.s ../asm/
-  mv *.elf ../elf/
   
   echo -e "${grn}Finished building, file name: \e[3;33m ${ELF} ${wht}"
 
