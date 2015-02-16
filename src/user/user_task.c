@@ -4,12 +4,14 @@
 #include <nameserver.h>
 #include <rps.h>
 #include "clock_server.h"
+#include "io.h"
 
 #define CYCLES 1000
 
 //#define A1 1
 //#define A2 1 
-#define A3 1
+//#define A3 1
+#define A4 1
 
 //TODO remove testing struct
 struct Server {
@@ -231,6 +233,26 @@ void a3_user_task( ) {
 
 #endif /* A3 */
 
+#ifdef A4
+
+void a4_test_task( ) {
+  int nameserver_tid = Create( 2, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid );
+  int idle_id = Create( PRIORITY_MAX, &idle_task );
+  debug( "Idle tid: %d", idle_id );
+  int com1_out_server_tid = Create( 2, &COM1_Out_Server );
+  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  char msg[4];
+  msg[0] = 13;
+  msg[1] = 54;
+  msg[2] = 13;
+  msg[3] = 58;
+  Putstr( COM1, msg, 4 );
+  Exit( );
+}
+
+#endif /* A4 */
+
 void first_user_task( ){
   bwsetfifo( COM2, OFF );
 #ifdef A1
@@ -269,6 +291,11 @@ void first_user_task( ){
   //test_id = Create( 6, &a3_test_task );
   //bwprintf( COM2, "idle_id: %d, test_id: %d\r\n", idle_id, test_id );
 #endif /* A3 */
+
+#ifdef A4
+  a4_test_task( );
+
+#endif /* A4 */
 
   bwprintf( COM2, "Exit first_user_task\n\r");
   Exit( );

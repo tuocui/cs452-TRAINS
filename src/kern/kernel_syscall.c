@@ -1,5 +1,6 @@
 #include <tools.h>
 #include <kernel.h>
+#include <ts7200.h>
 
 /* memcpy for message passing */
 // TODO: Utilize our 10 spare registers to do memcpy.
@@ -348,6 +349,16 @@ void handle_await_event( global_context_t *gc ) {
   );
   event_type = event_type_reg;
   //debug( "Obtained event_type: %d", event_type );
+  switch( event_type ) {
+    case COM1_OUT_IND:
+      // Turn on COM1 Output interrupts
+      // debug("Handling awaitevent");
+	    *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) |= TIEN_MASK | MSIEN_MASK;
+      debug("UART1_CTLR_OFFSET: %x", *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) );
+      break;
+    default:
+      break;
+  }
   (gc->interrupts)[event_type] = gc->cur_task;
   (gc->cur_task)->status = TD_EVENT_BLOCKED;
 }
@@ -370,10 +381,40 @@ void handle_timer_int( global_context_t *gc ) {
   *timer_clr = 1;
 }
 
+void handle_uart1_combined_int( global_context_t *gc ) {
+  int uart1_int_status = *((unsigned int *)( UART1_BASE + UART_INTR_OFFSET ));
+  //debug("uart1 int status: %x", uart1_int_status );
+
+  if( uart1_int_status & UART_TIS_MASK ) {
+    debug("Transmit interrupt hit");
+    gc->com1_status |= COM1_TRANSMIT_MASK;
+    *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~TIEN_MASK;
+  }
+
+  if( uart1_int_status & UART_MIS_MASK && 
+      *((int *)(UART1_BASE + UART_FLAG_OFFSET)) & CTS_MASK ) {
+    debug("MSIEN interrupt hit");
+    gc->com1_status |= COM1_CTS_MASK;
+    *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~MSIEN_MASK;
+  }
+  // TODO: Handle Input interrupts.
+
+  if( gc->com1_status & COM1_TRANSMIT_MASK && gc->com1_status & COM1_CTS_MASK ) {
+    task_descriptor_t *td = gc->interrupts[COM1_OUT_IND];
+    gc->com1_status &= ~COM1_CTS_MASK & ~COM1_TRANSMIT_MASK;
+    td->retval = 1;
+    add_to_priority( gc, td );
+  }
+  add_to_priority( gc, gc->cur_task );
+}
+
 void handle_hwi( global_context_t *gc, int hwi_type ) {
   switch( hwi_type ){
   case TIMER3_INT:
     handle_timer_int( gc );
+    break;
+  case UART1_COMBINED_INT:
+    handle_uart1_combined_int( gc );
     break;
   default:
     break;

@@ -44,6 +44,8 @@ typedef unsigned int size_t;
 #define CACHE_OFF 0 
 
 /* interrupts */
-#define TIMER3_INT_IND 0
+#define NUM_INTS            2
+#define TIMER3_INT_IND      0
+#define COM1_OUT_IND        1
 
 #endif

@@ -41,12 +41,21 @@ void hwi_cleanup( ) {
   /* Clear timer interrupt bit */
   int *timer_base = (int *)(TIMER3_BASE + CLR_OFFSET);
   *timer_base = 1;
+  /* Turn off COM1 Interrupts + COM1 uart */
+	*( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~UARTEN_MASK & 
+                                                        ~MSIEN_MASK & 
+                                                        ~RIEN_MASK & 
+                                                        ~TIEN_MASK & 
+                                                        ~RTIEN_MASK;
 }
 
 void hwi_init( ) {
   /* turn on timer3 interrupt, select as IRQ*/
   *((unsigned int *)(VIC2_BASE + VICX_INT_SELECT_OFFSET)) &= TIMER3_IRQ_MASK;
   *((unsigned int *)(VIC2_BASE + VICX_INT_ENABLE_OFFSET)) |= TIMER3_INT_ON;
+  /* turn on COM1 Output interrupts, select as IRQ */
+  *((unsigned int *)(VIC2_BASE + VICX_INT_SELECT_OFFSET)) &= UART1_COMBINED_IRQ_MASK;
+  *((unsigned int *)(VIC2_BASE + VICX_INT_ENABLE_OFFSET)) |= UART1_COMBINED_INT_ON;
 }
 
 
@@ -59,6 +68,7 @@ void kernel_init( global_context_t *gc) {
   }
   gc->num_tasks = 0;
   gc->num_missed_clock_cycles = 0;
+  gc->com1_status = COM1_CTS_MASK;
 
   hwi_cleanup( );
   hwi_init( );
