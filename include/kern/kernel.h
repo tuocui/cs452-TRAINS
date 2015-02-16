@@ -23,6 +23,7 @@
 /* IO status offsets */
 #define COM1_TRANSMIT_MASK 0x1
 #define COM1_CTS_MASK      0x2
+#define COM1_RECEIVE_MASK  0x4
 
 // "Global" variables used by the kernel
 typedef struct global_context_t {

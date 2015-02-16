@@ -100,9 +100,8 @@ void wait_cycles( int cycles ) {
 
 void COM1_Out_Notifier( ) {
   int com1_out_server_tid = MyParentTid( );
-  //TODO: this should be a level 1 assert
   
-  COM1_msg_t msg;
+  COM1_out_msg_t msg;
   int msg_size = sizeof(msg);
   msg.request_type = CM1_OUT_READY;
   msg.msg_val = NULL;
@@ -118,11 +117,23 @@ void COM1_Out_Notifier( ) {
 
     Send( com1_out_server_tid, (char*)&msg, msg_size, &rpl, 1 );
 	  *((int *)( UART1_BASE + UART_DATA_OFFSET )) = rpl;
-    // assert(1, rpl == (char)NOTIFIER_MAGIC );
   }
-  // AwaitEvent, in AwaitEvent, turn on interrupt, then turn off
-  // Send to server, receive char as reply
-  // Stick char in UART
+}
+
+void COM1_In_Notifier( ) {
+  int com1_in_server_tid = MyParentTid( );
+
+  COM1_in_msg_t msg;
+  int msg_size = sizeof(msg);
+  msg.request_type = CM1_IN_READY;
+  char rpl;
+  char c;
+
+  FOREVER {
+    c = (char) AwaitEvent( COM1_IN_IND );
+    msg.val = c;
+    Send( com1_in_server_tid, (char *)&msg, msg_size, &rpl, 1 );
+  }
 }
 
 void COM1_Out_Server( ) {
@@ -132,23 +143,18 @@ void COM1_Out_Server( ) {
   }
 
   enable_uart( COM1 );
-	setspeed( COM1, LOW_SPEED );
-	wait_cycles(1000);
-	enable_two_stop_bits( COM1 );
-	setfifo( COM1, OFF );
-
-  int notifier_tid = Create( 1, &COM1_Out_Notifier );
   int client_tid;
-  COM1_msg_t msg;
+  COM1_out_msg_t msg;
   int msg_size = sizeof(msg);
   int notifier_ready = 0;
 	int com1_out_cur_ind = 0;
 	int com1_out_print_ind = 0;
-  debug( "com1_out - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   char com1_out_buf[OUT_BUF_SIZE];
   char c;
   char *client_msg;
   int i;
+  int notifier_tid = Create( 1, &COM1_Out_Notifier );
+  debug( "com1_out - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
     Receive( &client_tid, (char *)&msg, msg_size );
     switch( msg.request_type ) {
@@ -178,7 +184,58 @@ void COM1_Out_Server( ) {
   Exit( );
 }
 
+void COM1_In_Server( ) {
+  if( RegisterAs( (char *)COM1_IN_SERVER ) == -1) {
+    bwputstr( COM2, "ERROR: failed to register COM1 INPUT server, aborting." );
+    Exit( );
+  }
+
+  int client_tid;
+  COM1_in_msg_t msg;
+  char c_rpl = 'a';
+  int msg_size = sizeof(msg);
+	int com1_in_cur_ind = 0;
+	int com1_in_print_ind = 0;
+	int client_q_cur_ind = 0;
+	int client_q_tail_ind = 0;
+  char com1_in_buf[OUT_BUF_SIZE];
+  int client_q[TD_MAX];
+  int notifier_tid = Create( 1, &COM1_In_Notifier );
+  debug( "com1_in - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
+  FOREVER {
+    Receive( &client_tid, (char *)&msg, msg_size );
+    switch( msg.request_type ) {
+    case CM1_IN_READY:
+      Reply( client_tid, &c_rpl, 1 );
+      // Add char to buffer
+      com1_in_buf[com1_in_cur_ind] = msg.val;
+      debug( "received char from uart: char:%x\r\n", com1_in_buf[com1_in_cur_ind] );
+      com1_in_cur_ind = ( com1_in_cur_ind + 1 ) % OUT_BUF_SIZE;
+      c_rpl = 1;
+      break;
+    case CM1_GET:
+      // Add client to queue
+      client_q[client_q_cur_ind] = client_tid;
+      client_q_cur_ind = ( client_q_cur_ind + 1 ) % TD_MAX;
+      break;
+    default:
+      break;
+    }
+
+    if( com1_in_cur_ind != com1_in_print_ind && client_q_cur_ind != client_q_tail_ind ) {
+      c_rpl = com1_in_buf[com1_in_print_ind];
+      com1_in_print_ind = ( com1_in_print_ind + 1 ) % OUT_BUF_SIZE;
+      client_tid = client_q[client_q_tail_ind];
+      client_q_tail_ind = ( client_q_tail_ind + 1 ) % TD_MAX;
+      //bwprintf( COM2, "sent: %x\r\n", c_rpl );
+      Reply( client_tid, &c_rpl, 1 );
+    }
+  }
+  Exit( );
+}
+
 int Putc( int channel, char ch ) {
+  return Putstr( channel, &ch, 1 );
   return 0;
 }
 
@@ -186,7 +243,7 @@ int Putstr( int channel, char *msg, int msg_len ) {
 	switch( channel ) {
 	case COM1:
   {
-    COM1_msg_t com1_msg;
+    COM1_out_msg_t com1_msg;
     int com1_out_server_tid = WhoIs( (char *)COM1_OUT_SERVER );
     int com1_msg_len = sizeof(com1_msg);
     char rtn;
@@ -206,6 +263,25 @@ int Putstr( int channel, char *msg, int msg_len ) {
 }
 
 int Getc( int channel ) {
+  switch( channel ) {
+  case COM1:
+  {
+    COM1_in_msg_t com1_msg;
+    int com1_in_server_tid = WhoIs( (char *)COM1_IN_SERVER );
+    int com1_msg_len = sizeof(com1_msg);
+    char rtn;
+		com1_msg.request_type = CM1_GET;
+    com1_msg.val = 0;
+    Send( com1_in_server_tid, (char *)&com1_msg, com1_msg_len, &rtn, 1 );
+    return (int) rtn;
+    break;
+  }
+	case COM2:
+		break;
+	default:
+		return -1;
+		break;
+	}
   return 0;
 }
 

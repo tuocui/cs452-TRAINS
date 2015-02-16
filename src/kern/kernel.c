@@ -150,10 +150,9 @@ void handle( global_context_t *gc, int request_type ) {
       
       assert(1, vic_base == 0 );
       ++vic_src_num;
-
       /* should have reset vic register at this point */
     }
-
+    add_to_priority( gc, gc->cur_task );
     break;
   case SYS_CREATE:
     handle_create( gc );

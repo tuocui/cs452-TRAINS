@@ -101,7 +101,7 @@ void clock_server( ) {
   reply_msg.request_type = CM_REPLY;
   msg_size = sizeof(receive_msg);
 
-  int notifier_tid = Create( 1, &notifier );
+  int notifier_tid = Create( 2, &notifier );
   debug( "notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   start_clock( TICKS_TEN_MS );
   FOREVER {
@@ -181,7 +181,7 @@ int Delay( int ticks ) {
   int msg_len = sizeof( msg );
   msg.request_type = CM_DELAY;
   msg.value = ticks;
-  //debug( "Sending delay: msg.value: %d", msg.value );
+  debug( "Sending delay: msg.value: %d", msg.value );
   Send( clock_server_id, (char *)&msg, msg_len, (char *)&rpl, msg_len );
   return 0;
 }

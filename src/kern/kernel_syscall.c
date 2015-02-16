@@ -354,7 +354,11 @@ void handle_await_event( global_context_t *gc ) {
       // Turn on COM1 Output interrupts
       // debug("Handling awaitevent");
 	    *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) |= TIEN_MASK | MSIEN_MASK;
-      debug("UART1_CTLR_OFFSET: %x", *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) );
+      //debug("UART1_CTLR_OFFSET: %x", *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) );
+      break;
+    case COM1_IN_IND:
+      debug("com1 in task awaiting");
+      *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) |= RIEN_MASK;
       break;
     default:
       break;
@@ -372,40 +376,55 @@ void handle_timer_int( global_context_t *gc ) {
     (gc->interrupts)[TIMER3_INT_IND] = NULL;
     gc->num_missed_clock_cycles = 0;
     add_to_priority( gc, td );
-    add_to_priority( gc, gc->cur_task );
     assert(0, td != gc->cur_task );
   } else {
     ++(gc->num_missed_clock_cycles);
-    add_to_priority( gc, gc->cur_task );
   }
   *timer_clr = 1;
 }
 
 void handle_uart1_combined_int( global_context_t *gc ) {
   int uart1_int_status = *((unsigned int *)( UART1_BASE + UART_INTR_OFFSET ));
+  int *uart1_status_flags = (int *)(UART1_BASE + UART_FLAG_OFFSET);
   //debug("uart1 int status: %x", uart1_int_status );
 
-  if( uart1_int_status & UART_TIS_MASK ) {
-    debug("Transmit interrupt hit");
+  if( uart1_int_status & UART_TIS_MASK && !(*uart1_status_flags & TXFF_MASK) ) {
+    //debug("Transmit interrupt hit");
     gc->com1_status |= COM1_TRANSMIT_MASK;
     *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~TIEN_MASK;
   }
 
-  if( uart1_int_status & UART_MIS_MASK && 
-      *((int *)(UART1_BASE + UART_FLAG_OFFSET)) & CTS_MASK ) {
-    debug("MSIEN interrupt hit");
+  if( uart1_int_status & UART_MIS_MASK && *uart1_status_flags & CTS_MASK ) {
+    //debug("MSIEN interrupt hit");
     gc->com1_status |= COM1_CTS_MASK;
+    // Kill interrupt
     *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~MSIEN_MASK;
   }
-  // TODO: Handle Input interrupts.
+
+  // Don't need Receive timout, since COM1 doesn't have FIFO turned on yet.
+  if( uart1_int_status & UART_RIS_MASK && *uart1_status_flags & RXFF_MASK) {
+    debug("RIEN interrupt hit");
+    char c = *((unsigned int *)( UART1_BASE + UART_DATA_OFFSET ));
+    task_descriptor_t *td = gc->interrupts[COM1_IN_IND];
+    gc->interrupts[COM1_IN_IND] = NULL;
+    assert( 0, td != NULL, "FUCK IN TD IS NULL" );
+    //gc->com1_status |= COM1_RECEIVE_MASK;
+    //*( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
+    *((unsigned int *)( UART1_BASE + UART_INTR_OFFSET )) &= ~UART_RIS_MASK;
+    td->retval = c;
+    add_to_priority( gc, td );
+  }
 
   if( gc->com1_status & COM1_TRANSMIT_MASK && gc->com1_status & COM1_CTS_MASK ) {
     task_descriptor_t *td = gc->interrupts[COM1_OUT_IND];
-    gc->com1_status &= ~COM1_CTS_MASK & ~COM1_TRANSMIT_MASK;
+    assert( 0, td != NULL, "FUCK OUT TD IS NULL" );
+    gc->com1_status &= (~COM1_CTS_MASK & ~COM1_TRANSMIT_MASK);
+    gc->interrupts[COM1_OUT_IND] = NULL;
     td->retval = 1;
+    *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~TIEN_MASK;
+    *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~MSIEN_MASK;
     add_to_priority( gc, td );
   }
-  add_to_priority( gc, gc->cur_task );
 }
 
 void handle_hwi( global_context_t *gc, int hwi_type ) {
