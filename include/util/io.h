@@ -8,12 +8,13 @@
     #define COM2	1
   #endif
 
-#define OUT_BUF_SIZE 512
+#define OUT_BUF_SIZE 2048
 #define LOW_SPEED 2400
 #define HIGH_SPEED 115200
 #define NUM_SENSOR_BYTES 10
 #define NUM_RECENT_SENSORS 1
 #define REQUEST_SENSOR 133
+#define PRINTF_MAX_SIZE 128
 
 typedef struct COM1_out_msg_t {
   enum {
@@ -42,6 +43,7 @@ void COM2_In_Server( );
 int Putc( int channel, char ch );
 int Putstr( int channel, char *msg, int msg_len );
 int Getc( int channel );
+void Printf( int channel, char *fmt, ... );
 int enable_uart( int channel );
 int enable_two_stop_bits( int channel );
 int setfifo( int channel, int state );

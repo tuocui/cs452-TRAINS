@@ -241,20 +241,10 @@ void a3_user_task( ) {
 
 void parse_user_input( ) {
   char d;
-  char e;
-  char c[3];
-  c[0] = 'a';
-  c[1] = 'b';
-  c[2] = 'c';
   FOREVER {
     d = (char)Getc( COM2 );
-    e = (char)Getc( COM2 );
-    c[0] = d;
-    c[1] = e;
-    Putstr( COM2, c, 2 );    
-    Putc( COM2, e );
+    Putc( COM2, d );
   }
-  Putstr( COM2, c, 3);
 }
 
 void track_sensor_task( ) {
@@ -310,7 +300,7 @@ void track_sensor_task( ) {
 	    sensor_num = recent_sensor % 100;
 	    module_num = recent_sensor / 100;
 	    module_num_c = ( ( char ) ( module_num / 2 ) ) + 'A';
-	    bwprintf( COM2, "    %c%d  \r\n", module_num_c, sensor_num );
+	    Printf( COM2, "%c%d\r\n", module_num_c, sensor_num );
 	    --recent_sensor_ind;
     }
     //Delay( 10 );
@@ -331,9 +321,15 @@ void a4_test_task( ) {
   debug( "COM1_Out Server tid: %d", com1_out_server_tid );
   int com1_in_server_tid = Create( 3, &COM1_In_Server );
   debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  int com2_out_server_tid = Create( 3, &COM2_Out_Server );
+  debug( "COM1_Out Server tid: %d", com2_out_server_tid );
+  int com2_in_server_tid = Create( 3, &COM2_In_Server );
+  debug( "COM1_In Server tid: %d", com2_in_server_tid );
   // Create clock server
   int clock_server_tid = Create( 3, &clock_server );
   debug( "Clock Server tid: %d", clock_server_tid );
+
+	Printf( COM2, "\033[2J" );
   char msg[4];
   msg[0] = 13;
   msg[1] = 54;
@@ -342,6 +338,8 @@ void a4_test_task( ) {
   Putstr( COM1, msg, 4 );
   int track_sensor_task_tid = Create( 6, &track_sensor_task );
   debug( "Track Sensor task tid: %d", track_sensor_task_tid );
+  int parse_user_input_tid = Create( 6, &parse_user_input );
+  debug( "User input task tid: %d", parse_user_input_tid );
   Exit( );
 }
 
@@ -404,7 +402,7 @@ void first_user_task( ){
 #endif /* A3 */
 
 #ifdef A4
-  a4_test_task2( );
+  a4_test_task( );
   
 #endif /* A4 */
 
@@ -453,6 +451,6 @@ void first_user_task( ){
   
 #endif /* TEST */
 
-  bwprintf( COM2, "Exit first_user_task\n\r");
+  //bwprintf( COM2, "Exit first_user_task\n\r");
   Exit( );
 }

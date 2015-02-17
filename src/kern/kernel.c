@@ -47,11 +47,10 @@ void hwi_cleanup( ) {
                                                         ~RIEN_MASK & 
                                                         ~TIEN_MASK & 
                                                         ~RTIEN_MASK;
-  //*( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~UARTEN_MASK & 
-  //                                                      ~MSIEN_MASK & 
-  //                                                      ~RIEN_MASK & 
-  //                                                      ~TIEN_MASK & 
-  //                                                      ~RTIEN_MASK;
+  *( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~MSIEN_MASK &
+                                                        ~RIEN_MASK &
+                                                        ~TIEN_MASK &
+                                                        ~RTIEN_MASK;
 
 
 
@@ -209,14 +208,14 @@ int main(int argc, char *argv[]) {
   int request_type;
   global_context_t gc;
 
-  bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
+  //bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
   kernel_init( &gc );
 
   task_descriptor_t *first_td = tds_create_td(&gc, 8, (int)&first_user_task);
   ++(gc.num_tasks);
   add_to_priority( &gc, first_td );
 
-  bwputstr( COM2, "FINISHED INITIALIZATION. WOO!\r\n" );
+  //bwputstr( COM2, "FINISHED INITIALIZATION. WOO!\r\n" );
 
   FOREVER {
     task_descriptor_t *scheduled_td = schedule( &gc );
@@ -230,7 +229,7 @@ int main(int argc, char *argv[]) {
   }
 
   hwi_cleanup( );
-  bwprintf(COM2, "\n\rExit Main\n\r");
+  //bwprintf(COM2, "\n\rExit Main\n\r");
 
   return 0;
 }
