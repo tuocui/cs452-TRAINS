@@ -5,6 +5,7 @@
 #include <rps.h>
 #include "clock_server.h"
 #include "io.h"
+#include "ring_buf.h"
 
 #define CYCLES 1000
 
@@ -13,7 +14,8 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-#define A4 1
+//#define A4 1
+#define TEST
 
 //TODO remove testing struct
 struct Server {
@@ -369,6 +371,13 @@ void first_user_task( ){
   a4_test_task( );
 
 #endif /* A4 */
+
+#ifdef TEST
+  declare_ring_buf( test, 10 );
+  //test_buf_size( );
+  test_buf_size( );
+
+#endif /* TEST */
 
   bwprintf( COM2, "Exit first_user_task\n\r");
   Exit( );
