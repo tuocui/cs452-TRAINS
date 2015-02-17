@@ -360,6 +360,13 @@ void handle_await_event( global_context_t *gc ) {
       debug("com1 in task awaiting");
       *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) |= RIEN_MASK;
       break;
+    case COM2_OUT_IND:
+      *( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) |= TIEN_MASK;
+      break;
+    case COM2_IN_IND:
+      *( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) |= RIEN_MASK;
+      break;
+
     default:
       break;
   }
@@ -420,9 +427,41 @@ void handle_uart1_combined_int( global_context_t *gc ) {
     assert( 0, td != NULL, "FUCK OUT TD IS NULL" );
     gc->com1_status &= (~COM1_CTS_MASK & ~COM1_TRANSMIT_MASK);
     gc->interrupts[COM1_OUT_IND] = NULL;
-    td->retval = 1;
+    td->retval = 0;
     *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~TIEN_MASK;
     *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~MSIEN_MASK;
+    add_to_priority( gc, td );
+  }
+}
+
+void handle_uart2_combined_int( global_context_t *gc ) {
+  int uart2_int_status = *((unsigned int *)( UART2_BASE + UART_INTR_OFFSET ));
+  int uart2_status_flags = *((unsigned int *)(UART2_BASE + UART_FLAG_OFFSET));
+  debug("uart2 int status: %x", uart2_int_status );
+
+  if( uart2_int_status & UART_TIS_MASK && !(uart2_status_flags & TXFF_MASK) ) {
+    debug("Transmit interrupt hit");
+    task_descriptor_t *td = gc->interrupts[COM2_OUT_IND];
+
+    assert( 0, td != NULL, "FUCK OUT TD IS NULL" );
+
+    gc->interrupts[COM2_OUT_IND] = NULL;
+    td->retval = 0;
+    *( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~TIEN_MASK;
+    add_to_priority( gc, td );
+  }
+
+  // Don't need Receive timout, since COM1 doesn't have FIFO turned on yet.
+  if( uart2_int_status & UART_RIS_MASK && uart2_status_flags & RXFF_MASK) {
+    debug("RIEN interrupt hit");
+    char c = *((char *)( UART2_BASE + UART_DATA_OFFSET ));
+    task_descriptor_t *td = gc->interrupts[COM2_IN_IND];
+    gc->interrupts[COM2_IN_IND] = NULL;
+    assert( 0, td != NULL, "FUCK IN TD IS NULL" );
+    //gc->com1_status |= COM1_RECEIVE_MASK;
+    //*( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
+    *((unsigned int *)( UART2_BASE + UART_INTR_OFFSET )) &= ~UART_RIS_MASK;
+    td->retval = c;
     add_to_priority( gc, td );
   }
 }
@@ -434,6 +473,8 @@ void handle_hwi( global_context_t *gc, int hwi_type ) {
     break;
   case UART1_COMBINED_INT:
     handle_uart1_combined_int( gc );
+  case UART2_COMBINED_INT:
+    handle_uart2_combined_int( gc );
     break;
   default:
     break;

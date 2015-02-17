@@ -19,6 +19,7 @@
 /* interrupts */
 #define TIMER3_INT         51
 #define UART1_COMBINED_INT 52
+#define UART2_COMBINED_INT 54
 
 /* IO status offsets */
 #define COM1_TRANSMIT_MASK 0x1

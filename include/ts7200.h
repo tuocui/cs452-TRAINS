@@ -90,6 +90,7 @@
 // Source: http://www.cgl.uwaterloo.ca/~wmcowan/teaching/cs452/pdf/ep93xx-user-guide.pdf
 #define TIMER3_BIT_ON           (1 << 19)
 #define UART1_COMBINED_BIT_ON   (1 << 20)
+#define UART2_COMBINED_BIT_ON   (1 << 22)
 
 #define VIC1_BASE 0x800B0000
 #define VIC2_BASE 0x800C0000
@@ -103,13 +104,17 @@
   #define TIMER3_FIQ_MASK           TIMER3_BIT_ON
   #define UART1_COMBINED_IRQ_MASK   ~UART1_COMBINED_BIT_ON
   #define UART1_COMBINED_FIQ_MASK   UART1_COMBINED_BIT_ON
+  #define UART2_COMBINED_IRQ_MASK   ~UART2_COMBINED_BIT_ON
+  #define UART2_COMBINED_FIQ_MASK   UART2_COMBINED_BIT_ON
 
 #define VICX_INT_ENABLE_OFFSET      0x10
   #define TIMER3_INT_ON             TIMER3_BIT_ON
   #define UART1_COMBINED_INT_ON     UART1_COMBINED_BIT_ON
+  #define UART2_COMBINED_INT_ON     UART2_COMBINED_BIT_ON
 
 #define VICX_INT_ENCLEAR_OFFSET     0x14
   #define CLEAR_ALL                 0xFFFFFFFF 
   #define CLEAR_TIMER3              TIMER3_BIT_ON
   #define CLEAR_UART1_COMBINED      UART1_COMBINED_BIT_ON
+  #define CLEAR_UART2_COMBINED      UART2_COMBINED_BIT_ON
 

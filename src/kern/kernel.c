@@ -47,6 +47,14 @@ void hwi_cleanup( ) {
                                                         ~RIEN_MASK & 
                                                         ~TIEN_MASK & 
                                                         ~RTIEN_MASK;
+  //*( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~UARTEN_MASK & 
+  //                                                      ~MSIEN_MASK & 
+  //                                                      ~RIEN_MASK & 
+  //                                                      ~TIEN_MASK & 
+  //                                                      ~RTIEN_MASK;
+
+
+
 }
 
 void hwi_init( ) {
@@ -56,6 +64,8 @@ void hwi_init( ) {
   /* turn on COM1 Output interrupts, select as IRQ */
   *((unsigned int *)(VIC2_BASE + VICX_INT_SELECT_OFFSET)) &= UART1_COMBINED_IRQ_MASK;
   *((unsigned int *)(VIC2_BASE + VICX_INT_ENABLE_OFFSET)) |= UART1_COMBINED_INT_ON;
+  *((unsigned int *)(VIC2_BASE + VICX_INT_SELECT_OFFSET)) &= UART2_COMBINED_IRQ_MASK;
+  *((unsigned int *)(VIC2_BASE + VICX_INT_ENABLE_OFFSET)) |= UART2_COMBINED_INT_ON;
 }
 
 
@@ -70,8 +80,11 @@ void kernel_init( global_context_t *gc) {
   gc->num_missed_clock_cycles = 0;
   gc->com1_status = COM1_CTS_MASK;
 
+  debug( "before hwi_cleanup" );
   hwi_cleanup( );
+  debug( "after hwi_cleanup" );
   hwi_init( );
+  debug( "after init " );
   
   init_kernelentry();
 #ifdef CACHE
@@ -188,7 +201,7 @@ void handle( global_context_t *gc, int request_type ) {
 
 int main(int argc, char *argv[]) {
 
-  print_env( );
+  //print_env( );
 
   debug("TD_BIT: %d", TD_BIT);
   debug("TD_MAX: %d", TD_MAX);

@@ -37,6 +37,8 @@ typedef struct COM1_in_msg_t {
 
 void COM1_Out_Server( );
 void COM1_In_Server( );
+void COM2_Out_Server( );
+void COM2_In_Server( );
 int Putc( int channel, char ch );
 int Putstr( int channel, char *msg, int msg_len );
 int Getc( int channel );
