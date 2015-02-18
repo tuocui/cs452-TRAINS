@@ -6,6 +6,9 @@
 #include "clock_server.h"
 #include "io.h"
 #include "ring_buf.h"
+#include "clock.h"
+#include "track.h"
+#include "screen.h"
 
 #define CYCLES 1000
 
@@ -65,11 +68,6 @@ void user_receive_task( ){
     rtn = Reply( sender_tid, (char*)&server_reply, sizeof(server_reply) );
     debug("Reply's rtn: %d", rtn );
   }
-  //rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  //debug("rtn: %d", rtn);
-  //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
-  //char c = bwgetc( COM2 );
-  //bwputc( COM2, c );
   Exit( );
 }
 
@@ -84,10 +82,6 @@ void user_send_task( ){
   int cycles;
   int rtn;
   cycles = CYCLES;
-  //server_s.a = (char) my_tid;
-  //server_s.b = (char) my_tid;
-  //debug("tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d", receiver_tid, &server_s,  sizeof(server_s), &server_reply,  sizeof(server_reply) );
-  
 
   while(--cycles >= 0){
     rtn = Send( receiver_tid, (char *) &server_s,  sizeof(server_s), (char *) &server_reply, sizeof(server_reply));
@@ -239,80 +233,12 @@ void a3_user_task( ) {
 
 #ifdef A4
 
-void parse_user_input( ) {
-  char d;
-  FOREVER {
-    d = (char)Getc( COM2 );
-    Putc( COM2, d );
-  }
-}
-
-void track_sensor_task( ) {
-  char c;
-  int module_num = 0;
-	int sensor_num = 1;
-	int i = 0;
-  int j = 0;
-  int recent_sensor;
-  int most_recent_sensor = 0;
-  int recent_sensors[NUM_RECENT_SENSORS];
-  int recent_sensors_ind = 0;
-  int num_sensors_triggered = 0;
-  int recent_sensor_ind;
-  char module_num_c;
-  int recent_sensor_triggered = 0;
-  FOREVER {
-    Putc( COM1, REQUEST_SENSOR );
-	  module_num = 0;
-    recent_sensor_triggered = 0;
-    for( i = 0; i < NUM_SENSOR_BYTES; ++i ) {
-      c = (char) Getc( COM1 );
-      //bwprintf( COM2, "got char: %x, module_num: %d\r\n", c, module_num );
-      sensor_num = 1;
-	    if ( c > 0 ) {
-	      if ( module_num % 2 == 1 ) {
-		      sensor_num += 8;
-	      }
-	      for( j = 0; j < 8 ; ++j ) {
-		      // Yay for bitwise operations
-		      if ( ( c >> ( 7 - j ) ) & 0x1 ) {
-	          recent_sensor = ( module_num * 100 ) + sensor_num;
-	          if ( recent_sensor == most_recent_sensor ) {
-		          ++sensor_num;
-		          continue;
-	          }
-            recent_sensor_triggered = 1;
-	          recent_sensors[recent_sensors_ind] = recent_sensor;
-	          ++num_sensors_triggered;
-	          most_recent_sensor = recent_sensor;
-	          recent_sensors_ind = ( recent_sensors_ind + 1 ) % NUM_RECENT_SENSORS;
-		      }
-		      ++sensor_num;
-	      }
-	    }
-	    ++module_num;
-    }
-
-    recent_sensor_ind = recent_sensors_ind - 1;
-    for( j = 0 ; recent_sensor_triggered && j < NUM_RECENT_SENSORS && j < num_sensors_triggered; ++j ) {
-	    if ( recent_sensor_ind == -1 ) recent_sensor_ind = NUM_RECENT_SENSORS - 1;
-	    recent_sensor = recent_sensors[recent_sensor_ind];
-	    sensor_num = recent_sensor % 100;
-	    module_num = recent_sensor / 100;
-	    module_num_c = ( ( char ) ( module_num / 2 ) ) + 'A';
-	    Printf( COM2, "%c%d\r\n", module_num_c, sensor_num );
-	    --recent_sensor_ind;
-    }
-    //Delay( 10 );
-  }
-  Exit( );
-}
-
 void a4_test_task( ) {
   setspeed( COM1, LOW_SPEED );
   wait_cycles(1000);
   enable_two_stop_bits( COM1 );
   setfifo( COM1, OFF );
+  setfifo( COM2, ON );
   int nameserver_tid = Create( 3, &nameserver_main );
   debug( "Nameserver tid: %d", nameserver_tid );
   int idle_id = Create( PRIORITY_MAX, &idle_task );
@@ -325,17 +251,12 @@ void a4_test_task( ) {
   debug( "COM1_Out Server tid: %d", com2_out_server_tid );
   int com2_in_server_tid = Create( 3, &COM2_In_Server );
   debug( "COM1_In Server tid: %d", com2_in_server_tid );
-  // Create clock server
   int clock_server_tid = Create( 3, &clock_server );
   debug( "Clock Server tid: %d", clock_server_tid );
-
-	Printf( COM2, "\033[2J" );
-  char msg[4];
-  msg[0] = 13;
-  msg[1] = 54;
-  msg[2] = 13;
-  msg[3] = 58;
-  Putstr( COM1, msg, 4 );
+  int clock_user_tid = Create( 10, &clock_user_task );
+  debug( "Clock user task tid: %d", clock_user_tid );
+  Printf( COM2, "\033[2J" );
+  initialize_track( );
   int track_sensor_task_tid = Create( 6, &track_sensor_task );
   debug( "Track Sensor task tid: %d", track_sensor_task_tid );
   int parse_user_input_tid = Create( 6, &parse_user_input );
@@ -363,7 +284,7 @@ void a4_test_task2( ) {
 #endif /* A4 */
 
 void first_user_task( ){
-  bwsetfifo( COM2, OFF );
+  //bwsetfifo( COM2, OFF );
 #ifdef A1
   int first_tid = MyTid( );
   debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(first_tid), TID_GEN(first_tid));

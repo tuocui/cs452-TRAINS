@@ -193,6 +193,9 @@ void handle( global_context_t *gc, int request_type ) {
   case SYS_EXIT:
     handle_exit( gc );
     break;
+  case SYS_DEATH:
+    handle_death( gc );
+    break;
   default:
     break;
   }

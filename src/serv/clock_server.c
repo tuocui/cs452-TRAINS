@@ -183,7 +183,7 @@ int Delay( int ticks ) {
   msg.value = ticks;
   debug( "Sending delay: msg.value: %d", msg.value );
   Send( clock_server_id, (char *)&msg, msg_len, (char *)&rpl, msg_len );
-  return 0;
+  return rpl.value;
 }
 
 int DelayUntil( int ticks ) {

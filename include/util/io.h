@@ -8,15 +8,14 @@
     #define COM2	1
   #endif
 
-#define OUT_BUF_SIZE 2048
 #define LOW_SPEED 2400
 #define HIGH_SPEED 115200
-#define NUM_SENSOR_BYTES 10
-#define NUM_RECENT_SENSORS 1
-#define REQUEST_SENSOR 133
+#define OUT_BUF_SIZE 2048
 #define PRINTF_MAX_SIZE 128
+#define MAX_IN_SIZE 16
+#define MAX_OUT_SIZE 8
 
-typedef struct COM1_out_msg_t {
+typedef struct COM_var_msg_t {
   enum {
     CM1_OUT_READY,
     CM1_PUT,
@@ -24,16 +23,16 @@ typedef struct COM1_out_msg_t {
   } request_type ;
   char *msg_val;
   int msg_len;
-} COM1_out_msg_t;
+} COM1_var_msg_t;
 
-typedef struct COM1_in_msg_t {
+typedef struct COM_const_msg_t {
   enum {
     CM1_IN_READY,
     CM1_GET,
     CM1_IN_REPLY,
   } request_type ;
   char val;
-} COM1_in_msg_t;
+} COM1_const_msg_t;
 
 
 void COM1_Out_Server( );
