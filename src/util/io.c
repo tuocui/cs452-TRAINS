@@ -189,7 +189,7 @@ void COM1_Out_Server( ) {
   char c;
   char *client_msg;
   int i;
-  int notifier_tid = Create( 1, &COM1_Out_Notifier );
+  int notifier_tid = Create( 2, &COM1_Out_Notifier );
   debug( "com1_out - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
     Receive( &client_tid, (char *)&msg, msg_size );
@@ -284,7 +284,7 @@ void COM2_Out_Server( ) {
   char c;
   char *client_msg;
   int i;
-  int notifier_tid = Create( 1, &COM2_Out_Notifier );
+  int notifier_tid = Create( 2, &COM2_Out_Notifier );
   debug( "com2_out - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
     Receive( &client_tid, (char *)&msg, msg_size );

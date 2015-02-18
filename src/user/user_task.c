@@ -317,11 +317,11 @@ void a4_test_task( ) {
   debug( "Nameserver tid: %d", nameserver_tid );
   int idle_id = Create( PRIORITY_MAX, &idle_task );
   debug( "Idle tid: %d", idle_id );
-  int com1_out_server_tid = Create( 3, &COM1_Out_Server );
+  int com1_out_server_tid = Create( 4, &COM1_Out_Server );
   debug( "COM1_Out Server tid: %d", com1_out_server_tid );
-  int com1_in_server_tid = Create( 3, &COM1_In_Server );
+  int com1_in_server_tid = Create( 4, &COM1_In_Server );
   debug( "COM1_In Server tid: %d", com1_in_server_tid );
-  int com2_out_server_tid = Create( 3, &COM2_Out_Server );
+  int com2_out_server_tid = Create( 4, &COM2_Out_Server );
   debug( "COM1_Out Server tid: %d", com2_out_server_tid );
   int com2_in_server_tid = Create( 3, &COM2_In_Server );
   debug( "COM1_In Server tid: %d", com2_in_server_tid );

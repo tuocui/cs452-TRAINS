@@ -416,7 +416,7 @@ void handle_uart1_combined_int( global_context_t *gc ) {
     gc->interrupts[COM1_IN_IND] = NULL;
     assert( 0, td != NULL, "FUCK IN TD IS NULL" );
     //gc->com1_status |= COM1_RECEIVE_MASK;
-    //*( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
+    *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
     *((unsigned int *)( UART1_BASE + UART_INTR_OFFSET )) &= ~UART_RIS_MASK;
     td->retval = c;
     add_to_priority( gc, td );
@@ -458,11 +458,13 @@ void handle_uart2_combined_int( global_context_t *gc ) {
     task_descriptor_t *td = gc->interrupts[COM2_IN_IND];
     gc->interrupts[COM2_IN_IND] = NULL;
     assert( 0, td != NULL, "FUCK IN TD IS NULL" );
-    //gc->com1_status |= COM1_RECEIVE_MASK;
-    //*( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
+    *( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
     *((unsigned int *)( UART2_BASE + UART_INTR_OFFSET )) &= ~UART_RIS_MASK;
-    td->retval = c;
-    add_to_priority( gc, td );
+    if( td != NULL ) {
+      td->retval = c;
+      add_to_priority( gc, td );
+    }
+    //gc->com1_status |= COM1_RECEIVE_MASK;
   }
 }
 
