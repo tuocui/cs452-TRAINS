@@ -1,7 +1,6 @@
 #include "tools.h"
 #include "kernel.h"
-
-
+/*
 void print_env( ) {
   bwprintf( COM2, "#################################\n\r" );
   #ifdef OPT
@@ -23,7 +22,7 @@ void print_env( ) {
   #endif 
   bwprintf( COM2, "#################################\n\r" );
 
-}
+}*/
 
 void cache_init( ) {
   asm volatile( 

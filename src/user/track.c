@@ -41,6 +41,8 @@ int update_switch_output( short switch_num, char state ) {
     switch_ind = 20;
   } else if ( switch_num == 156 ) {
     switch_ind = 21;
+  } else if ( switch_num <= 0 || switch_num > 18 ){
+    return 0;
   }
 
   int line_num = 9 + ( switch_ind / 4 );
@@ -56,15 +58,24 @@ int kill_switch( ) {
 }
 
 int set_switch( short switch_num, short c_s ) {
-  char c_s_c = '/';
+  char c_s_c;
   char msg[2];
   msg[0] = c_s;
   msg[1] = switch_num;
   Printf( COM1, msg, 2 );
   Delay( 20 );
   kill_switch( );
-  if ( c_s == STRAIGHT ) c_s_c = 'S';
-  if ( c_s == CURVED ) c_s_c = 'C';
+  switch( c_s ) {
+  case STRAIGHT:
+    c_s_c = 'S';
+    break;
+  case CURVED:
+    c_s_c = 'C';
+    break;
+  default:
+    c_s_c = '/';
+    break;
+  }
   update_switch_output( switch_num, c_s_c );
   return 0;
 }

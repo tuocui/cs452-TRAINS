@@ -102,10 +102,25 @@ int handle_switch( char *cmd_buffer ) {
   short switch_num = parse_short( cmd_buffer, &buf_ind );
   ++buf_ind;
   short c_s = parse_curve_straight( cmd_buffer, &buf_ind );
-  if ( switch_num < 0 || c_s < 0 ) {
+  char c_s_c;
+  if ( switch_num <= 0 ||
+       c_s <= 0 ||
+       ( switch_num > 18 && !( switch_num >= 153 && switch_num <= 156 ) ) ) {
     output_invalid( );
     return -1;  
   }
+  switch( c_s ) {
+  case STRAIGHT:
+    c_s_c = 'S';
+    break;
+  case CURVED:
+    c_s_c = 'C';
+    break;
+  default:
+    c_s_c = '/';
+    break;
+  }
+  Printf( COM2, "\0337\033[1A\033[2K\rSwitch %d set to %c\0338", switch_num, c_s_c );
   set_switch( switch_num, c_s );
   return 0;
 }

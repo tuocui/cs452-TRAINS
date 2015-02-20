@@ -178,7 +178,7 @@ void COM2_In_Notifier( ) {
 }
 void COM1_Out_Server( ) {
   if( RegisterAs( (char *)COM1_OUT_SERVER ) == -1) {
-    bwputstr( COM2, "ERROR: failed to register COM1 OUTPUT server, aborting." );
+    //bwputstr( COM2, "ERROR: failed to register COM1 OUTPUT server, aborting." );
     Exit( );
   }
 
@@ -226,7 +226,7 @@ void COM1_Out_Server( ) {
 
 void COM1_In_Server( ) {
   if( RegisterAs( (char *)COM1_IN_SERVER ) == -1) {
-    bwputstr( COM2, "ERROR: failed to register COM1 INPUT server, aborting." );
+    //bwputstr( COM2, "ERROR: failed to register COM1 INPUT server, aborting." );
     Exit( );
   }
 
@@ -323,7 +323,7 @@ void COM2_Out_Server( ) {
 
 void COM2_In_Server( ) {
   if( RegisterAs( (char *)COM2_IN_SERVER ) == -1) {
-    bwputstr( COM2, "ERROR: failed to register COM1 INPUT server, aborting." );
+    //bwputstr( COM2, "ERROR: failed to register COM1 INPUT server, aborting." );
     Exit( );
   }
 
