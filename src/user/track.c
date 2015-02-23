@@ -103,6 +103,7 @@ int initialize_track( ) {
       set_switch( switch_ind + 1, CURVED );
     }
     ++switch_ind;
+    Delay( 10 );
   }
   // And everything is good to go
   Putstr( COM2, "\033[2;0H\033[2K\033[24;0H>", 22 );
@@ -165,7 +166,7 @@ void track_sensor_task( ) {
       Printf( COM2, "\0337\033[%d;0H     %c%d  \0338", j + 7, module_num_c, sensor_num );
       --recent_sensor_ind;
     }
-    //Delay( 10 );
+    Delay( 10 );
   }
   Exit( );
 }

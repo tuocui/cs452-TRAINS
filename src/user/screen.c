@@ -195,12 +195,12 @@ void parse_user_input( ) {
       status = process_buffer( cmd_buffer, train_speeds );
       if( status == QUIT_CMD ) {
         Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
-        for( i = 1; i < NUM_TRAINS; ++i ) {
+        for( i = 25; i < NUM_TRAINS; ++i ) {
           train_speeds[i] = 0;
           set_train_speed( i, 0 );
-          Delay( 5 );
+          Delay( 10 );
         }
-        Delay( 400 );
+        Delay( 500 );
         Kill_the_system( 0xdeadbeef );
       }
     }

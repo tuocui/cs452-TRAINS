@@ -393,6 +393,7 @@ void handle_timer_int( global_context_t *gc ) {
 void handle_uart1_combined_int( global_context_t *gc ) {
   int uart1_int_status = *((unsigned int *)( UART1_BASE + UART_INTR_OFFSET ));
   int *uart1_status_flags = (int *)(UART1_BASE + UART_FLAG_OFFSET);
+  int *uart1_modem_status_flags = (int *)(UART1_BASE + UART_MDMSTS_OFFSET);
   //debug("uart1 int status: %x", uart1_int_status );
 
   if( uart1_int_status & UART_TIS_MASK && !(*uart1_status_flags & TXFF_MASK) ) {
@@ -401,7 +402,7 @@ void handle_uart1_combined_int( global_context_t *gc ) {
     *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~TIEN_MASK;
   }
 
-  if( uart1_int_status & UART_MIS_MASK && *uart1_status_flags & CTS_MASK ) {
+  if( uart1_int_status & UART_MIS_MASK && *uart1_modem_status_flags & DCTS_MASK && *uart1_status_flags & CTS_MASK ) {
     //debug("MSIEN interrupt hit");
     gc->com1_status |= COM1_CTS_MASK;
     // Kill interrupt
