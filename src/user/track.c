@@ -62,7 +62,7 @@ int set_switch( short switch_num, short c_s ) {
   char msg[2];
   msg[0] = c_s;
   msg[1] = switch_num;
-  Printf( COM1, msg, 2 );
+  Putstr( COM1, msg, 2 );
   Delay( 20 );
   kill_switch( );
   switch( c_s ) {

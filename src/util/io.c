@@ -218,7 +218,7 @@ void COM1_Out_Server( ) {
       com1_out_print_ind = ( com1_out_print_ind + 1 ) % OUT_BUF_SIZE;
       notifier_ready = 0;
       Reply( notifier_tid, &c, 1 );
-      //bwprintf( COM2, "sent: %c\r\n", c );
+      //Printf( COM2, "sent: %d\r\n", c );
     }
   }
   Exit( );
