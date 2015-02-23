@@ -155,7 +155,6 @@ void COM2_Out_Notifier( ) {
 
     Send( com2_out_server_tid, (char*)&msg, msg_size, &rpl, 1 );
 	  *((int *)( UART2_BASE + UART_DATA_OFFSET )) = rpl;
-    debug( "after putc on UART2 ");
   }
 }
 

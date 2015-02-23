@@ -24,6 +24,8 @@
     __assert__( cond, ## __VA_ARGS__  );                        \
   } else { ; }                                                  
 
+#define compile_assert( cond, msg ) \
+  typedef char compile_assert_##msg[( cond ) ? 1 : -1]
 
 /* to enable debug print
  * call nmake with -d; ./nmake -d
