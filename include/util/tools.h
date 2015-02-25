@@ -37,7 +37,7 @@
 #define debug( fmt, ... )                                     \
   do {                                                        \
     if( DEBUG ) {                                             \
-      bwprintf(COM2, "DEBUG (%s:%d):\t"fmt"\n\r", __FILE__, \
+      bwprintf(COM2, "DEBUG (%s:%d):\t"fmt"\n\r", __FILE__,   \
           __LINE__, ## __VA_ARGS__ );                         \
     }                                                         \
   } while( 0 )

@@ -1,5 +1,6 @@
 #
 # Makefile
+# -int-to-pointer-cast
 # extra flagx are set by nmake
 #
 

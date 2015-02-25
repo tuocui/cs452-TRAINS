@@ -510,11 +510,20 @@ void first_user_task( ){
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  idx = com2_buf_push_front( 'j' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+
+  //idx = com2_buf_push_front( 'j' );
+  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+
+  //c = com2_buf_pop_back( );
+  //debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 #endif /* TEST */
 
   bwprintf( COM2, "Exit first_user_task\n\r");

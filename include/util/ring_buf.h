@@ -1,120 +1,83 @@
 #ifndef __RING_BUF_H__
 #define __RING_BUF_H__
 
-#define BUF_OVERFLOW  -100
-#define BUF_EMPTY     -101
+#define TYPE_ERROR    -100
+#define BUF_OVERFLOW  -101
+#define BUF_EMPTY     -102
 
+#define TYPE_CHAR 1 
+#define TYPE_INT  4 
+
+typedef union type_arr {
+  char * m_arr_char;
+  int * m_arr_int;
+} type_arr_t;
+
+typedef struct ring_queue {
+  int m_size;
+  int m_head;
+  int m_tail;
+  int m_free;
+  type_arr_t * m_arr;
+} ring_queue_t ;
+
+inline int push_front( int type, ring_queue_t * queue, void * val );
+
+inline int pop_back( int type, ring_queue_t * queue );
+inline int pop_front( int type, ring_queue_t * queue );
+
+inline int top_front( int type, ring_queue_t * queue );
+inline int top_back( int type, ring_queue_t * queue );
+
+inline int count( ring_queue_t * queue );
+inline int empty( ring_queue_t * queue );
 
 #define declare_ring_queue(TYPE, NAME, RING_BUF_SIZE ) \
   compile_assert( RING_BUF_SIZE > 0, invalid_ring_buf_size );\
-  typedef struct ring_queue { \
-    int m_size; \
-    TYPE m_arr[RING_BUF_SIZE]; \
-    int m_head; \
-    int m_tail; \
-    int m_free; \
-  } ring_queue_t ; \
-\
   ring_queue_t NAME##_queue; \
   NAME##_queue.m_size = RING_BUF_SIZE; \
   NAME##_queue.m_head = 0; \
   NAME##_queue.m_tail = 0; \
   NAME##_queue.m_free = RING_BUF_SIZE; \
+  TYPE arr[RING_BUF_SIZE]; \
+  NAME##_queue.m_arr->m_arr_char = (char*)&arr; \
 \
-/* return the idx of the inserted value on success, an errno otherwise */ \
-  inline int __attribute__((always_inline))                                        \
-  NAME##_push_front( TYPE val ) {                                         \
-    debug( "m_free: %d", NAME##_queue.m_free ); \
-    if( NAME##_queue.m_free == 0 ) { \
-      assert( 1, NAME##_queue.m_head == NAME##_queue.m_tail, "X" ); \
-      return BUF_OVERFLOW; \
-    } \
-    else { \
-      TYPE const push_idx = NAME##_queue.m_head; \
-      NAME##_queue.m_arr[NAME##_queue.m_head] = val; \
-      NAME##_queue.m_head = ( NAME##_queue.m_head + 1 ) % RING_BUF_SIZE; \
-      --NAME##_queue.m_free; \
-\
-      assert( 1, NAME##_queue.m_head >= 0 && NAME##_queue.m_head < RING_BUF_SIZE, "A" );    \
-      assert( 1, NAME##_queue.m_tail >= 0 && NAME##_queue.m_tail < RING_BUF_SIZE, "B" );    \
-      assert( 1, NAME##_queue.m_free >= 0 , "C");                                         \
-\
-      return push_idx; \
-    } \
+  /* return the idx of the inserted value on success, an errno otherwise */ \
+  inline int __attribute__((always_inline)) \
+  NAME##_push_front( TYPE val ) { \
+    return push_front( sizeof( TYPE ), &NAME##_queue, (void *)(&val) ); \
   } \
-                                                                                   \
-  /* return num of occupied elements in the buffer */                              \
-  inline int __attribute__((always_inline)) __attribute__((const))                 \
-  NAME##_count( ) {                                                            \
-    assert( 1, RING_BUF_SIZE - NAME##_queue.m_free >= 0 , "D");                           \
-    return RING_BUF_SIZE - NAME##_queue.m_free;                                      \
-  }                                                                                \
-                                                                                   \
-  /* return the value of the front element, an errno otherwise */                  \
-  inline TYPE __attribute__((always_inline))                                        \
-    NAME##_pop_front( ) {                                                      \
-    if( NAME##_queue.m_free == RING_BUF_SIZE ) {                                     \
-      assert( 1, NAME##_queue.m_head == NAME##_queue.m_tail, "E");                            \
-      return BUF_EMPTY;                                                            \
-    }                                                                              \
-    else {                                                                         \
-      debug( "m_head: %d", NAME##_queue.m_head );\
-      NAME##_queue.m_head = (NAME##_queue.m_head - 1 + RING_BUF_SIZE)%RING_BUF_SIZE;   \
-      debug( "m_head: %d", NAME##_queue.m_head );\
-      TYPE const ret_val = NAME##_queue.m_arr[NAME##_queue.m_head];                     \
-      ++NAME##_queue.m_free;                                                         \
-                                                                                   \
-      assert( 1, NAME##_queue.m_head >= 0 && NAME##_queue.m_head < RING_BUF_SIZE, "F" );    \
-      assert( 1, NAME##_queue.m_tail >= 0 && NAME##_queue.m_tail < RING_BUF_SIZE, "G" );    \
-                                                                                   \
-      return ret_val;                                                              \
-    }                                                                              \
-  }                                                                                \
+\
+  /* return num of occupied elements in the buffer */ \
+  inline int __attribute__((always_inline)) __attribute__((const)) \
+  NAME##_count( ) { \
+    return count( &NAME##_queue ); \
+  } \
+\
+  inline int __attribute__((always_inline)) \
+  NAME##_pop_back( ) { \
+    return pop_back( sizeof( TYPE ), &NAME##_queue ); \
+  } \
+\
+  /* return the value of the front element, an errno otherwise */ \
+  inline TYPE __attribute__((always_inline)) \
+  NAME##_pop_front( ) { \
+    return pop_front( sizeof( TYPE ), &NAME##_queue ); \
+  } \
 \
   inline int __attribute__((always_inline)) __attribute__((const)) \
   NAME##_empty( ) { \
-    assert( 1, RING_BUF_SIZE - NAME##_queue.m_free >= 0, "H" ); \
-    return ( NAME##_queue.m_free == RING_BUF_SIZE ); \
+    return empty( &NAME##_queue ); \
   } \
 \
-  inline TYPE __attribute__((always_inline))                                        \
-  NAME##_pop_back( ) {                                                         \
-    if( NAME##_queue.m_free == RING_BUF_SIZE ) {                                     \
-      assert( 1, NAME##_queue.m_head == NAME##_queue.m_tail, "H");                         \
-      return BUF_EMPTY;                                                            \
-    }                                                                              \
-    else {                                                                         \
-      TYPE ret_val = NAME##_queue.m_arr[NAME##_queue.m_tail];                           \
-      NAME##_queue.m_tail = ( NAME##_queue.m_tail + 1 ) % RING_BUF_SIZE;               \
-      ++NAME##_queue.m_free;                                                         \
-                                                                                   \
-      assert( 1, NAME##_queue.m_head >= 0 && NAME##_queue.m_head < RING_BUF_SIZE, "I" );    \
-      assert( 1, NAME##_queue.m_tail >= 0 && NAME##_queue.m_tail < RING_BUF_SIZE, "J" );    \
-                                                                                   \
-      return ret_val;                                                              \
-    }                                                                              \
-  }                                                                                \
-                                                                                   \
-  inline TYPE __attribute__((always_inline)) __attribute__((const))                 \
-  NAME##_top_front( ) {                                                        \
-    if( NAME##_queue.m_free == RING_BUF_SIZE ) {                                     \
-      assert( 1, NAME##_queue.m_head == NAME##_queue.m_tail );                         \
-      return BUF_EMPTY;                                                            \
-    }                                                                              \
-    else                                                                           \
-      return NAME##_queue.m_arr[NAME##_queue.m_head];                                  \
-  }                                                                                \
-                                                                                   \
-  inline TYPE __attribute__((always_inline)) __attribute__((const))                 \
-  NAME##_top_back( ) {                                                         \
-    if( NAME##_queue.m_free == RING_BUF_SIZE ) {                                     \
-      assert( 1, NAME##_queue.m_head == NAME##_queue.m_tail );                            \
-      return BUF_EMPTY;                                                            \
-    }                                                                              \
-    else                                                                           \
-      return NAME##_queue.m_arr[NAME##_queue.m_tail];                                  \
-  }                                                                                \
-
-
+  inline int __attribute__((always_inline)) __attribute__((const)) \
+  NAME##_top_front( ) { \
+    return top_back( sizeof( TYPE ), &NAME##_queue ); \
+  } \
+\
+  inline TYPE __attribute__((always_inline)) __attribute__((const)) \
+  NAME##_top_back( ) { \
+    return top_back( sizeof( TYPE ), &NAME##_queue ); \
+  }
 
 #endif /* __RING_BUF_H__ */
