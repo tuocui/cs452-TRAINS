@@ -153,3 +153,29 @@ int AwaitEvent( int eventid ) {
   retval = retval_reg;
   return retval;
 }
+
+int AwaitEvent2( int eventid, char *event, int eventlen ) {
+  register int retval_reg asm("r0");
+  int retval;
+  asm volatile(
+    "stmfd sp!, {r0, r1, r2}\n\t"
+    "swi %1\n\t"
+    "mov %0, r0\n\t"
+    "add sp, sp, #12\n\t"
+    : "+r"(retval_reg)
+    : "i"(SYS_AWAIT_EVENT)
+  );
+  retval = retval_reg;
+  return retval;
+}
+
+void Kill_the_system( int magic_num ) {
+  asm volatile(
+    "stmfd sp!, {r0}\n\t"
+    "swi %0\n\t"
+    "add sp, sp, #4\n\t"
+    :: "i"(SYS_DEATH)
+  );
+  return;
+}
+

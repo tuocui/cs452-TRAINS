@@ -21,4 +21,8 @@ int Reply( int tid, char *reply, int replylen );
 
 int AwaitEvent( int eventid );
 
+int AwaitEvent2( int eventid, char *event, int eventlen );
+
+void Kill_the_system( int magic_num );
+
 #endif

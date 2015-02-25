@@ -47,6 +47,8 @@ typedef struct global_context_t {
   task_descriptor_t *interrupts[NUM_INTS];
   unsigned int num_missed_clock_cycles;
   int com1_status;
+  int num_ticks;
+  int num_ticks_idle;
   //int com2_status;
 
 } global_context_t;

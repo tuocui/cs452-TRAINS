@@ -86,7 +86,7 @@ void insert_client( clock_client_t **new_client, clock_client_t **first_client_q
 
 void clock_server( ) {
   if( RegisterAs( (char *)CLOCK_SERVER ) == -1) {
-    bwputstr( COM2, "ERROR: failed to register clock_server, aborting." );
+    //bwputstr( COM2, "ERROR: failed to register clock_server, aborting." );
     Exit( );
   }
 
@@ -160,7 +160,7 @@ void clock_server( ) {
         break;
       }
     default:
-      bwprintf( COM2, "ERROR: clock_server receives invalid msg type");
+      //bwprintf( COM2, "ERROR: clock_server receives invalid msg type");
       reply_msg.value = -1;
       Reply( client_tid, (char *)&reply_msg, msg_size );
       break;
@@ -183,7 +183,7 @@ int Delay( int ticks ) {
   msg.value = ticks;
   debug( "Sending delay: msg.value: %d", msg.value );
   Send( clock_server_id, (char *)&msg, msg_len, (char *)&rpl, msg_len );
-  return 0;
+  return rpl.value;
 }
 
 int DelayUntil( int ticks ) {

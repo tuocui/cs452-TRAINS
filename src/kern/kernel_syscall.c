@@ -364,7 +364,7 @@ void handle_await_event( global_context_t *gc ) {
       *( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) |= TIEN_MASK;
       break;
     case COM2_IN_IND:
-      *( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) |= RIEN_MASK;
+      *( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) |= RIEN_MASK | RTIEN_MASK;;
       break;
 
     default:
@@ -387,12 +387,17 @@ void handle_timer_int( global_context_t *gc ) {
   } else {
     ++(gc->num_missed_clock_cycles);
   }
+  ++(gc->num_ticks);
+  if( gc->cur_task->priority == PRIORITY_MAX ) {
+    ++(gc->num_ticks_idle);
+  }
   *timer_clr = 1;
 }
 
 void handle_uart1_combined_int( global_context_t *gc ) {
   int uart1_int_status = *((unsigned int *)( UART1_BASE + UART_INTR_OFFSET ));
   int *uart1_status_flags = (int *)(UART1_BASE + UART_FLAG_OFFSET);
+  //int *uart1_modem_status_flags = (int *)(UART1_BASE + UART_MDMSTS_OFFSET);
   //debug("uart1 int status: %x", uart1_int_status );
 
   if( uart1_int_status & UART_TIS_MASK && !(*uart1_status_flags & TXFF_MASK) ) {
@@ -401,6 +406,7 @@ void handle_uart1_combined_int( global_context_t *gc ) {
     *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~TIEN_MASK;
   }
 
+  //if( uart1_int_status & UART_MIS_MASK && *uart1_modem_status_flags & DCTS_MASK && *uart1_status_flags & CTS_MASK ) {
   if( uart1_int_status & UART_MIS_MASK && *uart1_status_flags & CTS_MASK ) {
     //debug("MSIEN interrupt hit");
     gc->com1_status |= COM1_CTS_MASK;
@@ -451,20 +457,47 @@ void handle_uart2_combined_int( global_context_t *gc ) {
     add_to_priority( gc, td );
   }
 
-  // Don't need Receive timout, since COM1 doesn't have FIFO turned on yet.
-  if( uart2_int_status & UART_RIS_MASK && uart2_status_flags & RXFF_MASK) {
+  if( ( uart2_int_status & UART_RIS_MASK || uart2_int_status & UART_RTIS_MASK ) && !(uart2_status_flags & RXFE_MASK) ) {
     debug("RIEN interrupt hit");
-    char c = *((char *)( UART2_BASE + UART_DATA_OFFSET ));
     task_descriptor_t *td = gc->interrupts[COM2_IN_IND];
+    //debug( "In handle await event" );
+    register int event_type_reg asm("r0");
+    int event_type;
+    register char *event_buf_reg asm("r1");
+    char *event_buf;
+    register int event_len_reg asm("r2");
+    int event_len;
+    register unsigned int *cur_sp_reg asm("r3") = td->sp;
+    asm volatile(
+      "msr cpsr_c, #0xdf\n\t"
+      "add r3, %3, #56\n\t" // 14 registers + pc + retval saved
+      "ldmfd r3, {%0, %1, %2}\n\t"
+      "msr cpsr_c, #0xd3\n\t"
+      : "+r"(event_type_reg), "+r"(event_buf_reg), "+r"(event_len_reg), "+r"(cur_sp_reg)
+    );
+    event_type = event_type_reg;
+    event_buf = event_buf_reg;
+    event_len = event_len_reg;
     gc->interrupts[COM2_IN_IND] = NULL;
     assert( 0, td != NULL, "FUCK IN TD IS NULL" );
-    *( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
-    *((unsigned int *)( UART2_BASE + UART_INTR_OFFSET )) &= ~UART_RIS_MASK;
+    if( uart2_int_status & UART_RIS_MASK ){
+      *((unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
+      *((unsigned int *)( UART2_BASE + UART_INTR_OFFSET )) &= ~UART_RIS_MASK;
+    } else if ( uart2_int_status & UART_RTIS_MASK ) {
+      *((unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~RTIEN_MASK;
+      *((unsigned int *)( UART2_BASE + UART_INTR_OFFSET )) &= ~UART_RTIS_MASK;
+    }
+    int i = 0;
     if( td != NULL ) {
-      td->retval = c;
+      for( ; i < event_len && !(*((unsigned int *)(UART2_BASE + UART_FLAG_OFFSET)) & RXFE_MASK); ++i ) {
+        event_buf[i] = *((char *)( UART2_BASE + UART_DATA_OFFSET ));
+        //for( j = 0; j < 56; ++j ) ;
+      }
+      td->retval = i;
+      *((unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
+      *((unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~RTIEN_MASK;
       add_to_priority( gc, td );
     }
-    //gc->com1_status |= COM1_RECEIVE_MASK;
   }
 }
 
@@ -483,4 +516,26 @@ void handle_hwi( global_context_t *gc, int hwi_type ) {
   }
 }
 
+void handle_death( global_context_t *gc ) {
+  register int magic_death_num_reg asm("r0");
+  int magic_death_num;
+  register unsigned int *cur_sp_reg asm("r3") = (gc->cur_task)->sp;
+
+  asm volatile(
+    "msr cpsr_c, #0xdf\n\t"
+    "add r3, %1, #56\n\t" // 14 registers + pc + retval saved
+    "ldmfd r3, {%0}\n\t"
+    "msr cpsr_c, #0xd3\n\t"
+    : "+r"(magic_death_num_reg), "+r"(cur_sp_reg)
+  );
+  magic_death_num = magic_death_num_reg;
+  if( magic_death_num == 0xdeadbeef ) {
+    int i;
+    for( i = 0; i <= PRIORITY_MAX; ++i ) {
+      (gc->priorities)[i].first_in_queue = NULL;
+    }
+  } else {
+    add_to_priority( gc, gc->cur_task );
+  }
+}
 
