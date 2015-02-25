@@ -39,8 +39,10 @@ inline int empty( ring_queue_t * queue );
   NAME##_queue.m_head = 0; \
   NAME##_queue.m_tail = 0; \
   NAME##_queue.m_free = RING_BUF_SIZE; \
+  type_arr_t type_arr; \
   TYPE arr[RING_BUF_SIZE]; \
-  NAME##_queue.m_arr->m_arr_char = (char*)&arr; \
+  type_arr.m_arr_char = (char*)&arr; \
+  NAME##_queue.m_arr = &type_arr; \
 \
   /* return the idx of the inserted value on success, an errno otherwise */ \
   inline int __attribute__((always_inline)) \
@@ -72,10 +74,10 @@ inline int empty( ring_queue_t * queue );
 \
   inline int __attribute__((always_inline)) __attribute__((const)) \
   NAME##_top_front( ) { \
-    return top_back( sizeof( TYPE ), &NAME##_queue ); \
+    return top_front( sizeof( TYPE ), &NAME##_queue ); \
   } \
 \
-  inline TYPE __attribute__((always_inline)) __attribute__((const)) \
+  inline int __attribute__((always_inline)) __attribute__((const)) \
   NAME##_top_back( ) { \
     return top_back( sizeof( TYPE ), &NAME##_queue ); \
   }
