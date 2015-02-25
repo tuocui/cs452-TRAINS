@@ -77,6 +77,8 @@ void kernel_init( global_context_t *gc) {
   gc->num_tasks = 0;
   gc->num_missed_clock_cycles = 0;
   gc->com1_status = COM1_CTS_MASK;
+  gc->num_ticks = 0;
+  gc->num_ticks_idle = 0;
 
   debug( "before hwi_cleanup" );
   hwi_cleanup( );
@@ -231,7 +233,7 @@ int main(int argc, char *argv[]) {
   }
 
   hwi_cleanup( );
-  //bwprintf(COM2, "\n\rExit Main\n\r");
+  bwprintf(COM2, "Total ticks: %d, idle ticks: %d\r\n", gc.num_ticks, gc.num_ticks_idle);
 
   return 0;
 }
