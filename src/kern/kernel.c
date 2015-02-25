@@ -1,7 +1,6 @@
 #include "tools.h"
 #include "kernel.h"
-
-
+/*
 void print_env( ) {
   bwprintf( COM2, "#################################\n\r" );
   #ifdef OPT
@@ -23,7 +22,7 @@ void print_env( ) {
   #endif 
   bwprintf( COM2, "#################################\n\r" );
 
-}
+}*/
 
 void cache_init( ) {
   asm volatile( 
@@ -41,12 +40,30 @@ void hwi_cleanup( ) {
   /* Clear timer interrupt bit */
   int *timer_base = (int *)(TIMER3_BASE + CLR_OFFSET);
   *timer_base = 1;
+  /* Turn off COM1 Interrupts + COM1 uart */
+	*( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~UARTEN_MASK & 
+                                                        ~MSIEN_MASK & 
+                                                        ~RIEN_MASK & 
+                                                        ~TIEN_MASK & 
+                                                        ~RTIEN_MASK;
+  *( (unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~MSIEN_MASK &
+                                                        ~RIEN_MASK &
+                                                        ~TIEN_MASK &
+                                                        ~RTIEN_MASK;
+
+
+
 }
 
 void hwi_init( ) {
   /* turn on timer3 interrupt, select as IRQ*/
   *((unsigned int *)(VIC2_BASE + VICX_INT_SELECT_OFFSET)) &= TIMER3_IRQ_MASK;
   *((unsigned int *)(VIC2_BASE + VICX_INT_ENABLE_OFFSET)) |= TIMER3_INT_ON;
+  /* turn on COM1 Output interrupts, select as IRQ */
+  *((unsigned int *)(VIC2_BASE + VICX_INT_SELECT_OFFSET)) &= UART1_COMBINED_IRQ_MASK;
+  *((unsigned int *)(VIC2_BASE + VICX_INT_ENABLE_OFFSET)) |= UART1_COMBINED_INT_ON;
+  *((unsigned int *)(VIC2_BASE + VICX_INT_SELECT_OFFSET)) &= UART2_COMBINED_IRQ_MASK;
+  *((unsigned int *)(VIC2_BASE + VICX_INT_ENABLE_OFFSET)) |= UART2_COMBINED_INT_ON;
 }
 
 
@@ -59,9 +76,15 @@ void kernel_init( global_context_t *gc) {
   }
   gc->num_tasks = 0;
   gc->num_missed_clock_cycles = 0;
+  gc->com1_status = COM1_CTS_MASK;
+  gc->num_ticks = 0;
+  gc->num_ticks_idle = 0;
 
+  debug( "before hwi_cleanup" );
   hwi_cleanup( );
+  debug( "after hwi_cleanup" );
   hwi_init( );
+  debug( "after init " );
   
   init_kernelentry();
 #ifdef CACHE
@@ -140,10 +163,9 @@ void handle( global_context_t *gc, int request_type ) {
       
       assert(1, vic_base == 0 );
       ++vic_src_num;
-
       /* should have reset vic register at this point */
     }
-
+    add_to_priority( gc, gc->cur_task );
     break;
   case SYS_CREATE:
     handle_create( gc );
@@ -172,6 +194,9 @@ void handle( global_context_t *gc, int request_type ) {
   case SYS_EXIT:
     handle_exit( gc );
     break;
+  case SYS_DEATH:
+    handle_death( gc );
+    break;
   default:
     break;
   }
@@ -179,7 +204,7 @@ void handle( global_context_t *gc, int request_type ) {
 
 int main(int argc, char *argv[]) {
 
-  print_env( );
+  //print_env( );
 
   debug("TD_BIT: %d", TD_BIT);
   debug("TD_MAX: %d", TD_MAX);
@@ -187,14 +212,14 @@ int main(int argc, char *argv[]) {
   int request_type;
   global_context_t gc;
 
-  bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
+  //bwputstr( COM2, "LOADING... WE ARE FASTER THAN WINDOWS :)\r\n" );
   kernel_init( &gc );
 
   task_descriptor_t *first_td = tds_create_td(&gc, 8, (int)&first_user_task);
   ++(gc.num_tasks);
   add_to_priority( &gc, first_td );
 
-  bwputstr( COM2, "FINISHED INITIALIZATION. WOO!\r\n" );
+  //bwputstr( COM2, "FINISHED INITIALIZATION. WOO!\r\n" );
 
   FOREVER {
     task_descriptor_t *scheduled_td = schedule( &gc );
@@ -208,7 +233,7 @@ int main(int argc, char *argv[]) {
   }
 
   hwi_cleanup( );
-  bwprintf(COM2, "\n\rExit Main\n\r");
+  bwprintf(COM2, "Total ticks: %d, idle ticks: %d\r\n", gc.num_ticks, gc.num_ticks_idle);
 
   return 0;
 }

@@ -3,13 +3,13 @@
 
 void tds_init(global_context_t *gc) {
   int i = 0;
-  /* loading bar */ 
-  // TODO: should combine it with screen layout in the future
-  int bar_size = 40;
-  int block_size = USER_SPACE_SIZE / bar_size;
-  int block_step = 0;
-  int blocks = 1;
-  /* loading bar end */
+  ///* loading bar */ 
+  //// TODO: should combine it with screen layout in the future
+  //int bar_size = 40;
+  //int block_size = USER_SPACE_SIZE / bar_size;
+  //int block_step = 0;
+  //int blocks = 1;
+  ///* loading bar end */
 
   gc->td_first_free = gc->tds;
   gc->td_last_free = &(gc->tds[TD_MAX-1]);
@@ -22,20 +22,20 @@ void tds_init(global_context_t *gc) {
       (gc->user_space)[i] = 0;
       //debug("init i: %d", i);
 
-    /* loading bar */
-    if(block_step == block_size) {
-      bwprintf(COM2, "\033[s\033[50D%d%%\033[u\033[44m ", 
-                     blocks * 100 / bar_size );
-      ++blocks;
-      block_step = 0;
-    }
-    ++block_step;
-    /* loading bar end */
+    ///* loading bar */
+    //if(block_step == block_size) {
+    //  bwprintf(COM2, "\033[s\033[50D%d%%\033[u\033[44m ", 
+    //                 blocks * 100 / bar_size );
+    //  ++blocks;
+    //  block_step = 0;
+    //}
+    //++block_step;
+    ///* loading bar end */
   }
 
-  /* loading bar */
-  bwprintf(COM2, "\033[40m\n\r");
-  /* loading bar end */
+  ///* loading bar */
+  //bwprintf(COM2, "\033[40m\n\r");
+  ///* loading bar end */
 
   i = 0;
   for( ; i < TD_MAX; ++i) {

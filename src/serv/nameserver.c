@@ -38,7 +38,7 @@ void nameserver_main( ) {
         // Register, and reply back
         jobs[request.val] = reply_tid;
         reply_back( reply_tid, &reply, msg_len, SUCCESS, 0 );
-        debug( "Woo, a %d server registered with id: %d", request.type, jobs[request.type] );
+        debug( "Woo, a %d server registered with id: %d", request.val, jobs[request.val] );
       }
       break;
     case WHOIS:

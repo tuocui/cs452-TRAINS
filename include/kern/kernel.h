@@ -15,9 +15,16 @@
 #define HWI_MAGIC 0xab
 #define USER_SPACE_SIZE (TD_MAX * TD_SIZE)
 
+
 /* interrupts */
-#define NUM_INTS 1
-#define TIMER3_INT 51
+#define TIMER3_INT         51
+#define UART1_COMBINED_INT 52
+#define UART2_COMBINED_INT 54
+
+/* IO status offsets */
+#define COM1_TRANSMIT_MASK 0x1
+#define COM1_CTS_MASK      0x2
+#define COM1_RECEIVE_MASK  0x4
 
 // "Global" variables used by the kernel
 typedef struct global_context_t {
@@ -39,6 +46,10 @@ typedef struct global_context_t {
 
   task_descriptor_t *interrupts[NUM_INTS];
   unsigned int num_missed_clock_cycles;
+  int com1_status;
+  int num_ticks;
+  int num_ticks_idle;
+  //int com2_status;
 
 } global_context_t;
 

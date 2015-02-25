@@ -4,12 +4,21 @@
 #include <nameserver.h>
 #include <rps.h>
 #include "clock_server.h"
+#include "io.h"
+#include "ring_buf.h"
+#include "clock.h"
+#include "track.h"
+#include "screen.h"
 
 #define CYCLES 1000
 
+// TODO: Split this into user task and test task files
+
 //#define A1 1
 //#define A2 1 
-#define A3 1
+//#define A3 1
+#define A4 1
+//#define TEST
 
 //TODO remove testing struct
 struct Server {
@@ -59,11 +68,6 @@ void user_receive_task( ){
     rtn = Reply( sender_tid, (char*)&server_reply, sizeof(server_reply) );
     debug("Reply's rtn: %d", rtn );
   }
-  //rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-  //debug("rtn: %d", rtn);
-  //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
-  //char c = bwgetc( COM2 );
-  //bwputc( COM2, c );
   Exit( );
 }
 
@@ -78,10 +82,6 @@ void user_send_task( ){
   int cycles;
   int rtn;
   cycles = CYCLES;
-  //server_s.a = (char) my_tid;
-  //server_s.b = (char) my_tid;
-  //debug("tid: %d, msg: %x, msglen: %d, reply: %x, replylen: %d", receiver_tid, &server_s,  sizeof(server_s), &server_reply,  sizeof(server_reply) );
-  
 
   while(--cycles >= 0){
     rtn = Send( receiver_tid, (char *) &server_s,  sizeof(server_s), (char *) &server_reply, sizeof(server_reply));
@@ -231,8 +231,60 @@ void a3_user_task( ) {
 
 #endif /* A3 */
 
+#ifdef A4
+
+void a4_test_task( ) {
+  setspeed( COM1, LOW_SPEED );
+  wait_cycles(1000);
+  enable_two_stop_bits( COM1 );
+  setfifo( COM1, OFF );
+  setfifo( COM2, ON );
+  int nameserver_tid = Create( 3, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid );
+  int idle_id = Create( PRIORITY_MAX, &idle_task );
+  debug( "Idle tid: %d", idle_id );
+  int com2_out_server_tid = Create( 4, &COM2_Out_Server );
+  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  int com2_in_server_tid = Create( 3, &COM2_In_Server );
+  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  int com1_out_server_tid = Create( 4, &COM1_Out_Server );
+  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  int com1_in_server_tid = Create( 3, &COM1_In_Server );
+  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  int clock_server_tid = Create( 3, &clock_server );
+  debug( "Clock Server tid: %d", clock_server_tid );
+  int clock_user_tid = Create( 10, &clock_user_task );
+  debug( "Clock user task tid: %d", clock_user_tid );
+  Printf( COM2, "\033[2J" );
+  initialize_track( );
+  int track_sensor_task_tid = Create( 6, &track_sensor_task );
+  debug( "Track Sensor task tid: %d", track_sensor_task_tid );
+  int parse_user_input_tid = Create( 6, &parse_user_input );
+  debug( "User input task tid: %d", parse_user_input_tid );
+  Exit( );
+}
+
+void a4_test_task2( ) {
+  setfifo( COM2, OFF );
+  int nameserver_tid = Create( 3, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid );
+  int idle_id = Create( PRIORITY_MAX, &idle_task );
+  debug( "Idle tid: %d", idle_id );
+  int com2_out_server_tid = Create( 3, &COM2_Out_Server );
+  debug( "COM1_Out Server tid: %d", com2_out_server_tid );
+  int com2_in_server_tid = Create( 3, &COM2_In_Server );
+  debug( "COM1_In Server tid: %d", com2_in_server_tid );
+  // Create clock server
+  int clock_server_tid = Create( 3, &clock_server );
+  debug( "Clock Server tid: %d", clock_server_tid );
+  int parse_user_input_tid = Create( 6, &parse_user_input );
+  debug( "Track Sensor task tid: %d", parse_user_input_tid );
+  Exit( );
+}
+#endif /* A4 */
+
 void first_user_task( ){
-  bwsetfifo( COM2, OFF );
+  //bwsetfifo( COM2, OFF );
 #ifdef A1
   int first_tid = MyTid( );
   debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(first_tid), TID_GEN(first_tid));
@@ -270,6 +322,56 @@ void first_user_task( ){
   //bwprintf( COM2, "idle_id: %d, test_id: %d\r\n", idle_id, test_id );
 #endif /* A3 */
 
-  bwprintf( COM2, "Exit first_user_task\n\r");
+#ifdef A4
+  a4_test_task( );
+  
+#endif /* A4 */
+
+#ifdef TEST
+  declare_ring_queue( test, 3 );
+  debug( "buf_count: %d", test_queue_count( ) );
+  int idx = test_queue_push_front( 1 );
+  debug( "buf_count: %d, idx: %d", test_queue_count( ), idx );
+
+  idx = test_queue_push_front( 2 );
+  debug( "buf_count: %d, idx: %d", test_queue_count( ), idx );
+
+  idx = test_queue_push_front( 3 );
+  debug( "buf_count: %d, idx: %d", test_queue_count( ), idx );
+  
+  idx = test_queue_push_front( 4 );
+  debug( "buf_count: %d, idx: %d", test_queue_count( ), idx );
+
+  int elm = test_queue_top_front( );
+  debug( "buf_count: %d, elm: %d", test_queue_count( ), elm );
+
+  elm = test_queue_top_front( );
+  debug( "buf_count: %d, elm: %d", test_queue_count( ), elm );
+
+  elm = test_queue_top_back( );
+  debug( "buf_count: %d, elm: %d", test_queue_count( ), elm );
+
+  elm = test_queue_top_back( );
+  debug( "buf_count: %d, elm: %d", test_queue_count( ), elm );
+
+
+
+  debug(" now what's popping " );
+  elm = test_queue_pop_front( );
+  debug( "buf_count: %d, elm: %d", test_queue_count( ), elm );
+
+  elm = test_queue_pop_back( );
+  debug( "buf_count: %d, elm: %d", test_queue_count( ), elm );
+
+  elm = test_queue_pop_front( );
+  debug( "buf_count: %d, elm: %d", test_queue_count( ), elm );
+
+  idx = test_queue_push_front( 12 );
+  debug( "buf_count: %d, idx: %d", test_queue_count( ), idx );
+
+  
+#endif /* TEST */
+
+  //bwprintf( COM2, "Exit first_user_task\n\r");
   Exit( );
 }
