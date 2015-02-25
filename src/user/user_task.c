@@ -366,6 +366,7 @@ void a4_test_task2( ) {
 
 void first_user_task( ){
   bwsetfifo( COM2, OFF );
+  debug( "first user task" );
 #ifdef A1
   int first_tid = MyTid( );
   debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(first_tid), TID_GEN(first_tid));
@@ -465,7 +466,11 @@ void first_user_task( ){
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   idx = com2_buf_push_front( 'b' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  
   idx = com2_buf_push_front( 'c' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+
   idx = com2_buf_push_front( 'd' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
@@ -474,6 +479,27 @@ void first_user_task( ){
 
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+
+  idx = com2_buf_push_front( 'e' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+
+  idx = com2_buf_push_front( 'f' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+
+  idx = com2_buf_push_front( 'g' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+
+  idx = com2_buf_push_front( 'h' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+
+  idx = com2_buf_push_front( 'i' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
   
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
@@ -481,8 +507,14 @@ void first_user_task( ){
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
+  idx = com2_buf_push_front( 'j' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 #endif /* TEST */
 
   bwprintf( COM2, "Exit first_user_task\n\r");
