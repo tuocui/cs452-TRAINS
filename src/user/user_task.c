@@ -417,63 +417,63 @@ void ring_buf_test( ) {
   idx = test_push_front( 15 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
-  //declare_ring_queue( char, com2_buf, 3 );
-  //debug( "buf_count: %d", com2_buf_count( ) );
-  //int idx = com2_buf_push_front( 'a' );
-  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  declare_ring_queue( char, com2_buf, 3 );
+  debug( "buf_count: %d", com2_buf_count( ) );
+  int idx = com2_buf_push_front( 'a' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  //idx = com2_buf_push_front( 'b' );
-  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
-  //
-  //idx = com2_buf_push_front( 'c' );
-  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  idx = com2_buf_push_front( 'b' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  
+  idx = com2_buf_push_front( 'c' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  //idx = com2_buf_push_front( 'd' );
-  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  idx = com2_buf_push_front( 'd' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  //char c = com2_buf_pop_back( );
-  //debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  char c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  //c = com2_buf_pop_back( );
-  //debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  //idx = com2_buf_push_front( 'e' );
-  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
-  //
-  //c = com2_buf_pop_back( );
-  //debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  idx = com2_buf_push_front( 'e' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  //idx = com2_buf_push_front( 'f' );
-  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  idx = com2_buf_push_front( 'f' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  //idx = com2_buf_push_front( 'g' );
-  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  idx = com2_buf_push_front( 'g' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  //c = com2_buf_pop_back( );
-  //debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  //idx = com2_buf_push_front( 'h' );
-  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  idx = com2_buf_push_front( 'h' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  //idx = com2_buf_push_front( 'i' );
-  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
-  //
-  //c = com2_buf_pop_back( );
-  //debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  idx = com2_buf_push_front( 'i' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  //c = com2_buf_pop_back( );
-  //debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  //c = com2_buf_pop_back( );
-  //debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
 
 
-  //idx = com2_buf_push_front( 'j' );
-  //debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  idx = com2_buf_push_front( 'j' );
+  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  //c = com2_buf_pop_back( );
-  //debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  c = com2_buf_pop_back( );
+  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
   debug( "end of test" );
   return;
 
