@@ -5,14 +5,14 @@
 /* memcpy for message passing */
 // TODO: Utilize our 10 spare registers to do memcpy.
 // Way faster than copying 1 byte at a time
-void kmemcpy( char * dst, const char * src, size_t len ) {
+inline void kmemcpy( char * dst, const char * src, size_t len ) {
   dst += len; 
   src += len;
   while(len-- > 0)  
     *--dst = *--src;
 }
 
-int get_message_tid( unsigned int *sp, int offset ) {
+inline int get_message_tid( unsigned int *sp, int offset ) {
 #ifndef CLANG
   register unsigned int  int_reg     asm("r1");
   register int           offset_reg  asm("r2") = offset;
@@ -32,7 +32,7 @@ int get_message_tid( unsigned int *sp, int offset ) {
 #endif
 }
 
-char *get_message( unsigned int *sp, int offset, int *msglen ) {
+inline char *get_message( unsigned int *sp, int offset, int *msglen ) {
 #ifndef CLANG
   /* get the next two arguments: *msg, and msglen */
   register char          *char_reg   asm("r0");
