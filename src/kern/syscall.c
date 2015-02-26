@@ -179,3 +179,29 @@ void Kill_the_system( int magic_num ) {
   return;
 }
 
+int Idle_pct_cumulative( ) {
+  register int retval_reg asm("r0");
+  int retval;
+  asm volatile(
+    "swi %1\n\t"
+    "mov %0, r0\n\t"
+    : "+r"(retval_reg)
+    : "i"(SYS_IDLE_PCT_CUM)
+  );
+  retval = retval_reg;
+  return retval;
+}
+
+int Idle_pct_recent( ) {
+  register int retval_reg asm("r0");
+  int retval;
+  asm volatile(
+    "swi %1\n\t"
+    "mov %0, r0\n\t"
+    : "+r"(retval_reg)
+    : "i"(SYS_IDLE_PCT_REC)
+  );
+  retval = retval_reg;
+  return retval;
+}
+

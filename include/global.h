@@ -25,6 +25,8 @@ typedef unsigned int size_t;
 #define SYS_RECEIVE         6
 #define SYS_REPLY           7
 #define SYS_AWAIT_EVENT     8
+#define SYS_IDLE_PCT_CUM    9 // lol
+#define SYS_IDLE_PCT_REC    10
 #define SYS_DEATH           98
 #define SYS_EXIT            99
 

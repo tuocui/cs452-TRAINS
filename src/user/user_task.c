@@ -9,6 +9,7 @@
 #include "clock.h"
 #include "track.h"
 #include "screen.h"
+#include "util.h"
 
 #define CYCLES 1000
 
@@ -240,18 +241,18 @@ void a4_test_task( ) {
   setfifo( COM1, OFF );
   setfifo( COM2, ON );
   int nameserver_tid = Create( 3, &nameserver_main );
-  debug( "Nameserver tid: %d", nameserver_tid );
-  int idle_id = Create( PRIORITY_MAX, &idle_task );
+  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
   debug( "Idle tid: %d", idle_id );
-  int com2_out_server_tid = Create( 4, &COM2_Out_Server );
+  int com2_out_server_tid = Create( 4, &COM2_Out_Server ); // 35
   debug( "COM2_Out Server tid: %d", com2_out_server_tid );
-  int com2_in_server_tid = Create( 3, &COM2_In_Server );
+  int com2_in_server_tid = Create( 3, &COM2_In_Server ); // 37
   debug( "COM2_In Server tid: %d", com2_in_server_tid );
-  int com1_out_server_tid = Create( 4, &COM1_Out_Server );
+  int com1_out_server_tid = Create( 4, &COM1_Out_Server ); // 39
   debug( "COM1_Out Server tid: %d", com1_out_server_tid );
-  int com1_in_server_tid = Create( 3, &COM1_In_Server );
+  int com1_in_server_tid = Create( 3, &COM1_In_Server ); // 41
   debug( "COM1_In Server tid: %d", com1_in_server_tid );
-  int clock_server_tid = Create( 3, &clock_server );
+  int clock_server_tid = Create( 3, &clock_server ); // 43
   debug( "Clock Server tid: %d", clock_server_tid );
   int clock_user_tid = Create( 10, &clock_user_task );
   debug( "Clock user task tid: %d", clock_user_tid );
@@ -261,6 +262,8 @@ void a4_test_task( ) {
   debug( "Track Sensor task tid: %d", track_sensor_task_tid );
   int parse_user_input_tid = Create( 6, &parse_user_input );
   debug( "User input task tid: %d", parse_user_input_tid );
+  int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
+  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
   Exit( );
 }
 

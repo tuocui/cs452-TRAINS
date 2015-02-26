@@ -387,9 +387,9 @@ void handle_timer_int( global_context_t *gc ) {
   } else {
     ++(gc->num_missed_clock_cycles);
   }
-  ++(gc->num_ticks);
+  ++(gc->num_ticks_rec);
   if( gc->cur_task->priority == PRIORITY_MAX ) {
-    ++(gc->num_ticks_idle);
+    ++(gc->num_ticks_idle_rec);
   }
   *timer_clr = 1;
 }
@@ -537,5 +537,23 @@ void handle_death( global_context_t *gc ) {
   } else {
     add_to_priority( gc, gc->cur_task );
   }
+}
+
+void handle_idle_task_pct_cum( global_context_t *gc ) {
+  int pct;
+  gc->num_ticks += gc->num_ticks_rec;
+  gc->num_ticks_idle += gc->num_ticks_idle_rec;
+  pct = ( gc->num_ticks_idle * 100 ) / gc->num_ticks;
+  gc->cur_task->retval = pct;
+  add_to_priority( gc, gc->cur_task );
+}
+
+void handle_idle_task_pct_rec( global_context_t *gc ) {
+  int pct;
+  pct = ( gc->num_ticks_idle_rec * 100 ) / gc->num_ticks_rec;
+  gc->cur_task->retval = pct;
+  gc->num_ticks_rec = 0;
+  gc->num_ticks_idle_rec = 0;
+  add_to_priority( gc, gc->cur_task );
 }
 

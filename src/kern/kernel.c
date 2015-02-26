@@ -79,6 +79,8 @@ void kernel_init( global_context_t *gc) {
   gc->com1_status = COM1_CTS_MASK;
   gc->num_ticks = 0;
   gc->num_ticks_idle = 0;
+  gc->num_ticks_rec = 0;
+  gc->num_ticks_idle_rec = 0;
 
   debug( "before hwi_cleanup" );
   hwi_cleanup( );
@@ -196,6 +198,12 @@ void handle( global_context_t *gc, int request_type ) {
     break;
   case SYS_DEATH:
     handle_death( gc );
+    break;
+  case SYS_IDLE_PCT_CUM:
+    handle_idle_task_pct_cum( gc );
+    break;
+  case SYS_IDLE_PCT_REC:
+    handle_idle_task_pct_rec( gc );
     break;
   default:
     break;
