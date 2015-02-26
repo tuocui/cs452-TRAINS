@@ -19,11 +19,11 @@ typedef struct com_msg {
   enum {
     COM_IN_READY,
     COM_IN_REPLY,
-    COM_IN_PUT,
+    COM_IN_GET,
 
     COM_OUT_READY,
     COM_OUT_REPLY,
-    COM_OUT_GET,
+    COM_OUT_PUT,
   } request_type;
   char * msg_val;
   int msg_len;

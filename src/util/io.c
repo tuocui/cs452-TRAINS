@@ -3,6 +3,7 @@
 #include "syscall.h"
 #include "nameserver.h"
 #include "io.h"
+#include "ring_buf.h"
 
 // Turn on UART, should only be used for COM1
 int enable_uart( int channel ) {
@@ -110,10 +111,11 @@ void com1_out_notifier( ) {
   FOREVER {
     debug( "Before await" );
     errno = AwaitEvent( COM1_OUT_IND );
-    assert(0, errno >= 0, "ERROR: interrupt eventid is incorrect" );
+    assert( 1, errno >= 0, "ERROR: interrupt eventid is incorrect" );
     debug( "Notifier finished awaiting" );
 
-    Send( com1_out_server_tid, (char*)&msg, sizeof( msg ), &rpl, 1 );
+    errno = Send( com1_out_server_tid, (char*)&msg, sizeof( msg ), &rpl, 1 );
+    assert( 1, errno >= 0 );
     *((int *)( UART1_BASE + UART_DATA_OFFSET )) = rpl;
   }
 }
@@ -133,10 +135,11 @@ void com2_out_notifier( ) {
   FOREVER {
     debug( "Before await" );
     errno = AwaitEvent( COM2_OUT_IND );
-    assert(0, errno >= 0, "ERROR: interrupt eventid is incorrect" );
+    assert( 1, errno >= 0, "ERROR: interrupt eventid is incorrect" );
     debug( "Notifier finished awaiting" );
 
-    Send( com2_out_server_tid, (char*)&msg, msg_size, (char *)&rpl, msg_size );
+    errno = Send( com2_out_server_tid, (char*)&msg, msg_size, (char *)&rpl, msg_size );
+    assert( 1, errno >= 0 );
     for( i = 0; i < rpl.msg_len; ++i ) {
       *((int *)( UART2_BASE + UART_DATA_OFFSET )) = (rpl.msg_val)[i];
     }
@@ -156,11 +159,12 @@ void com1_in_notifier( ) {
 
   FOREVER {
     ret_val = AwaitEvent( COM1_IN_IND );
-    assert( 0, ret_val >= 0, "ERROR: interrupt eventid is incorrect" );
+    assert( 1, ret_val >= 0, "ERROR: interrupt eventid is incorrect" );
     c = (char)ret_val;
     msg.msg_val = &c;
     msg.msg_len = 0;
-    Send( com_in_server_tid, (char *)&msg, sizeof( msg ), &rpl, 0 );
+    ret_val = Send( com_in_server_tid, (char *)&msg, sizeof( msg ), &rpl, 0 );
+    assert( 1, ret_val >= 0 );
   }
 }
 
@@ -175,8 +179,9 @@ void com2_in_notifier( ) {
   msg.msg_val = c_buf;
   FOREVER {
     msg.msg_len = AwaitEvent2( COM2_IN_IND, c_buf, c_buf_size );
-    assert( 0, msg.msg_len >= 0, "ERROR: interrupt eventid is incorrect" );
-    Send( com_in_server_tid, (char *)&msg, sizeof( msg ), &rpl, 0 );
+    assert( 1, msg.msg_len >= 0, "ERROR: interrupt eventid is incorrect" );
+    int ret_val = Send( com_in_server_tid, (char *)&msg, sizeof( msg ), &rpl, 0 );
+    assert( 1, ret_val >= 0 );
   }
 }
 
@@ -197,20 +202,23 @@ void com1_out_server( ) {
   char *client_msg;
   int i;
   int notifier_tid = Create( 2, &com1_out_notifier );
+  int ret_val;
   debug( "com1_out - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
-    Receive( &client_tid, (char *)&msg, sizeof( msg ));
+    ret_val = Receive( &client_tid, (char *)&msg, sizeof( msg ));
+    assert( 1, ret_val >= 0 );
     switch( msg.request_type ) {
     case COM_OUT_READY:
       notifier_ready = 1;
       break;
-    case COM_IN_PUT:
+    case COM_OUT_PUT:
       client_msg = msg.msg_val;
       for( i = 0; i < msg.msg_len; ++i ) {
         com1_out_buf[com1_out_cur_ind] = client_msg[i];
         com1_out_cur_ind = ( com1_out_cur_ind + 1 ) % OUT_BUF_SIZE;
       }
-      assert( 1, Reply( client_tid, client_msg, 0 ) >= 0 );
+      ret_val = Reply( client_tid, &c, 0 );
+      assert( 1, ret_val >= 0 );
       break;
     default:
       break;
@@ -220,7 +228,8 @@ void com1_out_server( ) {
       c = com1_out_buf[com1_out_print_ind];
       com1_out_print_ind = ( com1_out_print_ind + 1 ) % OUT_BUF_SIZE;
       notifier_ready = 0;
-      assert( 1, Reply( notifier_tid, &c, 1 ) >= 0 );
+      ret_val = Reply( notifier_tid, &c, 1 );
+      assert( 1, ret_val >= 0 );
       //Printf( COM2, "sent: %d\r\n", c );
     }
   }
@@ -245,19 +254,23 @@ void com2_out_server( ) {
   char com2_out_buf[OUT_BUF_SIZE];
   int i;
   int notifier_tid = Create( 2, &com2_out_notifier );
+  int ret_val;
+  char c_rpl = 'a';
   debug( "com2_out - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
-    Receive( &client_tid, (char *)&msg, msg_size );
+    ret_val = Receive( &client_tid, (char *)&msg, msg_size );
+    assert( 1, ret_val >= 0 );
     switch( msg.request_type ) {
     case COM_OUT_READY:
       notifier_ready = 1;
       break;
-    case COM_IN_PUT:
+    case COM_OUT_PUT:
       for( i = 0; i < msg.msg_len; ++i ) {
         com2_out_buf[com2_out_cur_ind] = msg.msg_val[i];
         com2_out_cur_ind = ( com2_out_cur_ind + 1 ) % OUT_BUF_SIZE;
       }
-      assert( 1, Reply( client_tid, (char *)client_tid, 0 ) >= 0 );
+      ret_val = Reply( client_tid, &c_rpl, 0 );
+      assert( 1, ret_val >= 0 );
       break;
     default:
       break;
@@ -269,7 +282,8 @@ void com2_out_server( ) {
       }
       notifier_ready = 0;
       rpl.msg_len = i;
-      assert( 1, Reply( notifier_tid, (char *)&rpl, msg_size ) >= 0 );
+      ret_val = Reply( notifier_tid, (char *)&rpl, msg_size );
+      assert( 1, ret_val >= 0 );
     }
   }
   Exit( );
@@ -291,18 +305,21 @@ void com1_in_server( ) {
   int com1_in_print_ind = 0;
   char com1_in_buf[OUT_BUF_SIZE];
   int notifier_tid = Create( 1, &com1_in_notifier );
+  int ret_val;
   debug( "com1_in - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
-    Receive( &client_tid, (char *)&msg, sizeof( msg ));
+    ret_val = Receive( &client_tid, (char *)&msg, sizeof( msg ));
+    assert( 1, ret_val >= 0 );
     switch( msg.request_type ) {
     case COM_IN_READY:
-      assert( 1, Reply( client_tid, &c_rpl, 0 ) >= 0 );
+      ret_val = Reply( client_tid, &c_rpl, 0 );
+      assert( 1, ret_val >= 0 );
       // Add char to buffer
       com1_in_buf[com1_in_cur_ind] = msg.msg_val[0];
       debug( "received char from uart: char:%x\r\n", com1_in_buf[com1_in_cur_ind] );
       com1_in_cur_ind = ( com1_in_cur_ind + 1 ) % OUT_BUF_SIZE;
       break;
-    case COM_OUT_GET:
+    case COM_IN_GET:
       if( waiting_client != -1 ) {
       assert( 1, waiting_client == client_tid, \
           "ERROR: more than 1 thread is calling Getc on com1: tids: %d, %d", \
@@ -319,7 +336,8 @@ void com1_in_server( ) {
         waiting_client != -1 && waiting_times > 0 ) {
       c_rpl = com1_in_buf[com1_in_print_ind];
       com1_in_print_ind = ( com1_in_print_ind + 1 ) % OUT_BUF_SIZE;
-      assert( 1, Reply( waiting_client, &c_rpl, 1 ) >= 0 );
+      ret_val = Reply( waiting_client, &c_rpl, 1 );
+      assert( 1, ret_val >= 0 );
       --waiting_times;
     }
   }
@@ -345,12 +363,15 @@ void com2_in_server( ) {
   int notifier_tid = Create( 1, &com2_in_notifier );
   int c_buf_size;
   int i;
+  int ret_val;
   debug( "com2_in - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
-    Receive( &client_tid, (char *)&msg, msg_size );
+    ret_val = Receive( &client_tid, (char *)&msg, msg_size );
+    assert( 1, ret_val >= 0 );
     switch( msg.request_type ) {
     case COM_IN_READY:
-      assert( 1, Reply( client_tid, &c_rpl, 0 ) >= 0 );
+      ret_val = Reply( client_tid, &c_rpl, 0 );
+      assert( 1, ret_val >= 0 );
       // Add char to buffer
       c_buf_size = msg.msg_len;
       for( i = 0; i < c_buf_size; ++i ) {
@@ -359,7 +380,7 @@ void com2_in_server( ) {
         com2_in_cur_ind = ( com2_in_cur_ind + 1 ) % OUT_BUF_SIZE;
       }
       break;
-    case COM_OUT_GET:
+    case COM_IN_GET:
       if( waiting_client != -1 ) {
       assert( 1, waiting_client == client_tid,
           "ERROR: more than 1 thread is calling Getc on com2: %d, %d",
@@ -377,7 +398,8 @@ void com2_in_server( ) {
       c_rpl = com2_in_buf[com2_in_print_ind];
       com2_in_print_ind = ( com2_in_print_ind + 1 ) % OUT_BUF_SIZE;
       //bwprintf( COM2, "sent: %x\r\n", c_rpl );
-      assert( 1, Reply( waiting_client, &c_rpl, 1 ) >= 0 ); 
+      ret_val = Reply( waiting_client, &c_rpl, 1 );
+      assert( 1, ret_val >= 0 );
       --waiting_times;
     }
   }
@@ -393,19 +415,22 @@ int Putstr( int channel, char *msg, int msg_len ) {
   com_msg_t com_msg;
   int com_msg_len = sizeof(com_msg);
   char rtn;
-  com_msg.request_type = COM_IN_PUT;
+  com_msg.request_type = COM_OUT_PUT;
   com_msg.msg_val = msg;
   com_msg.msg_len = msg_len;
 
+  int ret_val;
   switch( channel ) {
   case COM1: {
     int com_out_server_tid = WhoIs( (char *)COM1_OUT_SERVER );
-    Send( com_out_server_tid, (char *)&com_msg, com_msg_len, &rtn, 0 );
+    ret_val = Send( com_out_server_tid, (char *)&com_msg, com_msg_len, &rtn, 0 );
+    assert( 1, ret_val >= 0 );
     break;
   }
   case COM2: {
     int com_out_server_tid = WhoIs( (char *)COM2_OUT_SERVER );
-    Send( com_out_server_tid, (char *)&com_msg, com_msg_len, &rtn, 0 );
+    ret_val = Send( com_out_server_tid, (char *)&com_msg, com_msg_len, &rtn, 0 );
+    assert( 1, ret_val >= 0 );
     break;
   }
   default:
@@ -417,27 +442,30 @@ int Putstr( int channel, char *msg, int msg_len ) {
 }
 
 int Getc( int channel ) {
+  int ret_val;
   switch( channel ) {
   case COM1:
   {
     com_msg_t com_msg;
     char rtn;
-    com_msg.request_type = COM_OUT_GET;
+    com_msg.request_type = COM_IN_GET;
     com_msg.msg_val = NULL;
     com_msg.msg_len = 0;
     int com_in_server_tid = WhoIs( (char *)COM1_IN_SERVER );
-    Send( com_in_server_tid, (char *)&com_msg, sizeof( com_msg ), &rtn, 1 );
+    ret_val = Send( com_in_server_tid, (char *)&com_msg, sizeof( com_msg ), &rtn, 1 );
+    assert( 1, ret_val >= 0 );
     return (int) rtn;
     break;
   }
   case COM2: {
     com_msg_t com_msg;
     char rtn;
-    com_msg.request_type = COM_OUT_GET;
+    com_msg.request_type = COM_IN_GET;
     com_msg.msg_val = NULL;
     com_msg.msg_len = 0;
     int com_in_server_tid = WhoIs( (char *)COM2_IN_SERVER );
-    Send( com_in_server_tid, (char *)&com_msg, sizeof( com_msg ), &rtn, 1 );
+    ret_val = Send( com_in_server_tid, (char *)&com_msg, sizeof( com_msg ), &rtn, 1 );
+    assert( 1, ret_val >= 0 );
     return (int) rtn;
     break;
   }
