@@ -1,12 +1,12 @@
 #ifndef __IO_H__
 #define __IO_H__
 
-#include <global.h>
+#include "global.h"
 
-  #ifndef COM1
-    #define COM1	0
-    #define COM2	1
-  #endif
+#ifndef COM1
+  #define COM1	0
+  #define COM2	1
+#endif
 
 #define LOW_SPEED 2400
 #define HIGH_SPEED 115200
@@ -14,25 +14,6 @@
 #define PRINTF_MAX_SIZE 128
 #define MAX_IN_SIZE 16
 #define MAX_OUT_SIZE 8
-
-//typedef struct com_var_msg_t {
-//  enum {
-//    CM1_OUT_READY,
-//    CM1_PUT,
-//    CM1_OUT_REPLY,
-//  } request_type ;
-//  char *msg_val;
-//  int msg_len;
-//} com_var_msg_t;
-//
-//typedef struct com_const_msg_t {
-//  enum {
-//    CM1_IN_READY,
-//    CM1_GET,
-//    CM1_IN_REPLY,
-//  } request_type ;
-//  char val;
-//} com_const_msg_t;
 
 typedef struct com_msg {
   enum {

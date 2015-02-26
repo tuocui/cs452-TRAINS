@@ -1,5 +1,5 @@
-#include <tools.h>
-#include <ts7200.h>
+#include "tools.h"
+#include "ts7200.h"
 #include "syscall.h"
 #include "nameserver.h"
 #include "io.h"
@@ -118,22 +118,6 @@ void com1_out_notifier( ) {
   }
 }
 
-void COM1_In_Notifier( ) {
-  int com1_in_server_tid = MyParentTid( );
-
-  com_msg_t msg;
-  msg.request_type = COM_IN_READY;
-  char rpl;
-  char c;
-
-  FOREVER {
-    c = (char) AwaitEvent( COM1_IN_IND );
-    msg.msg_val = &c;
-    msg.msg_len = 0;
-    Send( com1_in_server_tid, (char *)&msg, sizeof( msg ), &rpl, 0 );
-  }
-}
-
 void com2_out_notifier( ) {
   int com2_out_server_tid = MyParentTid( );
   
@@ -160,8 +144,28 @@ void com2_out_notifier( ) {
   }
 }
 
+
+void com1_in_notifier( ) {
+  int com_in_server_tid = MyParentTid( );
+
+  com_msg_t msg;
+  msg.request_type = COM_IN_READY;
+  char rpl;
+  char c;
+  int ret_val;
+
+  FOREVER {
+    ret_val = AwaitEvent( COM1_IN_IND );
+    assert( 0, ret_val >= 0, "ERROR: interrupt eventid is incorrect" );
+    c = (char)ret_val;
+    msg.msg_val = &c;
+    msg.msg_len = 0;
+    Send( com_in_server_tid, (char *)&msg, sizeof( msg ), &rpl, 0 );
+  }
+}
+
 void com2_in_notifier( ) {
-  int com2_in_server_tid = MyParentTid( );
+  int com_in_server_tid = MyParentTid( );
 
   com_msg_t msg;
   msg.request_type = COM_IN_READY;
@@ -171,9 +175,11 @@ void com2_in_notifier( ) {
   msg.msg_val = c_buf;
   FOREVER {
     msg.msg_len = AwaitEvent2( COM2_IN_IND, c_buf, c_buf_size );
-    Send( com2_in_server_tid, (char *)&msg, sizeof( msg ), &rpl, 0 );
+    assert( 0, msg.msg_len >= 0, "ERROR: interrupt eventid is incorrect" );
+    Send( com_in_server_tid, (char *)&msg, sizeof( msg ), &rpl, 0 );
   }
 }
+
 void com1_out_server( ) {
   if( RegisterAs( (char *)COM1_OUT_SERVER ) == -1) {
     //bwputstr( COM2, "ERROR: failed to register COM1 OUTPUT server, aborting." );
@@ -216,54 +222,6 @@ void com1_out_server( ) {
       notifier_ready = 0;
       Reply( notifier_tid, &c, 1 );
       //Printf( COM2, "sent: %d\r\n", c );
-    }
-  }
-  Exit( );
-}
-
-void com1_in_server( ) {
-  if( RegisterAs( (char *)COM1_IN_SERVER ) == -1) {
-    //bwputstr( COM2, "ERROR: failed to register COM1 INPUT server, aborting." );
-    Exit( );
-  }
-
-  int client_tid;
-  com_msg_t msg;
-  char c_rpl = 'a';
-  int com1_in_cur_ind = 0;
-  int com1_in_print_ind = 0;
-  int client_q_cur_ind = 0;
-  int client_q_tail_ind = 0;
-  char com1_in_buf[OUT_BUF_SIZE];
-  int client_q[TD_MAX];
-  int notifier_tid = Create( 1, &COM1_In_Notifier );
-  debug( "com1_in - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
-  FOREVER {
-    Receive( &client_tid, (char *)&msg, sizeof( msg ));
-    switch( msg.request_type ) {
-    case COM_IN_READY:
-      Reply( client_tid, &c_rpl, 0 );
-      // Add char to buffer
-      com1_in_buf[com1_in_cur_ind] = msg.msg_val[0];
-      debug( "received char from uart: char:%x\r\n", com1_in_buf[com1_in_cur_ind] );
-      com1_in_cur_ind = ( com1_in_cur_ind + 1 ) % OUT_BUF_SIZE;
-      break;
-    case COM_OUT_GET:
-      // Add client to queue
-      client_q[client_q_cur_ind] = client_tid;
-      client_q_cur_ind = ( client_q_cur_ind + 1 ) % TD_MAX;
-      break;
-    default:
-      break;
-    }
-
-    if( com1_in_cur_ind != com1_in_print_ind && client_q_cur_ind != client_q_tail_ind ) {
-      c_rpl = com1_in_buf[com1_in_print_ind];
-      com1_in_print_ind = ( com1_in_print_ind + 1 ) % OUT_BUF_SIZE;
-      client_tid = client_q[client_q_tail_ind];
-      client_q_tail_ind = ( client_q_tail_ind + 1 ) % TD_MAX;
-      //bwprintf( COM2, "sent: %x\r\n", c_rpl );
-      Reply( client_tid, &c_rpl, 1 );
     }
   }
   Exit( );
@@ -317,6 +275,52 @@ void com2_out_server( ) {
   Exit( );
 }
 
+
+void com1_in_server( ) {
+  if( RegisterAs( (char *)COM1_IN_SERVER ) == -1) {
+    //bwputstr( COM2, "ERROR: failed to register COM1 INPUT server, aborting." );
+    Exit( );
+  }
+
+  int client_tid;
+  int waiting_client = -1;
+  com_msg_t msg;
+  char c_rpl = 'a';
+  int com1_in_cur_ind = 0;
+  int com1_in_print_ind = 0;
+  char com1_in_buf[OUT_BUF_SIZE];
+  int notifier_tid = Create( 1, &com1_in_notifier );
+  debug( "com1_in - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
+  FOREVER {
+    Receive( &client_tid, (char *)&msg, sizeof( msg ));
+    switch( msg.request_type ) {
+    case COM_IN_READY:
+      Reply( client_tid, &c_rpl, 0 );
+      // Add char to buffer
+      com1_in_buf[com1_in_cur_ind] = msg.msg_val[0];
+      debug( "received char from uart: char:%x\r\n", com1_in_buf[com1_in_cur_ind] );
+      com1_in_cur_ind = ( com1_in_cur_ind + 1 ) % OUT_BUF_SIZE;
+      break;
+    case COM_OUT_GET:
+      // Add client to queue
+      assert( 0, waiting_client == -1,
+          "ERROR: more than 1 thread is calling Getc on com1" );
+      waiting_client = client_tid;
+      break;
+    default:
+      break;
+    }
+
+    if( com1_in_cur_ind != com1_in_print_ind && waiting_client != -1 ) {
+      c_rpl = com1_in_buf[com1_in_print_ind];
+      com1_in_print_ind = ( com1_in_print_ind + 1 ) % OUT_BUF_SIZE;
+      Reply( waiting_client, &c_rpl, 1 );
+      waiting_client = -1;
+    }
+  }
+  Exit( );
+}
+
 void com2_in_server( ) {
   if( RegisterAs( (char *)COM2_IN_SERVER ) == -1) {
     //bwputstr( COM2, "ERROR: failed to register COM1 INPUT server, aborting." );
@@ -324,16 +328,14 @@ void com2_in_server( ) {
   }
 
   int client_tid;
+  int waiting_client = -1;
   com_msg_t msg;
   //TODO
   char c_rpl = 'a';
   int msg_size = sizeof(msg);
   int com2_in_cur_ind = 0;
   int com2_in_print_ind = 0;
-  int client_q_cur_ind = 0;
-  int client_q_tail_ind = 0;
   char com2_in_buf[OUT_BUF_SIZE];
-  int client_q[TD_MAX];
   int notifier_tid = Create( 1, &com2_in_notifier );
   int c_buf_size;
   int i;
@@ -352,21 +354,20 @@ void com2_in_server( ) {
       }
       break;
     case COM_OUT_GET:
-      // Add client to queue
-      client_q[client_q_cur_ind] = client_tid;
-      client_q_cur_ind = ( client_q_cur_ind + 1 ) % TD_MAX;
+      assert( 0, waiting_client == -1,
+          "ERROR: more than 1 thread is calling Getc on com2" );
+      waiting_client = client_tid;
       break;
     default:
       break;
     }
 
-    if( com2_in_cur_ind != com2_in_print_ind && client_q_cur_ind != client_q_tail_ind ) {
+    if( com2_in_cur_ind != com2_in_print_ind && waiting_client != -1 ) {
       c_rpl = com2_in_buf[com2_in_print_ind];
       com2_in_print_ind = ( com2_in_print_ind + 1 ) % OUT_BUF_SIZE;
-      client_tid = client_q[client_q_tail_ind];
-      client_q_tail_ind = ( client_q_tail_ind + 1 ) % TD_MAX;
       //bwprintf( COM2, "sent: %x\r\n", c_rpl );
-      Reply( client_tid, &c_rpl, 1 );
+      Reply( waiting_client, &c_rpl, 1 );
+      waiting_client = -1;
     }
   }
   Exit( );
