@@ -1,4 +1,5 @@
 #include "ring_buf.h"
+#include "global.h"
 #include "tools.h"
 
 inline int push_front( int type, ring_queue_t * queue, void * val ) {
@@ -13,6 +14,8 @@ inline int push_front( int type, ring_queue_t * queue, void * val ) {
       queue->m_arr->m_arr_int[queue->m_head] = *((int *)val ); 
     else if( type == TYPE_CHAR )
       queue->m_arr->m_arr_char[queue->m_head] = *((char *)val );
+    else if( type == TYPE_PTR )
+      queue->m_arr->m_arr_ptr[queue->m_head] = *((struct_base_t *)val );
     else {
       assert( 1, 1 == 0, "unsupported type %d", type );
       return TYPE_ERROR;
@@ -28,20 +31,23 @@ inline int push_front( int type, ring_queue_t * queue, void * val ) {
   } 
 }
 
-inline int pop_back( int type, ring_queue_t * queue ) {
+inline void * pop_back( int type, ring_queue_t * queue ) {
   if( queue->m_free == queue->m_size ) {
       assert( 1, queue->m_head == queue->m_tail, "H");
-      return BUF_EMPTY;
+      assert( 2, 1 == 0, "ring_queue is empty" );
+      return NULL;
     }
   else {
-    int ret_val;
+    void * ret_val;
     if( type == TYPE_INT )
-      ret_val = (queue->m_arr->m_arr_int[queue->m_tail]);
+      ret_val = (void*)&(queue->m_arr->m_arr_int[queue->m_tail]);
     else if ( type == TYPE_CHAR )
-      ret_val = (queue->m_arr->m_arr_char[queue->m_tail]);
+      ret_val = (void*)&(queue->m_arr->m_arr_char[queue->m_tail]);
+    else if ( type == TYPE_PTR )
+      ret_val = (void*)&(queue->m_arr->m_arr_ptr[queue->m_tail]);
     else {
       assert( 1, 1 == 0, "unsupported type %d", type );
-      return TYPE_ERROR;
+      return NULL;
     }
 
     queue->m_tail = ( queue->m_tail + 1 ) % queue->m_size;
@@ -54,24 +60,27 @@ inline int pop_back( int type, ring_queue_t * queue ) {
     } 
 }
   
-inline int pop_front( int type, ring_queue_t * queue ) {
+inline void * pop_front( int type, ring_queue_t * queue ) {
   if( queue->m_free == queue->m_size ) { 
       assert( 1, queue->m_head == queue->m_tail, "E");
-      return BUF_EMPTY; 
+      assert( 2, 1 == 0, "ring_queue is empty" );
+      return NULL; 
     } 
     else { 
       debug( "m_head: %d", queue->m_head );
-      queue->m_head = (queue->m_head - 1 + queue->m_size)%queue->m_size;
+      queue->m_head = ( queue->m_head - 1 + queue->m_size ) % queue->m_size;
       debug( "m_head: %d", queue->m_head );
 
-      int ret_val;
+      void * ret_val;
       if( type == TYPE_INT )
-        ret_val = queue->m_arr->m_arr_int[queue->m_head];
+        ret_val = (void*)&(queue->m_arr->m_arr_int[queue->m_head]);
       else if( type == TYPE_CHAR )
-        ret_val = queue->m_arr->m_arr_char[queue->m_head];
+        ret_val = (void*)&(queue->m_arr->m_arr_char[queue->m_head]);
+      else if( type == TYPE_PTR )
+        ret_val = (void*)&(queue->m_arr->m_arr_ptr[queue->m_head]);
       else {
         assert( 1, 1 == 0, "unsupported type %d", type );
-        return TYPE_ERROR;
+        return NULL;
       }
 
       ++queue->m_free; 
@@ -93,32 +102,38 @@ inline int empty( ring_queue_t * queue ) {
   return ( queue->m_free == queue->m_size ); 
 }
 
-inline int top_front( int type, ring_queue_t * queue ) {
+inline void * top_front( int type, ring_queue_t * queue ) {
   if( queue->m_free == queue->m_size ) {
-      assert( 1, queue->m_head == queue->m_tail );
-      return BUF_EMPTY;
-    } 
+    assert( 1, queue->m_head == queue->m_tail );
+    assert( 2, 1 == 0, "ring_queue is empty" );
+    return NULL;
+  } 
   else if( type == TYPE_INT )
-    return queue->m_arr->m_arr_int[queue->m_head];  
+    return (void*)&(queue->m_arr->m_arr_int[queue->m_head]);  
   else if( type == TYPE_CHAR )
-    return queue->m_arr->m_arr_char[queue->m_head];
+    return (void*)&(queue->m_arr->m_arr_char[queue->m_head]);
+  else if( type == TYPE_PTR )
+    return (void*)&(queue->m_arr->m_arr_ptr[queue->m_head]);
   else {
     assert( 1, 1 == 0, "unsupported type %d", type );
-    return TYPE_ERROR;
+    return NULL;
   }
 }
 
-inline int top_back( int type, ring_queue_t * queue ) {
+inline void * top_back( int type, ring_queue_t * queue ) {
   if( queue->m_free == queue->m_size ) { 
     assert( 1, queue->m_head == queue->m_tail );
-    return BUF_EMPTY; 
+    assert( 2, 1 == 0, "ring_queue is empty" );
+    return NULL; 
   } 
   else if( type == TYPE_INT )
-    return queue->m_arr->m_arr_int[queue->m_tail]; 
+    return (void*)&(queue->m_arr->m_arr_int[queue->m_tail]); 
   else if( type == TYPE_CHAR )
-    return queue->m_arr->m_arr_char[queue->m_tail];
+    return (void*)&(queue->m_arr->m_arr_char[queue->m_tail]);
+  else if( type == TYPE_PTR )
+    return (void*)&(queue->m_arr->m_arr_ptr[queue->m_tail]);
   else {
     assert( 1, 1 == 0, "unsupported type %d", type );
-    return TYPE_ERROR;
+    return NULL;
   }
 }

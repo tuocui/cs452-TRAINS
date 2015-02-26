@@ -7,10 +7,15 @@
 
 #define TYPE_CHAR 1 
 #define TYPE_INT  4 
+#define TYPE_PTR  8
+
+typedef struct struct_base {
+} struct_base_t ;
 
 typedef union type_arr {
   char * m_arr_char;
   int * m_arr_int;
+  struct_base_t * m_arr_ptr;
 } type_arr_t;
 
 typedef struct ring_queue {
@@ -23,26 +28,26 @@ typedef struct ring_queue {
 
 inline int push_front( int type, ring_queue_t * queue, void * val );
 
-inline int pop_back( int type, ring_queue_t * queue );
-inline int pop_front( int type, ring_queue_t * queue );
+inline void * pop_back( int type, ring_queue_t * queue );
+inline void * pop_front( int type, ring_queue_t * queue );
 
-inline int top_front( int type, ring_queue_t * queue );
-inline int top_back( int type, ring_queue_t * queue );
+inline void * top_front( int type, ring_queue_t * queue );
+inline void * top_back( int type, ring_queue_t * queue );
 
 inline int count( ring_queue_t * queue );
 inline int empty( ring_queue_t * queue );
 
 #define declare_ring_queue(TYPE, NAME, RING_BUF_SIZE ) \
-  compile_assert( RING_BUF_SIZE > 0, invalid_ring_buf_size );\
+  compile_assert( RING_BUF_SIZE > 0, NAME##_invalid_ring_buf_size );\
   ring_queue_t NAME##_queue; \
   NAME##_queue.m_size = RING_BUF_SIZE; \
   NAME##_queue.m_head = 0; \
   NAME##_queue.m_tail = 0; \
   NAME##_queue.m_free = RING_BUF_SIZE; \
-  type_arr_t type_arr; \
-  TYPE arr[RING_BUF_SIZE]; \
-  type_arr.m_arr_char = (char*)&arr; \
-  NAME##_queue.m_arr = &type_arr; \
+  type_arr_t NAME##_type_arr; \
+  TYPE NAME##_arr[RING_BUF_SIZE]; \
+  NAME##_type_arr.m_arr_char = (char*)&NAME##_arr; \
+  NAME##_queue.m_arr = &NAME##_type_arr; \
 \
   /* return the idx of the inserted value on success, an errno otherwise */ \
   inline int __attribute__((always_inline)) \
@@ -56,15 +61,15 @@ inline int empty( ring_queue_t * queue );
     return count( &NAME##_queue ); \
   } \
 \
-  inline int __attribute__((always_inline)) \
+  inline TYPE __attribute__((always_inline)) \
   NAME##_pop_back( ) { \
-    return pop_back( sizeof( TYPE ), &NAME##_queue ); \
+    return *((TYPE *)pop_back( sizeof( TYPE ), &NAME##_queue )); \
   } \
 \
   /* return the value of the front element, an errno otherwise */ \
   inline TYPE __attribute__((always_inline)) \
   NAME##_pop_front( ) { \
-    return pop_front( sizeof( TYPE ), &NAME##_queue ); \
+    return *((TYPE *)pop_front( sizeof( TYPE ), &NAME##_queue )); \
   } \
 \
   inline int __attribute__((always_inline)) __attribute__((const)) \
@@ -72,14 +77,14 @@ inline int empty( ring_queue_t * queue );
     return empty( &NAME##_queue ); \
   } \
 \
-  inline int __attribute__((always_inline)) __attribute__((const)) \
+  inline TYPE __attribute__((always_inline)) __attribute__((const)) \
   NAME##_top_front( ) { \
-    return top_front( sizeof( TYPE ), &NAME##_queue ); \
+    return *((TYPE *)top_front( sizeof( TYPE ), &NAME##_queue )); \
   } \
 \
-  inline int __attribute__((always_inline)) __attribute__((const)) \
+  inline TYPE __attribute__((always_inline)) __attribute__((const)) \
   NAME##_top_back( ) { \
-    return top_back( sizeof( TYPE ), &NAME##_queue ); \
+    return *((TYPE *)top_back( sizeof( TYPE ), &NAME##_queue )); \
   }
 
 #endif /* __RING_BUF_H__ */

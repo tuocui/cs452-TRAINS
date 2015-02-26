@@ -368,7 +368,7 @@ void ring_buf_test( ) {
   declare_ring_queue(int, test, 2 );
   debug( "buf_count: %d", test_count( ) );
   int idx;
-  idx = 1;//test_push_front( 1 );
+  idx = test_push_front( 1 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
   idx = test_push_front( 2 );
@@ -381,7 +381,7 @@ void ring_buf_test( ) {
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
   int elm;
-  elm = 0;//test_top_front( );
+  elm = test_top_front( );
   debug( "buf_count: %d, elm: %d", test_count( ), elm );
 
   elm = test_top_front( );
@@ -419,7 +419,7 @@ void ring_buf_test( ) {
 
   declare_ring_queue( char, com2_buf, 3 );
   debug( "buf_count: %d", com2_buf_count( ) );
-  int idx = com2_buf_push_front( 'a' );
+  idx = com2_buf_push_front( 'a' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   idx = com2_buf_push_front( 'b' );
@@ -467,13 +467,41 @@ void ring_buf_test( ) {
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-
-
   idx = com2_buf_push_front( 'j' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+
+  typedef struct test_struct {
+    int a;
+  } test_struct_t ;
+
+  test_struct_t st1; st1.a = 1;
+  test_struct_t st2; st2.a = 2;
+  test_struct_t st3; st3.a = 3;
+
+  declare_ring_queue( test_struct_t *, st_buf, 3 );
+  idx = st_buf_push_front( &st1 );
+  debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
+
+  idx = st_buf_push_front( &st2 );
+  debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
+
+  idx = st_buf_push_front( &st3 );
+  debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
+
+  test_struct_t * st0;
+  st0 = st_buf_pop_back( );
+  debug( "buf_count: %d, st.a: %d", st_buf_count( ), st0->a );
+
+  st0 = st_buf_pop_back( );
+  debug( "buf_count: %d, st.a: %d", st_buf_count( ), st0->a );
+
+  st0 = st_buf_pop_back( );
+  debug( "buf_count: %d, st.a: %d", st_buf_count( ), st0->a );
+
+  
   debug( "end of test" );
   return;
 
