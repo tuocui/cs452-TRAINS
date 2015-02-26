@@ -29,4 +29,8 @@ void handle_hwi( struct global_context_t *gc, int hwi_type );
 
 void handle_death( struct global_context_t *gc );
 
+void handle_idle_task_pct_cum( struct global_context_t *gc );
+
+void handle_idle_task_pct_rec( struct global_context_t *gc );
+
 #endif

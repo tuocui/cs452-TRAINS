@@ -49,6 +49,8 @@ typedef struct global_context_t {
   int com1_status;
   int num_ticks;
   int num_ticks_idle;
+  int num_ticks_rec;
+  int num_ticks_idle_rec;
   //int com2_status;
 
 } global_context_t;

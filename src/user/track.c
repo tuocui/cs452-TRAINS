@@ -125,8 +125,9 @@ void track_sensor_task( ) {
   int recent_sensor_ind;
   char module_num_c;
   int recent_sensor_triggered = 0;
+  char request_sensor = REQUEST_SENSOR;
   FOREVER {
-    Putc( COM1, REQUEST_SENSOR );
+    Putstr( COM1, &request_sensor, 1 );
     module_num = 0;
     recent_sensor_triggered = 0;
     for( i = 0; i < NUM_SENSOR_BYTES; ++i ) {
@@ -166,7 +167,7 @@ void track_sensor_task( ) {
       Printf( COM2, "\0337\033[%d;0H     %c%d  \0338", j + 7, module_num_c, sensor_num );
       --recent_sensor_ind;
     }
-    Delay( 1 );
+    //Delay( 1 );
   }
   Exit( );
 }

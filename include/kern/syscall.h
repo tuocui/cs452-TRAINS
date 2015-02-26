@@ -25,4 +25,8 @@ int AwaitEvent2( int eventid, char *event, int eventlen );
 
 void Kill_the_system( int magic_num );
 
+int Idle_pct_cumulative( );
+
+int Idle_pct_recent( );
+
 #endif

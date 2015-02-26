@@ -297,8 +297,6 @@ void com1_in_server( ) {
   }
 
   int client_tid;
-  int waiting_client = -1;
-  int waiting_times = 0;
   com_msg_t msg;
   char c_rpl = 'a';
   int com1_in_cur_ind = 0;
@@ -306,6 +304,7 @@ void com1_in_server( ) {
   char com1_in_buf[OUT_BUF_SIZE];
   int notifier_tid = Create( 1, &com1_in_notifier );
   int ret_val;
+  int client_ready_tid = 0;
   debug( "com1_in - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
     ret_val = Receive( &client_tid, (char *)&msg, sizeof( msg ));
@@ -320,25 +319,17 @@ void com1_in_server( ) {
       com1_in_cur_ind = ( com1_in_cur_ind + 1 ) % OUT_BUF_SIZE;
       break;
     case COM_IN_GET:
-      if( waiting_client != -1 ) {
-      assert( 1, waiting_client == client_tid, \
-          "ERROR: more than 1 thread is calling Getc on com1: tids: %d, %d", \
-          waiting_client, client_tid );
-      }
-      ++waiting_times;
-      waiting_client = client_tid;
+      client_ready_tid = client_tid;
       break;
     default:
       break;
     }
 
-    if( com1_in_cur_ind != com1_in_print_ind && 
-        waiting_client != -1 && waiting_times > 0 ) {
+    if( com1_in_cur_ind != com1_in_print_ind && client_ready_tid != 0 ) {
       c_rpl = com1_in_buf[com1_in_print_ind];
       com1_in_print_ind = ( com1_in_print_ind + 1 ) % OUT_BUF_SIZE;
-      ret_val = Reply( waiting_client, &c_rpl, 1 );
+      ret_val = Reply( client_ready_tid, &c_rpl, 1 );
       assert( 1, ret_val >= 0 );
-      --waiting_times;
     }
   }
   Exit( );
@@ -351,8 +342,6 @@ void com2_in_server( ) {
   }
 
   int client_tid;
-  int waiting_client = -1;
-  int waiting_times = 0;
   com_msg_t msg;
   //TODO
   char c_rpl = 'a';
@@ -361,6 +350,7 @@ void com2_in_server( ) {
   int com2_in_print_ind = 0;
   char com2_in_buf[OUT_BUF_SIZE];
   int notifier_tid = Create( 1, &com2_in_notifier );
+  int client_ready_tid = 0;
   int c_buf_size;
   int i;
   int ret_val;
@@ -381,26 +371,18 @@ void com2_in_server( ) {
       }
       break;
     case COM_IN_GET:
-      if( waiting_client != -1 ) {
-      assert( 1, waiting_client == client_tid,
-          "ERROR: more than 1 thread is calling Getc on com2: %d, %d",
-          waiting_client, client_tid );
-      }
-      ++waiting_times;
-      waiting_client = client_tid;
+      client_ready_tid = client_tid;
       break;
     default:
       break;
     }
 
-    if( com2_in_cur_ind != com2_in_print_ind && 
-        waiting_client != -1 && waiting_times > 0 ) {
+    if( com2_in_cur_ind != com2_in_print_ind && client_ready_tid ) {
       c_rpl = com2_in_buf[com2_in_print_ind];
       com2_in_print_ind = ( com2_in_print_ind + 1 ) % OUT_BUF_SIZE;
-      //bwprintf( COM2, "sent: %x\r\n", c_rpl );
-      ret_val = Reply( waiting_client, &c_rpl, 1 );
+      ret_val = Reply( client_ready_tid, &c_rpl, 1 );
       assert( 1, ret_val >= 0 );
-      --waiting_times;
+      client_ready_tid = 0;
     }
   }
   Exit( );
@@ -408,7 +390,6 @@ void com2_in_server( ) {
 
 int Putc( int channel, char ch ) {
   return Putstr( channel, &ch, 1 );
-  return 0;
 }
 
 int Putstr( int channel, char *msg, int msg_len ) {
@@ -418,17 +399,18 @@ int Putstr( int channel, char *msg, int msg_len ) {
   com_msg.request_type = COM_OUT_PUT;
   com_msg.msg_val = msg;
   com_msg.msg_len = msg_len;
+  int com_out_server_tid;
 
   int ret_val;
   switch( channel ) {
   case COM1: {
-    int com_out_server_tid = WhoIs( (char *)COM1_OUT_SERVER );
+    com_out_server_tid = 39;
     ret_val = Send( com_out_server_tid, (char *)&com_msg, com_msg_len, &rtn, 0 );
     assert( 1, ret_val >= 0 );
     break;
   }
   case COM2: {
-    int com_out_server_tid = WhoIs( (char *)COM2_OUT_SERVER );
+    com_out_server_tid = 35;
     ret_val = Send( com_out_server_tid, (char *)&com_msg, com_msg_len, &rtn, 0 );
     assert( 1, ret_val >= 0 );
     break;
@@ -451,7 +433,7 @@ int Getc( int channel ) {
     com_msg.request_type = COM_IN_GET;
     com_msg.msg_val = NULL;
     com_msg.msg_len = 0;
-    int com_in_server_tid = WhoIs( (char *)COM1_IN_SERVER );
+    int com_in_server_tid = 41;
     ret_val = Send( com_in_server_tid, (char *)&com_msg, sizeof( com_msg ), &rtn, 1 );
     assert( 1, ret_val >= 0 );
     return (int) rtn;
@@ -463,7 +445,7 @@ int Getc( int channel ) {
     com_msg.request_type = COM_IN_GET;
     com_msg.msg_val = NULL;
     com_msg.msg_len = 0;
-    int com_in_server_tid = WhoIs( (char *)COM2_IN_SERVER );
+    int com_in_server_tid = 37;
     ret_val = Send( com_in_server_tid, (char *)&com_msg, sizeof( com_msg ), &rtn, 1 );
     assert( 1, ret_val >= 0 );
     return (int) rtn;
