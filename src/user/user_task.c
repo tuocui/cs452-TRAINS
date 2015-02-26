@@ -17,8 +17,8 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-//#define A4 1
-#define TEST
+#define A4 1
+//#define TEST
 
 //TODO remove testing struct
 struct Server {
@@ -243,13 +243,13 @@ void a4_test_task( ) {
   debug( "Nameserver tid: %d", nameserver_tid );
   int idle_id = Create( PRIORITY_MAX, &idle_task );
   debug( "Idle tid: %d", idle_id );
-  int com2_out_server_tid = Create( 4, &COM2_Out_Server );
+  int com2_out_server_tid = Create( 4, &com2_out_server );
   debug( "COM2_Out Server tid: %d", com2_out_server_tid );
-  int com2_in_server_tid = Create( 3, &COM2_In_Server );
+  int com2_in_server_tid = Create( 3, &com2_in_server );
   debug( "COM2_In Server tid: %d", com2_in_server_tid );
-  int com1_out_server_tid = Create( 4, &COM1_Out_Server );
+  int com1_out_server_tid = Create( 4, &com1_out_server );
   debug( "COM1_Out Server tid: %d", com1_out_server_tid );
-  int com1_in_server_tid = Create( 3, &COM1_In_Server );
+  int com1_in_server_tid = Create( 3, &com1_in_server );
   debug( "COM1_In Server tid: %d", com1_in_server_tid );
   int clock_server_tid = Create( 3, &clock_server );
   debug( "Clock Server tid: %d", clock_server_tid );
@@ -270,9 +270,9 @@ void a4_test_task2( ) {
   debug( "Nameserver tid: %d", nameserver_tid );
   int idle_id = Create( PRIORITY_MAX, &idle_task );
   debug( "Idle tid: %d", idle_id );
-  int com2_out_server_tid = Create( 3, &COM2_Out_Server );
+  int com2_out_server_tid = Create( 3, &com2_out_server );
   debug( "COM1_Out Server tid: %d", com2_out_server_tid );
-  int com2_in_server_tid = Create( 3, &COM2_In_Server );
+  int com2_in_server_tid = Create( 3, &com2_in_server );
   debug( "COM1_In Server tid: %d", com2_in_server_tid );
   // Create clock server
   int clock_server_tid = Create( 3, &clock_server );
