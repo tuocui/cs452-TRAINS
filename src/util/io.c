@@ -210,7 +210,7 @@ void com1_out_server( ) {
         com1_out_buf[com1_out_cur_ind] = client_msg[i];
         com1_out_cur_ind = ( com1_out_cur_ind + 1 ) % OUT_BUF_SIZE;
       }
-      Reply( client_tid, client_msg, 0 );
+      assert( 1, Reply( client_tid, client_msg, 0 ) >= 0 );
       break;
     default:
       break;
@@ -220,7 +220,7 @@ void com1_out_server( ) {
       c = com1_out_buf[com1_out_print_ind];
       com1_out_print_ind = ( com1_out_print_ind + 1 ) % OUT_BUF_SIZE;
       notifier_ready = 0;
-      Reply( notifier_tid, &c, 1 );
+      assert( 1, Reply( notifier_tid, &c, 1 ) >= 0 );
       //Printf( COM2, "sent: %d\r\n", c );
     }
   }
@@ -257,7 +257,7 @@ void com2_out_server( ) {
         com2_out_buf[com2_out_cur_ind] = msg.msg_val[i];
         com2_out_cur_ind = ( com2_out_cur_ind + 1 ) % OUT_BUF_SIZE;
       }
-      Reply( client_tid, (char *)client_tid, 0 );
+      assert( 1, Reply( client_tid, (char *)client_tid, 0 ) >= 0 );
       break;
     default:
       break;
@@ -269,7 +269,7 @@ void com2_out_server( ) {
       }
       notifier_ready = 0;
       rpl.msg_len = i;
-      Reply( notifier_tid, (char *)&rpl, msg_size );
+      assert( 1, Reply( notifier_tid, (char *)&rpl, msg_size ) >= 0 );
     }
   }
   Exit( );
@@ -284,6 +284,7 @@ void com1_in_server( ) {
 
   int client_tid;
   int waiting_client = -1;
+  int waiting_times = 0;
   com_msg_t msg;
   char c_rpl = 'a';
   int com1_in_cur_ind = 0;
@@ -295,27 +296,31 @@ void com1_in_server( ) {
     Receive( &client_tid, (char *)&msg, sizeof( msg ));
     switch( msg.request_type ) {
     case COM_IN_READY:
-      Reply( client_tid, &c_rpl, 0 );
+      assert( 1, Reply( client_tid, &c_rpl, 0 ) >= 0 );
       // Add char to buffer
       com1_in_buf[com1_in_cur_ind] = msg.msg_val[0];
       debug( "received char from uart: char:%x\r\n", com1_in_buf[com1_in_cur_ind] );
       com1_in_cur_ind = ( com1_in_cur_ind + 1 ) % OUT_BUF_SIZE;
       break;
     case COM_OUT_GET:
-      // Add client to queue
-      assert( 0, waiting_client == -1,
-          "ERROR: more than 1 thread is calling Getc on com1" );
+      if( waiting_client != -1 ) {
+      assert( 1, waiting_client == client_tid, \
+          "ERROR: more than 1 thread is calling Getc on com1: tids: %d, %d", \
+          waiting_client, client_tid );
+      }
+      ++waiting_times;
       waiting_client = client_tid;
       break;
     default:
       break;
     }
 
-    if( com1_in_cur_ind != com1_in_print_ind && waiting_client != -1 ) {
+    if( com1_in_cur_ind != com1_in_print_ind && 
+        waiting_client != -1 && waiting_times > 0 ) {
       c_rpl = com1_in_buf[com1_in_print_ind];
       com1_in_print_ind = ( com1_in_print_ind + 1 ) % OUT_BUF_SIZE;
-      Reply( waiting_client, &c_rpl, 1 );
-      waiting_client = -1;
+      assert( 1, Reply( waiting_client, &c_rpl, 1 ) >= 0 );
+      --waiting_times;
     }
   }
   Exit( );
@@ -329,6 +334,7 @@ void com2_in_server( ) {
 
   int client_tid;
   int waiting_client = -1;
+  int waiting_times = 0;
   com_msg_t msg;
   //TODO
   char c_rpl = 'a';
@@ -344,7 +350,7 @@ void com2_in_server( ) {
     Receive( &client_tid, (char *)&msg, msg_size );
     switch( msg.request_type ) {
     case COM_IN_READY:
-      Reply( client_tid, &c_rpl, 0 );
+      assert( 1, Reply( client_tid, &c_rpl, 0 ) >= 0 );
       // Add char to buffer
       c_buf_size = msg.msg_len;
       for( i = 0; i < c_buf_size; ++i ) {
@@ -354,20 +360,25 @@ void com2_in_server( ) {
       }
       break;
     case COM_OUT_GET:
-      assert( 0, waiting_client == -1,
-          "ERROR: more than 1 thread is calling Getc on com2" );
+      if( waiting_client != -1 ) {
+      assert( 1, waiting_client == client_tid,
+          "ERROR: more than 1 thread is calling Getc on com2: %d, %d",
+          waiting_client, client_tid );
+      }
+      ++waiting_times;
       waiting_client = client_tid;
       break;
     default:
       break;
     }
 
-    if( com2_in_cur_ind != com2_in_print_ind && waiting_client != -1 ) {
+    if( com2_in_cur_ind != com2_in_print_ind && 
+        waiting_client != -1 && waiting_times > 0 ) {
       c_rpl = com2_in_buf[com2_in_print_ind];
       com2_in_print_ind = ( com2_in_print_ind + 1 ) % OUT_BUF_SIZE;
       //bwprintf( COM2, "sent: %x\r\n", c_rpl );
-      Reply( waiting_client, &c_rpl, 1 );
-      waiting_client = -1;
+      assert( 1, Reply( waiting_client, &c_rpl, 1 ) >= 0 ); 
+      --waiting_times;
     }
   }
   Exit( );
