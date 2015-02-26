@@ -25,6 +25,7 @@ typedef unsigned int size_t;
 #define SYS_RECEIVE         6
 #define SYS_REPLY           7
 #define SYS_AWAIT_EVENT     8
+#define SYS_DEATH           98
 #define SYS_EXIT            99
 
 /* should not be in this scope, but for the sake of seeing all interrupt values */

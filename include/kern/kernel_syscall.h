@@ -23,6 +23,10 @@ void handle_reply( struct global_context_t *gc );
 
 void handle_await_event( struct global_context_t *gc );
 
+void handle_await_event2( struct global_context_t *gc );
+
 void handle_hwi( struct global_context_t *gc, int hwi_type );
+
+void handle_death( struct global_context_t *gc );
 
 #endif
