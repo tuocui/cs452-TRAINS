@@ -11,7 +11,7 @@ void idle_percent_task( ) {
   int recent_pct;
   Printf( 
     COM2,
-    "\0337\033[1;40HIdle (cumulative):  %%, (recent):  %%\0338"
+    "\0337\033[1;40HIdle (cumulative):   , (recent):   \0338"
   );
   FOREVER {
     cumulative_pct = Idle_pct_cumulative( );
@@ -19,7 +19,7 @@ void idle_percent_task( ) {
     // Print time
     Printf( 
       COM2,
-      "\0337\033[1;58H%d\033[1;72H%d\0338", 
+      "\0337\033[1;58H%d%% \033[1;72H%d%% \0338",
       cumulative_pct,
       recent_pct
     );
