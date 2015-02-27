@@ -162,7 +162,7 @@ void com1_in_notifier( ) {
     assert( 1, ret_val >= 0, "ERROR: interrupt eventid is incorrect" );
     c = (char)ret_val;
     msg.msg_val = &c;
-    msg.msg_len = 0;
+    msg.msg_len = 1;
     ret_val = Send( com_in_server_tid, (char *)&msg, sizeof( msg ), &rpl, 0 );
     assert( 1, ret_val >= 0 );
   }
@@ -325,11 +325,12 @@ void com1_in_server( ) {
       break;
     }
 
-    if( com1_in_cur_ind != com1_in_print_ind && client_ready_tid != 0 ) {
+    if( com1_in_cur_ind != com1_in_print_ind && client_ready_tid ) {
       c_rpl = com1_in_buf[com1_in_print_ind];
       com1_in_print_ind = ( com1_in_print_ind + 1 ) % OUT_BUF_SIZE;
       ret_val = Reply( client_ready_tid, &c_rpl, 1 );
       assert( 1, ret_val >= 0 );
+      client_ready_tid = 0;
     }
   }
   Exit( );

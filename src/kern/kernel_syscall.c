@@ -407,11 +407,13 @@ void handle_uart1_combined_int( global_context_t *gc ) {
   }
 
   //if( uart1_int_status & UART_MIS_MASK && *uart1_modem_status_flags & DCTS_MASK && *uart1_status_flags & CTS_MASK ) {
-  if( uart1_int_status & UART_MIS_MASK && *uart1_status_flags & CTS_MASK ) {
-    //debug("MSIEN interrupt hit");
-    gc->com1_status |= COM1_CTS_MASK;
-    // Kill interrupt
-    *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~MSIEN_MASK;
+  if( uart1_int_status & UART_MIS_MASK ) {
+    if( *uart1_status_flags & CTS_MASK ) {
+      gc->com1_status |= COM1_CTS_MASK;
+      // Kill interrupt
+      *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~MSIEN_MASK;
+    }
+    *((unsigned int *)( UART1_BASE + UART_INTR_OFFSET )) &= ~UART_MIS_MASK;
   }
 
   // Don't need Receive timout, since COM1 doesn't have FIFO turned on yet.
