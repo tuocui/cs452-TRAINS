@@ -64,4 +64,8 @@ typedef enum {
 #define COM2_OUT_IND        3
 #define COM2_IN_IND         4
 
+
+/* track and trains */
+#define TRACK_MAX 140
+#define NODE_MAX TRACK_MAX 
 #endif

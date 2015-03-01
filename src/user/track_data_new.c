@@ -1,6 +1,8 @@
 /* THIS FILE IS GENERATED CODE -- DO NOT EDIT */
 
 #include "track_data_new.h"
+#include "track_node.h"
+#include "global.h"
 
 static void *memset(void *s, int c, unsigned int n) {
   unsigned char *p = s;

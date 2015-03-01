@@ -11,6 +11,8 @@
 #include "screen.h"
 #include "util.h"
 #include "rail_control.h"
+#include "track_node.h"
+#include "track_data_new.h"
 
 #define CYCLES 1000
 
@@ -434,62 +436,59 @@ void ring_buf_test( ) {
 
 void dijkstra_test( ) {
   debug( "dijkstra_test" );
+  /* initialize the heap */
   min_heap_t min_heap;
-  debug( "0" );
   int node_id2idx[NODE_MAX];
   min_heap_node_t nodes[NODE_MAX];
-  init_min_heap( &min_heap, node_id2idx, nodes );
+  init_min_heap( &min_heap, 0, node_id2idx, nodes );
 
-  debug( "1" );
-  /* test heap_empty */
-  assert(2, heap_empty( &min_heap ));
-  debug( "1.1" );
-  min_heap.size = 1;
-  assert( 2, !heap_empty( &min_heap ));
-  debug( "1.2" );
-  min_heap.nodes[0].dist = 1;
-  debug( "1.3" );
-  assert( 2, extract_min( &min_heap )->dist == 1 );
-  debug( "1.4" );
-  assert( 2, heap_empty( &min_heap ));
+  ///* test heap_empty */
+  //assert(2, heap_empty( &min_heap ));
+  //min_heap.size = 1;
+  //assert( 2, !heap_empty( &min_heap ));
+  //min_heap.nodes[0].dist = 1;
+  //assert( 2, extract_min( &min_heap )->dist == 1 );
+  //assert( 2, heap_empty( &min_heap ));
 
-  debug( "2" );
-  /* test heapify */
-  min_heap.size = 7;
-  debug( "size: %d", min_heap.size );
-  int i = 0;
-  int j,k,l,m, a,b,c,d;
-  a = b = c = d = j = k = l = m = 10;
-  debug( "size: %d", min_heap.size );
-  for( ; i < min_heap.size; ++i ){
-  debug( "size: %d", min_heap.size );
-    init_node( &(min_heap.nodes[i]), i, 6-i );
-  debug( "size: %d", min_heap.size );
-  }
-  debug( "size: %d", min_heap.size );
-  min_heap.nodes[0].dist = 0;
-  debug( "size: %d", min_heap.size );
-  make_min_heap( &min_heap, 0 );
-  debug( "size: %d", min_heap.size );
-  assert( 2, min_heap.nodes[0].id == 0 );
-  debug( "size: %d", min_heap.size );
+  ///* test heapify */
+  //min_heap.size = 7;
+  //int i = 0;
+  //for( ; i < min_heap.size; ++i ){
+  //  init_node( &(min_heap.nodes[i]), i, 6-i );
+  //}
+  //min_heap.nodes[0].dist = 0;
+  //make_min_heap( &min_heap, 0 );
+  //assert( 2, min_heap.nodes[0].id == 0 );
 
-  debug( "3" );
-  min_heap.nodes[0].dist = 10;
-  debug( "size: %d", min_heap.size );
-  make_min_heap( &min_heap, 0 );
-  debug( "size: %d", min_heap.size );
-  assert( 2, min_heap.nodes[6].id == 0 );
-  assert( 2, min_heap.nodes[6].dist == 10 );
-  assert( 2, min_heap.nodes[0].id == 2 );
-  assert( 2, min_heap.nodes[0].dist == 4 );
-  assert( 2, min_heap.nodes[2].id == 6 );
-  assert( 2, min_heap.nodes[2].dist == 0 );
+  //min_heap.nodes[0].dist = 10;
+  //make_min_heap( &min_heap, 0 );
+  //assert( 2, min_heap.nodes[6].id == 0 );
+  //assert( 2, min_heap.nodes[6].dist == 10 );
+  //assert( 2, min_heap.nodes[0].id == 2 );
+  //assert( 2, min_heap.nodes[0].dist == 4 );
+  //assert( 2, min_heap.nodes[2].id == 6 );
+  //assert( 2, min_heap.nodes[2].dist == 0 );
 
-  debug( "size: %d", min_heap.size );
-  print_min_heap( &min_heap );
+  //debug( "size: %d", min_heap.size );
+  //print_min_heap( &min_heap );
+
+  track_node_t track_graph[TRACK_MAX];
+  init_trackb( track_graph );
+
+  //debug( "track_graph addr: %x", track_graph );
+  //debug( "track_node size: %d", sizeof( track_node_t ));
+
+  //debug( "third field address: %x", &(track_graph[0].name));
+  //debug( "third field address: %x", &(track_graph[0].type));
+  //debug( "third field address: %x", &(track_graph[0].reverse));
+  //debug( "third field address: %x", &(track_graph[0].edge));
+
+  //track_node_t * node_3 = &(track_graph[3]);
+  //debug( "track_node A4 addr: %x", node_3 );
+  //debug( "address diff %d", (node_3 - track_graph) );
   
-  
+  dijkstra( track_graph, 0 );
+
 }
 
 void first_user_task( ){

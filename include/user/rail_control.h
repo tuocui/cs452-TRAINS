@@ -2,7 +2,6 @@
 #define __RAIL_CONTROL_H__
 
 #include "global.h"
-#define NODE_MAX 140
 
 struct track_node;
 
@@ -27,7 +26,7 @@ typedef struct _min_heap_ {
 
 inline void init_node( min_heap_node_t * node, int id, int dist );
 
-void init_min_heap( min_heap_t * min_heap, int * node_id2idx, min_heap_node_t * nodes );
+void init_min_heap( min_heap_t * min_heap, int src_id, int * node_id2idx, min_heap_node_t * nodes );
 
 inline void swap_node( min_heap_node_t * node_a, min_heap_node_t * node_b );
 
@@ -35,10 +34,14 @@ void make_min_heap( min_heap_t * min_heap, int idx );
 
 inline bool heap_empty( min_heap_t * min_heap );
 
+inline bool heap_find( min_heap_t * min_heap, int id );
+
 min_heap_node_t * extract_min( min_heap_t * min_heap );
 
 inline void print_min_heap( min_heap_t * min_heap );
 
-int dijkstra( struct track_node * track_graph, int source );
+void dijkstra( struct track_node * track_graph, int source );
+
+void decrease_dist( min_heap_t * min_heap, int id, int dist );
 
 #endif

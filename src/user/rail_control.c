@@ -2,6 +2,7 @@
 #include "tools.h"
 #include "track_data_new.h"
 #include "track_node.h"
+#include "global.h"
 
 inline void init_node( min_heap_node_t * node, int id, int dist ) {
   assert( 1, node || id >= 0 || id < NODE_MAX );
@@ -10,7 +11,7 @@ inline void init_node( min_heap_node_t * node, int id, int dist ) {
   node->dist = dist;
 }
 
-void init_min_heap( min_heap_t * min_heap, int * node_id2idx, min_heap_node_t * nodes ) {
+void init_min_heap( min_heap_t * min_heap, int src_id, int * node_id2idx, min_heap_node_t * nodes ) {
   assert( 1, min_heap );
 
   min_heap->size = 0;
@@ -21,7 +22,11 @@ void init_min_heap( min_heap_t * min_heap, int * node_id2idx, min_heap_node_t * 
   int i;
   for( i = 0; i < min_heap->capacity; ++i ) {
     min_heap->node_id2idx[i] = i;
+    //TODO: fix INT_MAX
+    init_node( &(min_heap->nodes[i]), i, 100000 );
   }
+
+  init_node( &(min_heap->nodes[0]), src_id, 0);
 
 }
 
@@ -99,10 +104,11 @@ min_heap_node_t * extract_min( min_heap_t * min_heap ) {
   if( min_heap->size > 0 )
     make_min_heap( min_heap, 0 );
 
-  return root;  
+  return last;  
 }
 
 void decrease_dist( min_heap_t * min_heap, int id, int dist ) {
+  debug( "decrease_dist: id: %d, dist: %d", id, dist );
   assert( 1, min_heap );
   assert( 1, id >= 0 && id <= min_heap->size );
   
@@ -111,8 +117,11 @@ void decrease_dist( min_heap_t * min_heap, int id, int dist ) {
   assert( 1, min_heap->nodes[idx].dist > dist );
   min_heap->nodes[idx].dist = dist;
 
-  /* bubble up the node with the shorter distance */
+  /* bubble up the node with the updated distance */
+  debug( "idx dist: %d, idx/2 dist: %d", min_heap->nodes[idx].dist,
+      min_heap->nodes[(idx-1)/2].dist );
   while( idx != 0 && min_heap->nodes[idx].dist < min_heap->nodes[(idx-1)/2].dist ) {
+    debug(" idx: %d", idx );
     int parent_idx = ( idx - 1 ) / 2;
     /* swap the idx */
     min_heap->node_id2idx[parent_idx] = idx;
@@ -125,6 +134,10 @@ void decrease_dist( min_heap_t * min_heap, int id, int dist ) {
   }
 }
 
+inline bool heap_find( min_heap_t * min_heap, int id ) {
+  return min_heap->node_id2idx[id] < min_heap->size;
+}
+
 inline void print_min_heap( min_heap_t * min_heap ) {
   assert( 1, min_heap );
   debug( "size: %d", min_heap->size );
@@ -134,23 +147,130 @@ inline void print_min_heap( min_heap_t * min_heap ) {
   }
 }
 
-int dijkstra( struct track_node * track_graph, int source ) {
-  assert( 1, track_graph || source >= 0 || source < NODE_MAX )
+void dijkstra( struct track_node * track_graph, int src_id ) {
+  assert( 1, track_graph || src_id >= 0 || src_id < NODE_MAX )
   
+  /* initialize the heap */
+  min_heap_t min_heap;
+  int node_id2idx[NODE_MAX];
+  min_heap_node_t nodes[NODE_MAX];
+  init_min_heap( &min_heap, src_id, node_id2idx, nodes );
+
   /* array that stores the distance from the source to each node so far,
    * also the array that stores */
+  //TODO: heap, path and dist should be in the outer scope
+  int path[NODE_MAX];
   int dist[NODE_MAX];
-  int i = -1;
+  int i;
 
-  /* initialize all distance to INT_MAX */
+  /* initialize all distance to INT_MAX, all path to invalid */
   for( i = 0; i < NODE_MAX; ++i ) {
-    dist[i] = INT_MAX;
+    //TODO: fix INT_MAX
+    dist[i] = 100000;
+    path[i] = -1;
   }
+  min_heap.size = NODE_MAX;
 
   /* make the distance of the source to 0, so it's first picked */
-  dist[source] = 0;
+  dist[src_id] = 0;
 
-  
-  return 0;
+  /* in our case all vertices are connected, so loop until the heap is empty */
+  //TODO: think about replacing edge weight with time
+  //TODO: if use time, reverse edge weight should be dynamically calculated
+  while( !heap_empty( &min_heap )) {
+    assert( 1, min_heap.size );
+    min_heap_node_t * heap_node = extract_min( &min_heap );
+    assert( 1, heap_node );
+    debug( "min node_id: %d", heap_node->id );
+    
+    int track_id = heap_node ->id;
+    track_node_t * track_node = &(track_graph[track_id]);
+    
+
+    /* helper functions to calculate dist to all neighbors, 
+     * NODE_ENTER, NODE_SENEOR, NODE_MERGE have two neighbors: straight & reverse;
+     * NODE_BRANCH has three neighbors: straight, curved and reverse;
+     * NODE_EXIT has one neighbor: reverse */
+    int track_nbr_id, test_dist;
+    inline void __attribute__((always_inline)) \
+    update_forward( int direction ) {
+      track_nbr_id = track_node->edge[DIR_AHEAD].dest - track_graph;
+      test_dist = dist[track_id] + track_node->edge[direction].dist;
+      debug( "track_id: %d, track_nbr_id: %d, cur_node_dist: %d, edge_dist: %d, test_dist: %d", 
+          track_id, track_nbr_id, dist[track_id], track_node->edge[direction].dist, test_dist );
+      debug( "old dist: %d", dist[track_nbr_id] );
+      if( heap_find( &min_heap, track_nbr_id ) && 
+          test_dist < dist[track_nbr_id] ) {
+        debug( "!!!!!!!!!!!!!!!!update" );
+        dist[track_nbr_id] = test_dist;
+        path[track_nbr_id] = track_id;
+        decrease_dist( &min_heap, track_nbr_id, test_dist );
+      }
+    }
+
+    inline void __attribute__((always_inline)) \
+    update_backward( ) {
+      track_nbr_id = track_node->reverse - track_node;
+      test_dist = dist[track_id];
+      if( heap_find( &min_heap, track_nbr_id ) &&
+          test_dist < dist[track_nbr_id] ) {
+        dist[track_nbr_id] = test_dist;
+        path[track_nbr_id] = track_id;
+        decrease_dist( &min_heap, track_nbr_id, test_dist );
+      }
+    }
+
+    switch( track_node->type ) {
+      case NODE_ENTER:
+        debug( "ENTER" );
+        /* forward */
+        update_forward( DIR_AHEAD ); 
+        /* backward */
+        update_backward( );
+        break;
+      case NODE_SENSOR:
+        debug( "SENSOR" );
+        /* forward */
+        update_forward( DIR_AHEAD ); 
+        /* backward */
+        update_backward( );
+        break;
+      case NODE_MERGE:
+        debug( "MERGE" );
+        /* forward */
+        update_forward( DIR_AHEAD ); 
+        /* backward */
+        update_backward( );
+        break;
+      case NODE_BRANCH:
+        debug( "BRANCH" );
+        /* forward */
+        update_forward( DIR_AHEAD );
+        update_forward( DIR_CURVED );
+        /* backward */
+        update_backward( );
+        break;
+      case NODE_EXIT:
+        debug( "EXIT" );
+        /* backward */
+        update_backward( );
+        break;
+      default:
+        assert( 1, false );
+        break;
+    }
+  }
+
+  debug( "dijkstra dist: " );
+  for( i = 0; i < NODE_MAX; ++i ) {
+    bwprintf( COM2, "%d ", dist[i] );
+  }
+  debug( "" );
+
+  debug( "dijkstra path: " );
+  for( i = 0; i < NODE_MAX; ++i ) {
+    bwprintf( COM2, "%d ", path[i] );
+  }
+  debug( "" );
 }
 
