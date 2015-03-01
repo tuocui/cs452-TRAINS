@@ -10,6 +10,7 @@
 #include "track.h"
 #include "screen.h"
 #include "util.h"
+#include "rail_control.h"
 
 #define CYCLES 1000
 
@@ -18,8 +19,10 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-#define A4 1
-//#define TEST
+//#define A4 1
+//#define RING_TEST
+#define RAIL_TEST
+
 
 //TODO remove testing struct
 struct Server {
@@ -429,6 +432,66 @@ void ring_buf_test( ) {
 
 }
 
+void dijkstra_test( ) {
+  debug( "dijkstra_test" );
+  min_heap_t min_heap;
+  debug( "0" );
+  int node_id2idx[NODE_MAX];
+  min_heap_node_t nodes[NODE_MAX];
+  init_min_heap( &min_heap, node_id2idx, nodes );
+
+  debug( "1" );
+  /* test heap_empty */
+  assert(2, heap_empty( &min_heap ));
+  debug( "1.1" );
+  min_heap.size = 1;
+  assert( 2, !heap_empty( &min_heap ));
+  debug( "1.2" );
+  min_heap.nodes[0].dist = 1;
+  debug( "1.3" );
+  assert( 2, extract_min( &min_heap )->dist == 1 );
+  debug( "1.4" );
+  assert( 2, heap_empty( &min_heap ));
+
+  debug( "2" );
+  /* test heapify */
+  min_heap.size = 7;
+  debug( "size: %d", min_heap.size );
+  int i = 0;
+  int j,k,l,m, a,b,c,d;
+  a = b = c = d = j = k = l = m = 10;
+  debug( "size: %d", min_heap.size );
+  for( ; i < min_heap.size; ++i ){
+  debug( "size: %d", min_heap.size );
+    init_node( &(min_heap.nodes[i]), i, 6-i );
+  debug( "size: %d", min_heap.size );
+  }
+  debug( "size: %d", min_heap.size );
+  min_heap.nodes[0].dist = 0;
+  debug( "size: %d", min_heap.size );
+  make_min_heap( &min_heap, 0 );
+  debug( "size: %d", min_heap.size );
+  assert( 2, min_heap.nodes[0].id == 0 );
+  debug( "size: %d", min_heap.size );
+
+  debug( "3" );
+  min_heap.nodes[0].dist = 10;
+  debug( "size: %d", min_heap.size );
+  make_min_heap( &min_heap, 0 );
+  debug( "size: %d", min_heap.size );
+  assert( 2, min_heap.nodes[6].id == 0 );
+  assert( 2, min_heap.nodes[6].dist == 10 );
+  assert( 2, min_heap.nodes[0].id == 2 );
+  assert( 2, min_heap.nodes[0].dist == 4 );
+  assert( 2, min_heap.nodes[2].id == 6 );
+  assert( 2, min_heap.nodes[2].dist == 0 );
+
+  debug( "size: %d", min_heap.size );
+  print_min_heap( &min_heap );
+  
+  
+}
+
 void first_user_task( ){
   debug( "first user task" );
   //bwsetfifo( COM2, OFF );
@@ -474,10 +537,14 @@ void first_user_task( ){
   
 #endif /* A4 */
 
-#ifdef TEST
+#ifdef RING_TEST
   ring_buf_test( );
 #endif /* TEST */
 
-  //bwprintf( COM2, "Exit first_user_task\n\r");
+#ifdef RAIL_TEST
+  dijkstra_test( );
+#endif /* RAIL_TEST */
+
+  bwprintf( COM2, "Exit first_user_task\n\r");
   Exit( );
 }
