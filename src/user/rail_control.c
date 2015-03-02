@@ -66,6 +66,9 @@ void make_min_heap( min_heap_t * min_heap, int idx ) {
 
     /* update the id2idx array, to reflect the below swapping */
     assert( 1, min_heap->node_id2idx[parent_node->id] == idx ); 
+    if( min_heap->node_id2idx[smallest_node->id] != smallest ) {
+      debug("smallest_node->idx: %d, smallest: %d", min_heap->node_id2idx[smallest_node->id], smallest );
+    }
     assert( 1, min_heap->node_id2idx[smallest_node->id] == smallest );
     min_heap->node_id2idx[parent_node->id] = smallest;
     min_heap->node_id2idx[smallest_node->id] = idx;
@@ -110,10 +113,11 @@ min_heap_node_t * extract_min( min_heap_t * min_heap ) {
 void decrease_dist( min_heap_t * min_heap, int id, int dist ) {
   debug( "decrease_dist: id: %d, dist: %d", id, dist );
   assert( 1, min_heap );
-  assert( 1, id >= 0 && id <= min_heap->size );
   
   /* find the node with the vertex id */
   int idx = min_heap->node_id2idx[id];
+  assert( 1, idx >= 0 );
+  assert( 1, idx <= min_heap->size );
   assert( 1, min_heap->nodes[idx].dist > dist );
   min_heap->nodes[idx].dist = dist;
 
@@ -124,8 +128,8 @@ void decrease_dist( min_heap_t * min_heap, int id, int dist ) {
     debug(" idx: %d", idx );
     int parent_idx = ( idx - 1 ) / 2;
     /* swap the idx */
-    min_heap->node_id2idx[parent_idx] = idx;
-    min_heap->node_id2idx[idx] = parent_idx;
+    min_heap->node_id2idx[min_heap->nodes[parent_idx].id] = idx;
+    min_heap->node_id2idx[min_heap->nodes[idx].id] = parent_idx;
 
     /* swap this node with its parent */
     swap_node( &( min_heap->nodes[idx] ), &( min_heap->nodes[parent_idx] ));
@@ -194,7 +198,7 @@ void dijkstra( struct track_node * track_graph, int src_id ) {
     int track_nbr_id, test_dist;
     inline void __attribute__((always_inline)) \
     update_forward( int direction ) {
-      track_nbr_id = track_node->edge[DIR_AHEAD].dest - track_graph;
+      track_nbr_id = track_node->edge[direction].dest - track_graph;
       test_dist = dist[track_id] + track_node->edge[direction].dist;
       debug( "track_id: %d, track_nbr_id: %d, cur_node_dist: %d, edge_dist: %d, test_dist: %d", 
           track_id, track_nbr_id, dist[track_id], track_node->edge[direction].dist, test_dist );
@@ -263,14 +267,9 @@ void dijkstra( struct track_node * track_graph, int src_id ) {
 
   debug( "dijkstra dist: " );
   for( i = 0; i < NODE_MAX; ++i ) {
-    bwprintf( COM2, "%d ", dist[i] );
+    bwprintf( COM2, "node_num: %d, dist: %d, path: %d\r\n", i, dist[i], path[i] );
   }
   debug( "" );
-
-  debug( "dijkstra path: " );
-  for( i = 0; i < NODE_MAX; ++i ) {
-    bwprintf( COM2, "%d ", path[i] );
-  }
   debug( "" );
 }
 
