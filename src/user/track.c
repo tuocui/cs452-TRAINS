@@ -110,6 +110,7 @@ int initialize_track( ) {
   return 0;
 }
 
+// TODO: Redo how we are representing sensor nums
 void track_sensor_task( ) {
   char c;
   int module_num = 0;

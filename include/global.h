@@ -11,7 +11,7 @@ typedef unsigned int size_t;
 #define PRIORITY_MAX 16
 
 /* task descriptor related */
-#define TD_BIT 5 // TODO: change to 7 (td0 ~ td127) 
+#define TD_BIT 7 // TODO: change to 7 (td0 ~ td127) 
 #define TD_MAX (1 << TD_BIT) 
 #define TID_IDX( id ) ( id & (TD_MAX - 1) )
 #define TID_GEN( id ) ( id >> TD_BIT )

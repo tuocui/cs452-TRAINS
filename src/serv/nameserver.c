@@ -73,7 +73,7 @@ int RegisterAs( char *name ) {
   request.val = (int) name;
   // Currently hard-coding the nameserver tid
   // TODO: Make the nameserver tid "global"
-  int rtn = Send( 33, (char *)&request, sizeof(request), (char *)&reply, sizeof(reply) );
+  int rtn = Send( TD_MAX + 1, (char *)&request, sizeof(request), (char *)&reply, sizeof(reply) );
   // Nameserver doens't exist
   if( rtn < 0 ) {
     return -1;
@@ -86,7 +86,7 @@ int WhoIs( char *name ) {
   nameserver_msg_t reply;
   request.type = WHOIS;
   request.val = (int) name;
-  int rtn = Send( 33, (char *)&request, sizeof(request), (char *)&reply, sizeof(reply) );
+  int rtn = Send( TD_MAX + 1, (char *)&request, sizeof(request), (char *)&reply, sizeof(reply) );
   // Nameserver doens't exist
   if( rtn < 0 ) {
     return -1;
