@@ -23,10 +23,11 @@ void init_min_heap( min_heap_t * min_heap, int src_id, int * node_id2idx, min_he
   for( i = 0; i < min_heap->capacity; ++i ) {
     min_heap->node_id2idx[i] = i;
     //TODO: fix INT_MAX
-    init_node( &(min_heap->nodes[i]), i, 100000 );
+    init_node( &(min_heap->nodes[i]), i, INT_MAX);
   }
 
-  init_node( &(min_heap->nodes[0]), src_id, 0);
+  init_node( &(min_heap->nodes[src_id]), src_id, 0);
+  decrease_dist( min_heap, src_id, 0 );
 
 }
 
@@ -107,6 +108,13 @@ min_heap_node_t * extract_min( min_heap_t * min_heap ) {
   if( min_heap->size > 0 )
     make_min_heap( min_heap, 0 );
 
+  assert( 1, last->dist < INT_MAX );
+  //TODO: remove below testing code
+  if( last->dist >= INT_MAX ) {
+    debug( "extracted: id: %d, dist: %d", last->id, last->dist );
+    print_min_heap( min_heap );
+    FOREVER;
+  }
   return last;  
 }
 
@@ -122,11 +130,11 @@ void decrease_dist( min_heap_t * min_heap, int id, int dist ) {
   min_heap->nodes[idx].dist = dist;
 
   /* bubble up the node with the updated distance */
+  int parent_idx = ( idx - 1 ) / 2;
   debug( "idx dist: %d, idx/2 dist: %d", min_heap->nodes[idx].dist,
-      min_heap->nodes[(idx-1)/2].dist );
-  while( idx != 0 && min_heap->nodes[idx].dist < min_heap->nodes[(idx-1)/2].dist ) {
-    debug(" idx: %d", idx );
-    int parent_idx = ( idx - 1 ) / 2;
+      min_heap->nodes[parent_idx].dist );
+  while( idx != 0 && min_heap->nodes[idx].dist < min_heap->nodes[parent_idx].dist ) {
+    debug(" heapify idx: %d", idx );
     /* swap the idx */
     min_heap->node_id2idx[min_heap->nodes[parent_idx].id] = idx;
     min_heap->node_id2idx[min_heap->nodes[idx].id] = parent_idx;
@@ -135,7 +143,10 @@ void decrease_dist( min_heap_t * min_heap, int id, int dist ) {
     swap_node( &( min_heap->nodes[idx] ), &( min_heap->nodes[parent_idx] ));
     
     idx = parent_idx;
+    parent_idx = ( idx - 1 ) / 2;
   }
+  debug( "idx: %d, parent_idx: %d, idx_dist: %d, parent_dist: %d", idx,
+      parent_idx, min_heap->nodes[idx].dist, min_heap->nodes[parent_idx].dist );
 }
 
 inline bool heap_find( min_heap_t * min_heap, int id ) {
@@ -147,11 +158,11 @@ inline void print_min_heap( min_heap_t * min_heap ) {
   debug( "size: %d", min_heap->size );
   int idx;
   for( idx = 0; idx < min_heap->size; ++idx ) {
-    debug( "idx: %d, dist: %d", min_heap->nodes[idx].id, min_heap->nodes[idx].dist );
+    debug( "id: %d, dist: %d", min_heap->nodes[idx].id, min_heap->nodes[idx].dist );
   }
 }
 
-void dijkstra( struct track_node * track_graph, int src_id ) {
+void dijkstra( struct track_node* track_graph, int src_id, int* path, int* dist ) {
   assert( 1, track_graph || src_id >= 0 || src_id < NODE_MAX )
   
   /* initialize the heap */
@@ -162,15 +173,12 @@ void dijkstra( struct track_node * track_graph, int src_id ) {
 
   /* array that stores the distance from the source to each node so far,
    * also the array that stores */
-  //TODO: heap, path and dist should be in the outer scope
-  int path[NODE_MAX];
-  int dist[NODE_MAX];
   int i;
 
   /* initialize all distance to INT_MAX, all path to invalid */
   for( i = 0; i < NODE_MAX; ++i ) {
     //TODO: fix INT_MAX
-    dist[i] = 100000;
+    dist[i] = INT_MAX;
     path[i] = -1;
   }
   min_heap.size = NODE_MAX;
@@ -190,22 +198,22 @@ void dijkstra( struct track_node * track_graph, int src_id ) {
     int track_id = heap_node ->id;
     track_node_t * track_node = &(track_graph[track_id]);
     
-
     /* helper functions to calculate dist to all neighbors, 
      * NODE_ENTER, NODE_SENEOR, NODE_MERGE have two neighbors: straight & reverse;
      * NODE_BRANCH has three neighbors: straight, curved and reverse;
-     * NODE_EXIT has one neighbor: reverse */
+     * NODE_EXIT has one neighbor: reverse 
+     */
     int track_nbr_id, test_dist;
     inline void __attribute__((always_inline)) \
     update_forward( int direction ) {
       track_nbr_id = track_node->edge[direction].dest - track_graph;
+      assert( 1, track_nbr_id >= 0 );
       test_dist = dist[track_id] + track_node->edge[direction].dist;
       debug( "track_id: %d, track_nbr_id: %d, cur_node_dist: %d, edge_dist: %d, test_dist: %d", 
           track_id, track_nbr_id, dist[track_id], track_node->edge[direction].dist, test_dist );
       debug( "old dist: %d", dist[track_nbr_id] );
       if( heap_find( &min_heap, track_nbr_id ) && 
           test_dist < dist[track_nbr_id] ) {
-        debug( "!!!!!!!!!!!!!!!!update" );
         dist[track_nbr_id] = test_dist;
         path[track_nbr_id] = track_id;
         decrease_dist( &min_heap, track_nbr_id, test_dist );
@@ -214,8 +222,12 @@ void dijkstra( struct track_node * track_graph, int src_id ) {
 
     inline void __attribute__((always_inline)) \
     update_backward( ) {
-      track_nbr_id = track_node->reverse - track_node;
+      track_nbr_id = track_node->reverse - track_graph;
+      assert( 1, track_nbr_id >= 0 );
       test_dist = dist[track_id];
+      debug( "track_id: %d, track_nbr_id: %d, cur_node_dist: %d, edge_dist: %d, test_dist: %d", 
+          track_id, track_nbr_id, dist[track_id], track_node->edge[0].dist, test_dist );
+      debug( "old dist: %d", dist[track_nbr_id] );
       if( heap_find( &min_heap, track_nbr_id ) &&
           test_dist < dist[track_nbr_id] ) {
         dist[track_nbr_id] = test_dist;
@@ -263,13 +275,27 @@ void dijkstra( struct track_node * track_graph, int src_id ) {
         assert( 1, false );
         break;
     }
-  }
 
-  debug( "dijkstra dist: " );
-  for( i = 0; i < NODE_MAX; ++i ) {
-    bwprintf( COM2, "node_num: %d, dist: %d, path: %d\r\n", i, dist[i], path[i] );
+    assert( 1, dist[track_id] == min_heap.nodes[min_heap.node_id2idx[track_id]].dist );
+  //TODO: remove below testing code
+    if( dist[track_id] != min_heap.nodes[min_heap.node_id2idx[track_id]].dist ) {
+      debug( "unmatched track_id: %d, dist_arr: %d, heap_dist: %d", track_id, 
+          dist[track_id], min_heap.nodes[min_heap.node_id2idx[track_id]].dist );
+      FOREVER;
+    }
   }
-  debug( "" );
-  debug( "" );
 }
 
+void get_shortest_path( track_node_t* track_graph, int* path, int src_id, int dst_id, int* dst_path, int* steps) {
+  *steps = 0;
+  while( 1 ) {
+    debug("next step: %s", track_graph[dst_id].name );
+    dst_path[*steps] = path[dst_id];
+
+    if( dst_id == src_id )
+      break;
+
+    dst_id = path[dst_id];
+    ++(*steps);
+  }
+}

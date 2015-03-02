@@ -40,7 +40,9 @@ min_heap_node_t * extract_min( min_heap_t * min_heap );
 
 inline void print_min_heap( min_heap_t * min_heap );
 
-void dijkstra( struct track_node * track_graph, int source );
+void dijkstra( struct track_node* track_graph, int src_id, int* path, int* dist );
+
+void get_shortest_path( struct track_node* track_graph, int* path, int src_id, int dst_id, int* dst_path, int* steps );
 
 void decrease_dist( min_heap_t * min_heap, int id, int dist );
 

@@ -472,8 +472,8 @@ void dijkstra_test( ) {
   //debug( "size: %d", min_heap.size );
   //print_min_heap( &min_heap );
 
-  track_node_t track_graph[TRACK_MAX];
-  init_trackb( track_graph );
+  //track_node_t track_graph[TRACK_MAX];
+  //init_trackb( track_graph );
 
   //debug( "track_graph addr: %x", track_graph );
   //debug( "track_node size: %d", sizeof( track_node_t ));
@@ -487,7 +487,28 @@ void dijkstra_test( ) {
   //debug( "track_node A4 addr: %x", node_3 );
   //debug( "address diff %d", (node_3 - track_graph) );
   
-  dijkstra( track_graph, 0 );
+  track_node_t track_graph[TRACK_MAX];
+  init_trackb( track_graph );
+
+  int all_path[NODE_MAX];
+  int all_dist[NODE_MAX];
+
+  int src_id = 52;
+  int dst_id = 71;
+
+  dijkstra( track_graph, src_id, all_path, all_dist );
+  
+  debug( "dijkstra results: " );
+  int i;
+  for( i = 0; i < NODE_MAX; ++i ) {
+    bwprintf( COM2, "node_num: %d, dist: %d, path: %d\r\n", 
+        i, all_dist[i], all_path[i] );
+  }
+
+  int dst_path[NODE_MAX];
+  int *steps;
+
+  get_shortest_path( track_graph, all_path, src_id, dst_id, dst_path, steps );
 
 }
 
