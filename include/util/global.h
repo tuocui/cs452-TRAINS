@@ -4,8 +4,7 @@
 
 #define REDBOOT_OFFSET 0x218000
 #define NULL ((void *) 0)
-//TODO: fixme
-#define INT_MAX 200000 
+#define INT_MAX ((unsigned)0xFFFFFFFF) >> 1 
 //#define INT_MIN (signed)0xFFFFFFFF
 typedef unsigned int size_t;
 typedef enum {

@@ -175,7 +175,6 @@ void dijkstra( struct track_node* track_graph, int src_id, int* path, int* dist,
 
   /* initialize all distance to INT_MAX, all path to invalid */
   for( i = 0; i < NODE_MAX; ++i ) {
-    //TODO: fix INT_MAX
     dist[i] = INT_MAX;
     path[i] = -1;
     step[i] = 0;
@@ -202,44 +201,33 @@ void dijkstra( struct track_node* track_graph, int src_id, int* path, int* dist,
      * NODE_EXIT has one neighbor: reverse 
      */
     int track_nbr_id, test_dist, test_step;
+    #define update_info( ) \
+      if( heap_find( &min_heap, track_nbr_id ) && \
+          test_dist < dist[track_nbr_id] ) { \
+        dist[track_nbr_id] = test_dist; \
+        path[track_nbr_id] = track_id; \
+        step[track_nbr_id] = test_step; \
+        decrease_dist( &min_heap, track_nbr_id, test_dist ); \
+      }
+
     inline void __attribute__((always_inline)) \
     update_forward( int direction ) {
       track_nbr_id = track_node->edge[direction].dest - track_graph;
       assert( 1, track_nbr_id >= 0 );
-
       test_dist = dist[track_id] + track_node->edge[direction].dist;
       assertm( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
-
       test_step = step[track_id] + 1;
-      //debug( "track_id: %d, track_nbr_id: %d, cur_node_dist: %d, edge_dist: %d, test_dist: %d", track_id, track_nbr_id, dist[track_id], track_node->edge[direction].dist, test_dist );
-      //debug( "old dist: %d", dist[track_nbr_id] );
-      if( heap_find( &min_heap, track_nbr_id ) && 
-          test_dist < dist[track_nbr_id] ) {
-        dist[track_nbr_id] = test_dist;
-        path[track_nbr_id] = track_id;
-        step[track_nbr_id] = test_step;
-        decrease_dist( &min_heap, track_nbr_id, test_dist );
-      }
+      update_info( );
     }
 
     inline void __attribute__((always_inline)) \
     update_backward( ) {
       track_nbr_id = track_node->reverse - track_graph;
       assert( 1, track_nbr_id >= 0 );
-
       test_dist = dist[track_id];
       assertm( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
-
       test_step = step[track_id] + 1;
-      //debug( "track_id: %d, track_nbr_id: %d, cur_node_dist: %d, edge_dist: %d, test_dist: %d", track_id, track_nbr_id, dist[track_id], track_node->edge[0].dist, test_dist );
-      //debug( "old dist: %d", dist[track_nbr_id] );
-      if( heap_find( &min_heap, track_nbr_id ) &&
-          test_dist < dist[track_nbr_id] ) {
-        dist[track_nbr_id] = test_dist;
-        path[track_nbr_id] = track_id;
-        step[track_nbr_id] = test_step;
-        decrease_dist( &min_heap, track_nbr_id, test_dist );
-      }
+      update_info( );
     }
 
     switch( track_node->type ) {
@@ -286,7 +274,7 @@ void dijkstra( struct track_node* track_graph, int src_id, int* path, int* dist,
 void get_shortest_path( int* all_path, int* all_step, int src_id, int dst_id, int* dst_path ) {
   int steps = all_step[dst_id];
   while( steps ) {
-    dst_path[steps] = all_path[dst_id];
+    dst_path[steps] = dst_id;
 
     if( dst_id == src_id )
       break;
@@ -301,7 +289,7 @@ void print_shortest_path( track_node_t* track_graph, int* all_path, int* all_ste
   int tmp_id = dst_id;
   int steps = all_step[tmp_id] - 1;
   while( steps >= 0 ) {
-    dst_path[steps] = all_path[tmp_id];
+    dst_path[steps] = tmp_id;
 
     if( tmp_id == src_id )
       break;
@@ -312,8 +300,8 @@ void print_shortest_path( track_node_t* track_graph, int* all_path, int* all_ste
 
   steps = all_step[dst_id];
   int i;
-  bwprintf( COM2, "%d steps from %s to %s:\t", steps,
-      track_graph[src_id].name, track_graph[dst_id].name );
+  bwprintf( COM2, "%d steps from %s to %s:\t%s", steps, track_graph[src_id].name,
+      track_graph[dst_id].name, track_graph[src_id].name );
   for( i = 0; i < steps; ++i ) {
     bwprintf( COM2, "->%s", track_graph[dst_path[i]].name );
   }
