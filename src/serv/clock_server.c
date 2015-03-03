@@ -38,7 +38,7 @@ void notifier( ) {
   FOREVER {
     msg.value = AwaitEvent( TIMER3_INT_IND );
 
-    assert(0, msg.value > 0, "ERROR: interrupt eventid is incorrect" );
+    assertm(0, msg.value > 0, "ERROR: interrupt eventid is incorrect" );
 
     Send( clock_server_tid, (char*)&msg, msg_size, &rpl, 1 );
     

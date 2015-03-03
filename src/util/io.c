@@ -111,7 +111,7 @@ void com1_out_notifier( ) {
   FOREVER {
     debug( "Before await" );
     errno = AwaitEvent( COM1_OUT_IND );
-    assert( 1, errno >= 0, "ERROR: interrupt eventid is incorrect" );
+    assertm( 1, errno >= 0, "ERROR: interrupt eventid is incorrect" );
     debug( "Notifier finished awaiting" );
 
     errno = Send( com1_out_server_tid, (char*)&msg, sizeof( msg ), &rpl, 1 );
@@ -135,7 +135,7 @@ void com2_out_notifier( ) {
   FOREVER {
     debug( "Before await" );
     errno = AwaitEvent( COM2_OUT_IND );
-    assert( 1, errno >= 0, "ERROR: interrupt eventid is incorrect" );
+    assertm( 1, errno >= 0, "ERROR: interrupt eventid is incorrect" );
     debug( "Notifier finished awaiting" );
 
     errno = Send( com2_out_server_tid, (char*)&msg, msg_size, (char *)&rpl, msg_size );
@@ -159,7 +159,7 @@ void com1_in_notifier( ) {
 
   FOREVER {
     ret_val = AwaitEvent( COM1_IN_IND );
-    assert( 1, ret_val >= 0, "ERROR: interrupt eventid is incorrect" );
+    assertm( 1, ret_val >= 0, "ERROR: interrupt eventid is incorrect" );
     c = (char)ret_val;
     msg.msg_val = &c;
     msg.msg_len = 1;
@@ -179,7 +179,7 @@ void com2_in_notifier( ) {
   msg.msg_val = c_buf;
   FOREVER {
     msg.msg_len = AwaitEvent2( COM2_IN_IND, c_buf, c_buf_size );
-    assert( 1, msg.msg_len >= 0, "ERROR: interrupt eventid is incorrect" );
+    assertm( 1, msg.msg_len >= 0, "ERROR: interrupt eventid is incorrect" );
     int ret_val = Send( com_in_server_tid, (char *)&msg, sizeof( msg ), &rpl, 0 );
     assert( 1, ret_val >= 0 );
   }

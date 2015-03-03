@@ -13,15 +13,19 @@
 #ifndef AST_LEVEL
 #define AST_LEVEL -1
 #endif
-#define __assert__( cond, ... )                                  \
-  if( !( cond ) ) {                                              \
-    bwprintf(COM2,"Assert failed (%s:%d):\t%s\n\r\n\r",__FILE__, \
-        __LINE__, ## __VA_ARGS__);                               \
+
+#define assertm( level, cond, fmt, ... ) \
+  if( level <= AST_LEVEL && !( cond )) { \
+    bwprintf( COM2, "assertm failed (%s:%d):\t"fmt"\n\r", __FILE__, \
+        __LINE__, ## __VA_ARGS__ ); \
+    FOREVER; \
   } else { ; }
 
-#define assert( level, cond, ... )                              \
-  if( level <= AST_LEVEL ) {                                    \
-    __assert__( cond, ## __VA_ARGS__  );                        \
+#define assert( level, cond ) \
+  if( level <= AST_LEVEL && !( cond )) { \
+    bwprintf(COM2,"Assert failed (%s:%d):\t\n\r\n\r",__FILE__, \
+        __LINE__); \
+    FOREVER; \
   } else { ; }                                                  
 
 #define compile_assert( cond, msg ) \

@@ -492,23 +492,27 @@ void dijkstra_test( ) {
 
   int all_path[NODE_MAX];
   int all_dist[NODE_MAX];
+  int all_step[NODE_MAX];
 
   int src_id = 52;
   int dst_id = 71;
 
-  dijkstra( track_graph, src_id, all_path, all_dist );
+  dijkstra( track_graph, src_id, all_path, all_dist, all_step );
+
+  debug( "steps: %d", all_step[dst_id] );
+  int dst_path[all_step[dst_id]];
   
   debug( "dijkstra results: " );
   int i;
   for( i = 0; i < NODE_MAX; ++i ) {
-    bwprintf( COM2, "node_num: %d, dist: %d, path: %d\r\n", 
-        i, all_dist[i], all_path[i] );
+    bwprintf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
+        i, all_dist[i], all_path[i], all_step[i] );
   }
 
-  int dst_path[NODE_MAX];
-  int *steps;
+  //int dst_path[NODE_MAX];
+  //int *steps;
 
-  get_shortest_path( track_graph, all_path, src_id, dst_id, dst_path, steps );
+  print_shortest_path( track_graph, all_path, all_step, src_id, dst_id, dst_path );
 
 }
 

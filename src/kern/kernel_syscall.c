@@ -422,7 +422,7 @@ void handle_uart1_combined_int( global_context_t *gc ) {
     char c = *((unsigned int *)( UART1_BASE + UART_DATA_OFFSET ));
     task_descriptor_t *td = gc->interrupts[COM1_IN_IND];
     gc->interrupts[COM1_IN_IND] = NULL;
-    assert( 0, td != NULL, "FUCK IN TD IS NULL" );
+    assertm( 0, td != NULL, "FUCK IN TD IS NULL" );
     //gc->com1_status |= COM1_RECEIVE_MASK;
     *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
     *((unsigned int *)( UART1_BASE + UART_INTR_OFFSET )) &= ~UART_RIS_MASK;
@@ -432,7 +432,7 @@ void handle_uart1_combined_int( global_context_t *gc ) {
 
   if( gc->com1_status & COM1_TRANSMIT_MASK && gc->com1_status & COM1_CTS_MASK ) {
     task_descriptor_t *td = gc->interrupts[COM1_OUT_IND];
-    assert( 0, td != NULL, "FUCK OUT TD IS NULL" );
+    assertm( 0, td != NULL, "FUCK OUT TD IS NULL" );
     gc->com1_status &= (~COM1_CTS_MASK & ~COM1_TRANSMIT_MASK);
     gc->interrupts[COM1_OUT_IND] = NULL;
     td->retval = 0;
@@ -451,7 +451,7 @@ void handle_uart2_combined_int( global_context_t *gc ) {
     debug("Transmit interrupt hit");
     task_descriptor_t *td = gc->interrupts[COM2_OUT_IND];
 
-    assert( 0, td != NULL, "FUCK OUT TD IS NULL" );
+    assertm( 0, td != NULL, "FUCK OUT TD IS NULL" );
 
     gc->interrupts[COM2_OUT_IND] = NULL;
     td->retval = 0;
@@ -481,7 +481,7 @@ void handle_uart2_combined_int( global_context_t *gc ) {
     event_buf = event_buf_reg;
     event_len = event_len_reg;
     gc->interrupts[COM2_IN_IND] = NULL;
-    assert( 0, td != NULL, "FUCK IN TD IS NULL" );
+    assertm( 0, td != NULL, "FUCK IN TD IS NULL" );
     if( uart2_int_status & UART_RIS_MASK ){
       *((unsigned int*)(UART2_BASE + UART_CTLR_OFFSET)) &= ~RIEN_MASK;
       *((unsigned int *)( UART2_BASE + UART_INTR_OFFSET )) &= ~UART_RIS_MASK;
