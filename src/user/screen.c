@@ -198,7 +198,6 @@ void parse_user_input( ) {
         for( i = 25; i < NUM_TRAINS; ++i ) {
           train_speeds[i] = 0;
           set_train_speed( i, 0 );
-          Delay( 10 );
         }
         Delay( 500 );
         Kill_the_system( 0xdeadbeef );

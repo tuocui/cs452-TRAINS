@@ -103,7 +103,6 @@ int initialize_track( ) {
       set_switch( switch_ind + 1, CURVED );
     }
     ++switch_ind;
-    Delay( 10 );
   }
   // And everything is good to go
   Putstr( COM2, "\033[2;0H\033[2K\033[24;0H>", 22 );
