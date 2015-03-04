@@ -4,6 +4,77 @@
 #include "track_node.h"
 #include "global.h"
 
+//TODO: just realize the "act upon every sensor hit" approach does not work
+//because some sensors are too close to the branches, so there is absolutely not
+//enough time to issue a turn-out switch. It does not matter for milestone 1, but
+//this approach cannot achive monitoring two trains.
+///* get_next_command calls graph search to get the shortest path,
+// * for now, if the path only has length of one, the we issue stop command.
+// * if there are more than one node, it finds out if there needs reverse/switch
+// * If two nodes are reverse of each other,
+// * we issue reverse command. If the first node is MR, we check the second
+// * to decide which direction to go to. 
+// * The function returns a list of commands back to the server. For now, the 
+// * return value is an array of pair of integers. The even-positioned integers
+// * represent the operations (such as reverse, set speed to 13 etc), the odd-
+// * positioned integers represent the delay time before the operation. For 
+// * example, if the result is [RV, 120, SW13C, 150, EOC], it means we want to 
+// * delay 120 msec before the reverse command, and delay 150 msec before we 
+// * switch turn-out 13 to curved. Because the calling function does not know 
+// * exactly how many commands there are (can be 0-2) we use macro EOC to 
+// * indicate the end of commands.
+// *
+// * FIXME: we actually should check reverse condition many nodes ahead, but
+// * only execute it when we reach the sensor immediately before the reverse node
+// */
+//
+//void get_next_command( track_node_t* track_graph, int src_id, int dst_id, int* cmds ) {
+//  assert( 1, track_graph && src_id >= 0 && src_id < TRACK_MAX && dst_id >= 0 && dst_id < TRACK_MAX );
+//
+//  /* run dijkstra on the src and dst */
+//  int all_path[NODE_MAX], all_dist[NODE_MAX], all_step[NODE_MAX];
+//  dijkstra( track_graph, src_id, all_path, all_dist, all_step );
+//  
+//  /* get shortest path for our destination */
+//  int dst_path[all_step[dst_id]];
+//  get_shortest_path( all_path, all_step, src_id, dst_id, dst_path );
+//  //TODO: remove the debug print
+//  int i;
+//  for( i = 0; i < all_step[dst_id]; ++i ) {
+//    bwprintf( COM2, "->%s", track_graph[dst_path[i]].name );
+//  }
+//  //TODO: end of debug;
+//  
+//  /* for now, if there is only one node ahead, issue stop command, this behavior
+//   * should be changed after milestone 1 
+//   */
+//  int cmd_pos;
+//  if( all_step[dst_id] <= 1 ) {
+//    cmds[cmd_pos++] = TR_STOP;
+//    cmds[cmd_pos++] = 0;
+//    cmds[cmd_pos++] = EOC;
+//  }
+//  else {
+//    int node_id1 = dst_path[0]; 
+//    int node_id2 = dst_path[1];
+//    /* check reverse condition, this approach is wrong, we need to factor in time */
+//    if( track_graph[node_id1].reverse - track_graph == node_id2 ) {
+//      assertm( 1, track_graph[node_id2].reverse - track_graph == node_id1,
+//          "node_id1: %d, node_id2: %d", node_id1, node_id2 );
+//      //FIXME: below time should be calculated
+//      int reverse_delay = 3000;
+//      int reverse_time = 5000; 
+//      int switch_delay = reverse_delay + reverse_time;
+//      cmds[cmd_pos++] = TR_RV;
+//      cmds[cmd_pos++] = reverse_delay;
+//      cmds[cmd_pos++] = switch_delay;
+//    }
+//    /* check merge condition */
+//  
+//}
+
+
+//TODO: put below into a separate file "track_search"
 inline void init_node( min_heap_node_t * node, int id, int dist ) {
   assert( 1, node || id >= 0 || id < NODE_MAX );
 
@@ -22,7 +93,6 @@ void init_min_heap( min_heap_t * min_heap, int src_id, int * node_id2idx, min_he
   int i;
   for( i = 0; i < min_heap->capacity; ++i ) {
     min_heap->node_id2idx[i] = i;
-    //TODO: fix INT_MAX
     init_node( &(min_heap->nodes[i]), i, INT_MAX);
   }
 
@@ -169,11 +239,8 @@ void dijkstra( struct track_node* track_graph, int src_id, int* path, int* dist,
   min_heap_node_t nodes[NODE_MAX];
   init_min_heap( &min_heap, src_id, node_id2idx, nodes );
 
-  /* array that stores the distance from the source to each node so far,
-   * also the array that stores */
-  int i;
-
   /* initialize all distance to INT_MAX, all path to invalid */
+  int i;
   for( i = 0; i < NODE_MAX; ++i ) {
     dist[i] = INT_MAX;
     path[i] = -1;
