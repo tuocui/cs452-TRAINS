@@ -4,74 +4,113 @@
 #include "track_node.h"
 #include "global.h"
 
-//TODO: just realize the "act upon every sensor hit" approach does not work
-//because some sensors are too close to the branches, so there is absolutely not
-//enough time to issue a turn-out switch. It does not matter for milestone 1, but
-//this approach cannot achive monitoring two trains.
-///* get_next_command calls graph search to get the shortest path,
-// * for now, if the path only has length of one, the we issue stop command.
-// * if there are more than one node, it finds out if there needs reverse/switch
-// * If two nodes are reverse of each other,
-// * we issue reverse command. If the first node is MR, we check the second
-// * to decide which direction to go to. 
-// * The function returns a list of commands back to the server. For now, the 
-// * return value is an array of pair of integers. The even-positioned integers
-// * represent the operations (such as reverse, set speed to 13 etc), the odd-
-// * positioned integers represent the delay time before the operation. For 
-// * example, if the result is [RV, 120, SW13C, 150, EOC], it means we want to 
-// * delay 120 msec before the reverse command, and delay 150 msec before we 
-// * switch turn-out 13 to curved. Because the calling function does not know 
-// * exactly how many commands there are (can be 0-2) we use macro EOC to 
-// * indicate the end of commands.
-// *
-// * FIXME: we actually should check reverse condition many nodes ahead, but
-// * only execute it when we reach the sensor immediately before the reverse node
-// */
-//
-//void get_next_command( track_node_t* track_graph, int src_id, int dst_id, int* cmds ) {
-//  assert( 1, track_graph && src_id >= 0 && src_id < TRACK_MAX && dst_id >= 0 && dst_id < TRACK_MAX );
-//
-//  /* run dijkstra on the src and dst */
-//  int all_path[NODE_MAX], all_dist[NODE_MAX], all_step[NODE_MAX];
-//  dijkstra( track_graph, src_id, all_path, all_dist, all_step );
-//  
-//  /* get shortest path for our destination */
-//  int dst_path[all_step[dst_id]];
-//  get_shortest_path( all_path, all_step, src_id, dst_id, dst_path );
-//  //TODO: remove the debug print
-//  int i;
-//  for( i = 0; i < all_step[dst_id]; ++i ) {
-//    bwprintf( COM2, "->%s", track_graph[dst_path[i]].name );
-//  }
-//  //TODO: end of debug;
-//  
-//  /* for now, if there is only one node ahead, issue stop command, this behavior
-//   * should be changed after milestone 1 
-//   */
-//  int cmd_pos;
-//  if( all_step[dst_id] <= 1 ) {
-//    cmds[cmd_pos++] = TR_STOP;
-//    cmds[cmd_pos++] = 0;
-//    cmds[cmd_pos++] = EOC;
-//  }
-//  else {
-//    int node_id1 = dst_path[0]; 
-//    int node_id2 = dst_path[1];
-//    /* check reverse condition, this approach is wrong, we need to factor in time */
-//    if( track_graph[node_id1].reverse - track_graph == node_id2 ) {
-//      assertm( 1, track_graph[node_id2].reverse - track_graph == node_id1,
-//          "node_id1: %d, node_id2: %d", node_id1, node_id2 );
-//      //FIXME: below time should be calculated
-//      int reverse_delay = 3000;
-//      int reverse_time = 5000; 
-//      int switch_delay = reverse_delay + reverse_time;
-//      cmds[cmd_pos++] = TR_RV;
-//      cmds[cmd_pos++] = reverse_delay;
-//      cmds[cmd_pos++] = switch_delay;
-//    }
-//    /* check merge condition */
-//  
-//}
+/* get_next_command calls graph search to get the shortest path,
+ * for now, if the path only has length of one, the we issue stop command.
+ * if there are more than one node, it finds out if there needs reverse/switch
+ * If two nodes are reverse of each other,
+ * we issue reverse command. If the first node is MR, we check the second
+ * to decide which direction to go to. 
+ *
+ */
+
+void get_next_command( track_node_t* track_graph, int stop_dist, int src_id, int dst_id, commands_t* cmds ) {
+  assert( 1, track_graph && cmds && src_id >= 0 && src_id < TRACK_MAX && dst_id >= 0 && dst_id < TRACK_MAX );
+
+  /* run dijkstra on the src and dst */
+  int all_path[NODE_MAX], all_dist[NODE_MAX], all_step[NODE_MAX];
+  dijkstra( track_graph, src_id, all_path, all_dist, all_step );
+  
+  /* get shortest path for our destination */
+  int dst_path[all_step[dst_id]];
+  get_shortest_path( all_path, all_step, src_id, dst_id, dst_path );
+  //TODO: remove the debug print                                     //remove debug
+  int i;                                                             //remove debug
+  for( i = 0; i < all_step[dst_id]; ++i ) {                          //remove debug
+    bwprintf( COM2, "->%s", track_graph[dst_path[i]].name );         //remove debug
+  }                                                                  //remove debug
+  //TODO: end of debug;                                              //remove debug
+  
+  /* loop through the nodes, look for branches; for each branch, if there is >= 1  
+   * sensors ahead, we make a deicision on when and how to switch the turn out
+   * if we are on the sensor immediately before the branch, there is no time for 
+   * the switch, so we do not switch the turnout
+   */
+  int steps_to_dst = all_step[dst_id];
+  int num_sensors_ahead = 0;
+  int cur_node_id;
+  int switch_count = 0;
+  int action = -1;
+  for( i = 0; i < steps_to_dst; ++i ) {
+    cur_node_id = dst_path[i];
+    if( track_graph[cur_node_id].type == NODE_SENSOR ) {
+      ++num_sensors_ahead;
+    } 
+    else if( track_graph[cur_node_id].type == NODE_BRANCH ) {
+      if(( i - 1 >= 0 ) && track_graph[dst_path[i-1]].type == NODE_MERGE ) {
+        /* reverse case */
+        ;
+      }
+      else {
+        assert( 1, switch_count < 3 );
+        /* branch case */
+        /* we only switch the turnout when there is time, but not too much*/
+        #define set_switch( _cmds, _switch_count, _switch_id, _ACTION ) \
+          _cmds->switch_id##_switch_count = _switch_id; \
+          _cmds->switch_action##_switch_count = _ACTION; 
+          
+        if( num_sensors_ahead == 1 && i + 1 < steps_to_dst ) {
+          if( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest ==
+              &track_graph[dst_path[i+1]] ) {
+            assert( 1, track_graph[cur_node_id].num > 0 );
+            action = SW_STRAIGHT;
+          }
+          else if( track_graph[cur_node_id].edge[DIR_CURVED].dest ==
+              &track_graph[dst_path[i+1]] ) {
+            assert( 1, track_graph[cur_node_id].num > 0 );
+            action = SW_CURVED;
+          }
+          else 
+            assert( 1, false );
+
+          assert( 1, switch_count < 3 );
+          if( switch_count == 0 ){
+            set_switch( cmds, 0, track_graph[cur_node_id].num, action );
+          }
+          else if( switch_count == 1 ) {
+            set_switch( cmds, 1, track_graph[cur_node_id].num, action );
+          }
+          else if( switch_count == 2 ) {
+            set_switch( cmds, 2, track_graph[cur_node_id].num, action );
+          }
+          else
+            assert( 1, false );
+          
+          ++switch_count;
+        }
+      }
+    }
+  }
+
+  //if( all_step[dst_id] <= 1 ) {
+  //}
+  //else {
+  //  int node_id1 = dst_path[0]; 
+  //  int node_id2 = dst_path[1];
+  //  /* check reverse condition, this approach is wrong, we need to factor in time */
+  //  if( track_graph[node_id1].reverse - track_graph == node_id2 ) {
+  //    assertm( 1, track_graph[node_id2].reverse - track_graph == node_id1,
+  //        "node_id1: %d, node_id2: %d", node_id1, node_id2 );
+  //    //FIXME: below time should be calculated
+  //    int reverse_delay = 3000;
+  //    int reverse_time = 5000; 
+  //    int switch_delay = reverse_delay + reverse_time;
+  //    cmds[cmd_pos++] = TR_RV;
+  //    cmds[cmd_pos++] = reverse_delay;
+  //    cmds[cmd_pos++] = switch_delay;
+  //  }
+  //  /* check merge condition */
+  //
+}
 
 
 //TODO: put below into a separate file "track_search"
@@ -93,7 +132,7 @@ void init_min_heap( min_heap_t * min_heap, int src_id, int * node_id2idx, min_he
   int i;
   for( i = 0; i < min_heap->capacity; ++i ) {
     min_heap->node_id2idx[i] = i;
-    init_node( &(min_heap->nodes[i]), i, INT_MAX);
+    init_node( &( min_heap->nodes[i]), i, INT_MAX );
   }
 
   decrease_dist( min_heap, src_id, 0 );

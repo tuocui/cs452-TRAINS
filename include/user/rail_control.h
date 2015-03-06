@@ -3,7 +3,6 @@
 
 #include "global.h"
 
-#define EOC       -1 
 #define TR_STOP   0
 #define TR_SPD_1  1 
 #define TR_SPD_2  2 
@@ -21,51 +20,59 @@
 #define TR_SPD_14 14 
 #define TR_RV     15
 
-#define SW1_C     100 
-#define SW2_C     200 
-#define SW3_C     300
-#define SW4_C     400
-#define SW5_C     500
-#define SW6_C     600
-#define SW7_C     700
-#define SW8_C     700
-#define SW9_C     900
-#define SW10_C   1000
-#define SW11_C   1100
-#define SW12_C   1200
-#define SW13_C   1300
-#define SW14_C   1400
-#define SW15_C   1500
-#define SW16_C   1600
-#define SW17_C   1700
-#define SW18_C   1800
-#define SW153_C  1530
-#define SW154_C  1540
-#define SW155_C  1550
-#define SW156_C  1560
+#define SW_CURVED   0 
+#define SW_STRAIGHT 1 
 
-#define SW1_S     101 
-#define SW2_S     201 
-#define SW3_S     301
-#define SW4_S     401
-#define SW5_S     501
-#define SW6_S     601
-#define SW7_S     701
-#define SW8_S     701
-#define SW9_S     901
-#define SW10_S   1001
-#define SW11_S   1101
-#define SW12_S   1201
-#define SW13_S   1301
-#define SW14_S   1401
-#define SW15_S   1501
-#define SW16_S   1601
-#define SW17_S   1701
-#define SW18_S   1801
-#define SW153_S  1531
-#define SW154_S  1541
-#define SW155_S  1551
-#define SW156_S  1561
+#define SW1     1 
+#define SW2     2 
+#define SW3     3
+#define SW4     4
+#define SW5     5
+#define SW6     6
+#define SW7     7
+#define SW8     7
+#define SW9     9
+#define SW10   10
+#define SW11   11
+#define SW12   12
+#define SW13   13
+#define SW14   14
+#define SW15   15
+#define SW16   16
+#define SW17   17
+#define SW18   18
+#define SW153  153
+#define SW154  154
+#define SW155  155
+#define SW156  156
+
+
+typedef struct _commands_ {
+  bool has_cmd;
+
+  int train_id;
+  int train_action;
+  int train_delay;
+
+  int switch_id0;
+  int switch_action0;
+  int switch_delay0;
+  int switch_id1;
+  int switch_action1;
+  int switch_delay1;
+  int switch_id2;
+  int switch_action2;
+  int switch_delay2;
+} commands_t;
+
+void init_command( commands_t* cmds ) {
+  cmds->has_cmd = cmds->train_id = cmds->train_action = cmds->train_delay = \
+  cmds->switch_id0= cmds->switch_action0= cmds->switch_delay0= \
+  cmds->switch_id1= cmds->switch_action1= cmds->switch_delay1= \
+  cmds->switch_id2= cmds->switch_action2= cmds->switch_delay2= 0;
+}
+
+
 
 struct track_node;
 
