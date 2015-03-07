@@ -10,6 +10,7 @@
 #include "track.h"
 #include "screen.h"
 #include "util.h"
+#include "calibration.h"
 
 #define CYCLES 1000
 
@@ -268,20 +269,100 @@ void a4_test_task( ) {
 }
 
 void a4_test_task2( ) {
-  setfifo( COM2, OFF );
+  setspeed( COM1, LOW_SPEED );
+  wait_cycles(1000);
+  enable_two_stop_bits( COM1 );
+  setfifo( COM1, OFF );
+  setfifo( COM2, ON );
   int nameserver_tid = Create( 3, &nameserver_main );
-  debug( "Nameserver tid: %d", nameserver_tid );
-  int idle_id = Create( PRIORITY_MAX, &idle_task );
+  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
   debug( "Idle tid: %d", idle_id );
-  int com2_out_server_tid = Create( 3, &com2_out_server );
-  debug( "COM1_Out Server tid: %d", com2_out_server_tid );
-  int com2_in_server_tid = Create( 3, &com2_in_server );
-  debug( "COM1_In Server tid: %d", com2_in_server_tid );
-  // Create clock server
-  int clock_server_tid = Create( 3, &clock_server );
+  int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
+  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
+  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
+  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
+  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  int clock_server_tid = Create( 3, &clock_server ); // 43
   debug( "Clock Server tid: %d", clock_server_tid );
-  int parse_user_input_tid = Create( 6, &parse_user_input );
-  debug( "Track Sensor task tid: %d", parse_user_input_tid );
+  Printf( COM2, "\033[2J" );
+  initialize_track( );
+  int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
+  debug( "User input task tid: %d", parse_user_input_tid );
+  int calibrate_train_velocity_tid = Create( 6, &calibrate_train_velocity ); // 46
+  debug( "calibrate_train_velocity tid: %d", calibrate_train_velocity_tid );
+  int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
+  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
+  
+  Exit( );
+}
+
+void a4_test_task3( ) {
+  setspeed( COM1, LOW_SPEED );
+  wait_cycles(1000);
+  enable_two_stop_bits( COM1 );
+  setfifo( COM1, OFF );
+  setfifo( COM2, ON );
+  int nameserver_tid = Create( 3, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
+  debug( "Idle tid: %d", idle_id );
+  int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
+  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
+  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
+  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
+  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  int clock_server_tid = Create( 3, &clock_server ); // 43
+  debug( "Clock Server tid: %d", clock_server_tid );
+  Printf( COM2, "\033[2J" );
+  initialize_track( );
+  int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
+  debug( "User input task tid: %d", parse_user_input_tid );
+  int calibrate_stopping_distance_tid = Create( 6, &calibrate_stopping_distance ); // 46
+  debug( "calibrate_stopping_distance_tid: %d", calibrate_stopping_distance_tid );
+  int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
+  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
+  
+  Exit( );
+}
+
+void a4_test_task4( ) {
+  setspeed( COM1, LOW_SPEED );
+  wait_cycles(1000);
+  enable_two_stop_bits( COM1 );
+  setfifo( COM1, OFF );
+  setfifo( COM2, ON );
+  int nameserver_tid = Create( 3, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
+  debug( "Idle tid: %d", idle_id );
+  int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
+  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
+  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
+  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
+  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  int clock_server_tid = Create( 3, &clock_server ); // 43
+  debug( "Clock Server tid: %d", clock_server_tid );
+  Printf( COM2, "\033[2J" );
+  initialize_track( );
+  int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
+  debug( "User input task tid: %d", parse_user_input_tid );
+  int clock_user_tid = Create( 10, &clock_user_task ); // 46
+  debug( "Clock user task tid: %d", clock_user_tid );
+  int calibrate_accel_time_tid = Create( 6, &calibrate_accel_time ); // 47
+  debug( "calibrate_accel_time_tid: %d", calibrate_accel_time_tid );
+  int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
+  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
+  
   Exit( );
 }
 #endif /* A4 */
@@ -470,7 +551,7 @@ void first_user_task( ){
 #endif /* A3 */
 
 #ifdef A4
-  a4_test_task( );
+  a4_test_task3( );
   
 #endif /* A4 */
 
