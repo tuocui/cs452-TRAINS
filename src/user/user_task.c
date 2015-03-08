@@ -10,6 +10,7 @@
 #include "track.h"
 #include "screen.h"
 #include "util.h"
+
 #include "rail_control.h"
 #include "track_node.h"
 #include "track_data_new.h"
@@ -518,10 +519,11 @@ void ring_buf_test( ) {
 void dijkstra_test( ) {
   debug( "dijkstra_test" );
   /* initialize the heap */
-  min_heap_t min_heap;
-  int node_id2idx[NODE_MAX];
-  min_heap_node_t nodes[NODE_MAX];
-  init_min_heap( &min_heap, 0, node_id2idx, nodes );
+
+  //min_heap_t min_heap;
+  //int node_id2idx[NODE_MAX];
+  //min_heap_node_t nodes[NODE_MAX];
+  //init_min_heap( &min_heap, 0, node_id2idx, nodes );
 
   ///* test heap_empty */
   //assert(2, heap_empty( &min_heap ));
@@ -575,8 +577,9 @@ void dijkstra_test( ) {
   int all_dist[NODE_MAX];
   int all_step[NODE_MAX];
 
-  int src_id = 52;
-  int dst_id = 71;
+  int src_id = 45;
+  int dst_id = 14;
+  int safe_branch_dist = 0;
 
   dijkstra( track_graph, src_id, all_path, all_dist, all_step );
 
@@ -586,20 +589,36 @@ void dijkstra_test( ) {
   debug( "dijkstra results: " );
   int i;
   for( i = 0; i < NODE_MAX; ++i ) {
-    bwprintf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
-        i, all_dist[i], all_path[i], all_step[i] );
+    //bwprintf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
+    //    i, all_dist[i], all_path[i], all_step[i] );
   }
 
-  //int dst_path[NODE_MAX];
+    //int dst_path[NODE_MAX];
   //int *steps;
 
   //print_shortest_path( track_graph, all_path, all_step, src_id, dst_id, dst_path );
 
-  for( i = 0; i < NODE_MAX; ++i ) {
-    int all_dst_path[all_step[i]];
-    print_shortest_path( track_graph, all_path, all_step, src_id, i, all_dst_path );
-  }
+  //for( i = 0; i < NODE_MAX; ++i ) {
+  //  int all_dst_path[all_step[i]];
+  //  print_shortest_path( track_graph, all_path, all_step, src_id, i, all_dst_path );
+  //}
+  
+  train_state_t train;
+  //TODO initialize safe_branch, prev_ and next_ node_id
+  rail_cmds_t cmds;
+  while( safe_branch_dist < 500 ) {
+    init_rail_cmds( &cmds );
+    //FIXME: assign values to train
+    get_next_command( &train, &cmds );
+    safe_branch_dist += 50;
 
+  debug( "Commandes: \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d \
+                     \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d \
+                     \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
+                        cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
+                        cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
+                        cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  }
 
 }
 

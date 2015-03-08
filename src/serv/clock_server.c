@@ -28,8 +28,8 @@ void clock_clients_init( clock_client_t *clients) {
 
 void notifier( ) {
   int clock_server_tid = MyParentTid( );
-  //TODO: this should be a level 1 assert
-  
+  assert( 1, clock_server_tid > 0 );
+
   clock_msg_t msg;
   int msg_size = sizeof(msg);
   msg.request_type = CM_UPDATE;

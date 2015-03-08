@@ -4,6 +4,7 @@
 #include "clock_server.h"
 #include "tools.h"
 #include "syscall.h"
+#include "rail_control.h"
 
 #define TRAIN_NUM 58
 #define WEIGHT_PREV 50
@@ -248,7 +249,7 @@ void calibrate_train_velocity( ) {
         ++module_num;
       }
     }
-    Printf( COM2, "trains[%d].speeds[%d].str_vel = %d;\r\n", TRAIN_NUM, i, str_nsw_t / str_nsw_num );
+    Printf( COM2, "trains[%d].speeds[%d].straight_vel = %d;\r\n", TRAIN_NUM, i, str_nsw_t / str_nsw_num );
     Printf( COM2, "trains[%d].speeds[%d].curved_vel = %d;\r\n", TRAIN_NUM, i, tight_nsw_t / tight_nsw_num );
     //Printf( COM2, "Going over a switch loses: %dms\r\n", ( ( str_nsw_t / str_nsw_num ) * 285 ) - ( str_sw_t / str_sw_num ) * 285 );
   }
@@ -474,7 +475,7 @@ void calibrate_train_velocity( ) {
         ++module_num;
       }
     }
-    Printf( COM2, "trains[%d].speeds[%d].str_vel = %d;\r\n", TRAIN_NUM, i + 15, str_nsw_t / str_nsw_num );
+    Printf( COM2, "trains[%d].speeds[%d].straight_vel = %d;\r\n", TRAIN_NUM, i + 15, str_nsw_t / str_nsw_num );
     Printf( COM2, "trains[%d].speeds[%d].curved_vel = %d;\r\n", TRAIN_NUM, i + 15, tight_nsw_t / tight_nsw_num );
     //Printf( COM2, "Going over a switch loses: %d\r\n", ( ( str_nsw_t / str_nsw_num ) * 285 ) - ( str_sw_t / str_sw_num ) * 285 );
   }
@@ -570,7 +571,7 @@ void calibrate_accel_time( ) {
   int t1;
   int v0;
   int v1;
-  train_t trains[65];
+  train_state_t trains[65];
   init_trains( trains, 65 );
   set_switch( 17, STRAIGHT );
   set_switch( 13, STRAIGHT );
@@ -616,8 +617,8 @@ void calibrate_accel_time( ) {
                   t2 = Time( ) - t0;
                   if( t0 ) {
                     set_train_speed( TRAIN_NUM, i );
-                    v0 = trains[TRAIN_NUM].speeds[i].str_vel;
-                    v1 = trains[TRAIN_NUM].speeds[j].str_vel;
+                    v0 = trains[TRAIN_NUM].speeds[i].straight_vel;
+                    v1 = trains[TRAIN_NUM].speeds[j].straight_vel;
                     t1 = (( (2*dt) - ( (2*t2*v1) / 10000 ) ) * 10000) / (v0 - v1);
 
                     Printf( COM2, "%d\r\n", t2);
@@ -678,18 +679,18 @@ void calibrate_accel_time( ) {
   - update train speed on set_train_speed
 */
 
-void init_trains( train_t *trains, int num_trains ) {
+void init_trains( train_state_t *trains, int num_trains ) {
   int i;
   int j;
   for( i = 0; i < num_trains; ++i ) {
-    trains[i].prev_landmark = 0;
-    trains[i].next_landmark = 0;
+    trains[i].prev_node_id= 0;
+    trains[i].next_node_id= 0;
     trains[i].nm_past_landmark = 0;
     trains[i].cur_speed = 0;
     for( j = 0; j < NUM_SPEEDS; ++j ) {
       trains[i].speeds[j].speed = 0;
       trains[i].speeds[j].high_low = 0;
-      trains[i].speeds[j].str_vel = 0;
+      trains[i].speeds[j].straight_vel = 0;
       trains[i].speeds[j].curved_vel = 0;
       trains[i].speeds[j].stopping_distance = 0;
       trains[i].speeds[j].stopping_time = 0;
@@ -703,46 +704,46 @@ void init_trains( train_t *trains, int num_trains ) {
   // Stopping distance in mm
   trains[58].length = 210;
   trains[58].pickup_len = 50;
-  trains[58].speeds[14].str_vel = 54179; // 14 LOW
+  trains[58].speeds[14].straight_vel = 54179; // 14 LOW
   trains[58].speeds[14].curved_vel = 53686;
   trains[58].speeds[14].stopping_distance = 1188;
-  trains[58].speeds[13].str_vel = 53192; // 13 HIGH
+  trains[58].speeds[13].straight_vel = 53192; // 13 HIGH
   trains[58].speeds[13].curved_vel = 53983;
   trains[58].speeds[13].stopping_distance = 1052;
-  trains[58].speeds[12].str_vel = 48798; // 12 HIGH
+  trains[58].speeds[12].straight_vel = 48798; // 12 HIGH
   trains[58].speeds[12].curved_vel = 50517;
   trains[58].speeds[12].stopping_distance = 852;
-  trains[58].speeds[11].str_vel = 41440; // 11 HIGH
+  trains[58].speeds[11].straight_vel = 41440; // 11 HIGH
   trains[58].speeds[11].curved_vel = 41749;
   trains[58].speeds[11].stopping_distance = 645;
-  trains[58].speeds[10].str_vel = 33814; // 10 HIGH
+  trains[58].speeds[10].straight_vel = 33814; // 10 HIGH
   trains[58].speeds[10].curved_vel = 34627;
   trains[58].speeds[10].stopping_distance = 460;
-  trains[58].speeds[9].str_vel = 28004; // 9 HIGH
+  trains[58].speeds[9].straight_vel = 28004; // 9 HIGH
   trains[58].speeds[9].curved_vel = 27860;
   trains[58].speeds[9].stopping_distance = 336;
-  trains[58].speeds[8].str_vel = 22133; // 8 HIGH
+  trains[58].speeds[8].straight_vel = 22133; // 8 HIGH
   trains[58].speeds[8].curved_vel = 22370;
   trains[58].speeds[8].stopping_distance = 231;
-  trains[58].speeds[23].str_vel = 18907; // 8 LOW
+  trains[58].speeds[23].straight_vel = 18907; // 8 LOW
   trains[58].speeds[23].curved_vel = 19127;
   trains[58].speeds[23].stopping_distance = 186;
-  trains[58].speeds[24].str_vel = 25265; // 9 LOW
+  trains[58].speeds[24].straight_vel = 25265; // 9 LOW
   trains[58].speeds[24].curved_vel = 25270;
   trains[58].speeds[24].stopping_distance = 289;
-  trains[58].speeds[25].str_vel = 31219; // 10 LOW
+  trains[58].speeds[25].straight_vel = 31219; // 10 LOW
   trains[58].speeds[25].curved_vel = 31030;
   trains[58].speeds[25].stopping_distance = 402;
-  trains[58].speeds[26].str_vel = 38121; // 11 LOW
+  trains[58].speeds[26].straight_vel = 38121; // 11 LOW
   trains[58].speeds[26].curved_vel = 38043;
   trains[58].speeds[26].stopping_distance = 550;
-  trains[58].speeds[27].str_vel = 45551; // 12 LOW
+  trains[58].speeds[27].straight_vel = 45551; // 12 LOW
   trains[58].speeds[27].curved_vel = 44540;
   trains[58].speeds[27].stopping_distance = 754;
-  trains[58].speeds[28].str_vel = 52030; // 13 LOW
+  trains[58].speeds[28].straight_vel = 52030; // 13 LOW
   trains[58].speeds[28].curved_vel = 51056;
   trains[58].speeds[28].stopping_distance = 916;
-  trains[58].speeds[29].str_vel = 54344; // 14 LOW
+  trains[58].speeds[29].straight_vel = 54344; // 14 LOW
   trains[58].speeds[29].curved_vel = 52635;
   trains[58].speeds[29].stopping_distance = 1188;
 }

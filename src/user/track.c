@@ -3,6 +3,7 @@
 #include "syscall.h"
 #include "clock_server.h"
 #include "track.h"
+#include "rail_server.h"
 
 // TODO: Switch most printfs to putstrs, too lazy to count the number of chars
 
