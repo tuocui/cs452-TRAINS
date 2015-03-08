@@ -12,13 +12,13 @@
 // returns distance in mm
 int safe_distance_to_branch( train_t *train ) {
   int vel = (train->speeds[train->cur_speed]).straight_vel;
-  return ( vel * SWITCH_TIME ) / 100000 + SWITCH_BUFFER + train->len
+  return ( vel * SWITCH_TIME ) / 100000 + SWITCH_BUFFER + train->length;
 }
 
 // stopping distance + buffer + length of train
 // return distance in mm
 int safe_distance_to_stop( train_t *train ) {
-  return (train->speeds[train->cur_speed]).stopping_distance + STOP_BUFFER + train->len);
+  return (train->speeds[train->cur_speed]).stopping_distance + STOP_BUFFER + train->length;
 }
 
 // returns in ms
@@ -47,10 +47,10 @@ int get_mm_past_last_landmark( train_t *train, int cur_time ) {
   int prev_node_time = train->time_at_last_landmark * 10;
   int speed_finish_time = speed_change_time + accel_time( train->cur_speed, train->prev_speed );
   int cur_vel = train->speeds[train->cur_speed].straight_vel;
+  int prev_vel = train->speeds[train->prev_speed].straight_vel;
   if( speed_finish_time < prev_node_time ) {
     return ( ( cur_time - prev_node_time ) * cur_vel ) / 10000;
   } else if( speed_finish_time < cur_time ) {
-    int prev_vel = train->speeds[train->prev_speed].straight_vel;
     return ( ( cur_time - speed_finish_time ) * cur_vel ) / 10000 + 
            ( ( speed_finish_time - prev_node_time ) * prev_vel ) / 10000 + 
            ( ( speed_finish_time - prev_node_time ) * ( cur_vel - prev_vel ) ) / 20000;
