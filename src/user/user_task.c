@@ -10,6 +10,9 @@
 #include "track.h"
 #include "screen.h"
 #include "util.h"
+#include "rail_control.h"
+#include "track_node.h"
+#include "track_data_new.h"
 #include "calibration.h"
 
 #define CYCLES 1000
@@ -19,8 +22,10 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-#define A4 1
-//#define TEST
+//#define A4 1
+//#define RING_TEST
+#define RAIL_TEST
+
 
 //TODO remove testing struct
 struct Server {
@@ -510,6 +515,94 @@ void ring_buf_test( ) {
 
 }
 
+void dijkstra_test( ) {
+  debug( "dijkstra_test" );
+  /* initialize the heap */
+  min_heap_t min_heap;
+  int node_id2idx[NODE_MAX];
+  min_heap_node_t nodes[NODE_MAX];
+  init_min_heap( &min_heap, 0, node_id2idx, nodes );
+
+  ///* test heap_empty */
+  //assert(2, heap_empty( &min_heap ));
+  //min_heap.size = 1;
+  //assert( 2, !heap_empty( &min_heap ));
+  //min_heap.nodes[0].dist = 1;
+  //assert( 2, extract_min( &min_heap )->dist == 1 );
+  //assert( 2, heap_empty( &min_heap ));
+
+  ///* test heapify */
+  //min_heap.size = 7;
+  //int i = 0;
+  //for( ; i < min_heap.size; ++i ){
+  //  init_node( &(min_heap.nodes[i]), i, 6-i );
+  //}
+  //min_heap.nodes[0].dist = 0;
+  //make_min_heap( &min_heap, 0 );
+  //assert( 2, min_heap.nodes[0].id == 0 );
+
+  //min_heap.nodes[0].dist = 10;
+  //make_min_heap( &min_heap, 0 );
+  //assert( 2, min_heap.nodes[6].id == 0 );
+  //assert( 2, min_heap.nodes[6].dist == 10 );
+  //assert( 2, min_heap.nodes[0].id == 2 );
+  //assert( 2, min_heap.nodes[0].dist == 4 );
+  //assert( 2, min_heap.nodes[2].id == 6 );
+  //assert( 2, min_heap.nodes[2].dist == 0 );
+
+  //debug( "size: %d", min_heap.size );
+  //print_min_heap( &min_heap );
+
+  //track_node_t track_graph[TRACK_MAX];
+  //init_trackb( track_graph );
+
+  //debug( "track_graph addr: %x", track_graph );
+  //debug( "track_node size: %d", sizeof( track_node_t ));
+
+  //debug( "third field address: %x", &(track_graph[0].name));
+  //debug( "third field address: %x", &(track_graph[0].type));
+  //debug( "third field address: %x", &(track_graph[0].reverse));
+  //debug( "third field address: %x", &(track_graph[0].edge));
+
+  //track_node_t * node_3 = &(track_graph[3]);
+  //debug( "track_node A4 addr: %x", node_3 );
+  //debug( "address diff %d", (node_3 - track_graph) );
+  
+  track_node_t track_graph[TRACK_MAX];
+  init_trackb( track_graph );
+
+  int all_path[NODE_MAX];
+  int all_dist[NODE_MAX];
+  int all_step[NODE_MAX];
+
+  int src_id = 52;
+  int dst_id = 71;
+
+  dijkstra( track_graph, src_id, all_path, all_dist, all_step );
+
+  debug( "steps: %d", all_step[dst_id] );
+  //int dst_path[all_step[dst_id]];
+  
+  debug( "dijkstra results: " );
+  int i;
+  for( i = 0; i < NODE_MAX; ++i ) {
+    bwprintf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
+        i, all_dist[i], all_path[i], all_step[i] );
+  }
+
+  //int dst_path[NODE_MAX];
+  //int *steps;
+
+  //print_shortest_path( track_graph, all_path, all_step, src_id, dst_id, dst_path );
+
+  for( i = 0; i < NODE_MAX; ++i ) {
+    int all_dst_path[all_step[i]];
+    print_shortest_path( track_graph, all_path, all_step, src_id, i, all_dst_path );
+  }
+
+
+}
+
 void first_user_task( ){
   debug( "first user task" );
   //bwsetfifo( COM2, OFF );
@@ -555,10 +648,14 @@ void first_user_task( ){
   
 #endif /* A4 */
 
-#ifdef TEST
+#ifdef RING_TEST
   ring_buf_test( );
 #endif /* TEST */
 
-  //bwprintf( COM2, "Exit first_user_task\n\r");
+#ifdef RAIL_TEST
+  dijkstra_test( );
+#endif /* RAIL_TEST */
+
+  bwprintf( COM2, "Exit first_user_task\n\r");
   Exit( );
 }
