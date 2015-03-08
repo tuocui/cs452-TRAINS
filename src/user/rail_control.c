@@ -19,31 +19,7 @@ void init_command( commands_t* cmds ) {
   cmds->switch_id2= cmds->switch_action2= cmds->switch_delay2= 0;
 }
 
-void get_next_command( track_node_t* track_graph, int safe_branch_dist, int src_id, int dest_id, commands_t* cmds ) {
-
-  assert( 1, track_graph && cmds && src_id >= 0 && src_id < TRACK_MAX && dest_id >= 0 && dest_id < TRACK_MAX );
-  /* currently we only run dijkstra on sensor hit, so src_id should be  a sensor */
-  assert( 1, track_graph[src_id].type == NODE_SENSOR );
-
-  /* run dijkstra on the src and dest */
-  int all_path[NODE_MAX], all_dist[NODE_MAX], all_step[NODE_MAX];
-  dijkstra( track_graph, src_id, all_path, all_dist, all_step );
-  debug( "dist from src to dest: %d", all_dist[dest_id] );
-  
-  /* get shortest path for our destination */
-  int dest_path[all_step[dest_id]];
-  get_shortest_path( all_path, all_step, src_id, dest_id, dest_path );
-
-  //TODO: remove the debug print                                     //remove debug
-  print_shortest_path( track_graph, all_path, all_step, src_id, dest_id, dest_path );
-  int i;                                                             //remove debug
-  for( i = 0; i < all_step[dest_id]; ++i ) {                          //remove debug
-    bwprintf( COM2, "->%s", track_graph[dest_path[i]].name );         //remove debug
-  }                                                                  //remove debug
-  bwprintf( COM2, "\n\r" );
-  //TODO: end of debug;                                              //remove debug
-  
-  /* we are sitting on the first sensor, we set the prev_sensor to be the one we
+/* we are sitting on the first sensor, we set the prev_sensor to be the one we
    * are sitting on. We update the prev_sensor when we see another one. For each
    * branch, we check:
    * if prev_sensor == src_id: 
@@ -64,20 +40,53 @@ void get_next_command( track_node_t* track_graph, int safe_branch_dist, int src_
    * else
    *  do nothing
    */
+//TODO: change input to a train struct 
+void get_next_command( track_node_t* track_graph, int stop_dist, int safe_branch_dist, int src_id, int dest_id, commands_t* cmds ) {
+
+  assert( 1, track_graph && cmds && src_id >= 0 && src_id < TRACK_MAX && dest_id >= 0 && dest_id < TRACK_MAX );
+  /* currently we only run dijkstra on sensor hit, so src_id should be  a sensor */
+  assert( 1, track_graph[src_id].type == NODE_SENSOR );
+
+  /* run dijkstra on the src and dest */
+  int all_path[NODE_MAX], all_dist[NODE_MAX], all_step[NODE_MAX];
+  dijkstra( track_graph, src_id, all_path, all_dist, all_step );
+  debug( "dist from src to dest: %d", all_dist[dest_id] );
+  
+  /* get shortest path for our destination */
+  int dest_path[all_step[dest_id]];
+  get_shortest_path( all_path, all_step, src_id, dest_id, dest_path );
+
+  int i;
   int prev_sensor_id = src_id;
   int second_sensor_id = -1;
   int steps_to_dest = all_step[dest_id];
   int cur_node_id;
   int switch_count = 0;
   int action;
+
+  print_shortest_path( track_graph, all_path, all_step, src_id, dest_id, dest_path);
+  debug( "steps_to_dest: %d", steps_to_dest );
   for( i = 0; i < steps_to_dest; ++i ) {
     cur_node_id = dest_path[i];
+    /* if the node is the end of the route */
+    if( i == steps_to_dest - 1 ) {
+      /* get dist between sensor and dest */  
+      int sensor2dest_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
+      /* if we are the last sensor or the dest and second sensor is too close */
+      if( prev_sensor_id == src_id || 
+         ( prev_sensor_id == second_sensor_id && stop_dist > sensor2dest_dist )) {
+        cmds->train_id = train_id;
+        cmds->train_action = TR_STOP;
+        cmds->train_delay = ( sensor2dest_dist - stop_dist ) / train_velocity;
+      }
+    }
     /* update prev_sensor iff cur_sensor is the sensor immediately after src */
-    if( track_graph[cur_node_id].type == NODE_SENSOR && second_sensor_id == -1 ) {
+    else if( track_graph[cur_node_id].type == NODE_SENSOR && second_sensor_id == -1 ) {
       second_sensor_id = cur_node_id;
       prev_sensor_id = second_sensor_id;
     } 
     else if( track_graph[cur_node_id].type == NODE_BRANCH ) {
+      debug( "branch_name: %s", track_graph[cur_node_id].name );
       action = -1;
       /* reverse case */
       if(( i - 1 >= 0 ) && track_graph[dest_path[i-1]].type == NODE_MERGE ) {
@@ -88,12 +97,14 @@ void get_next_command( track_node_t* track_graph, int safe_branch_dist, int src_
       else if( i + 1 < steps_to_dest ) { 
         assert( 1, switch_count < 3 );
 
-        #define set_switch( _cmds, _switch_count, _switch_id, _ACTION ) \
+        #define set_switch( _cmds, _switch_count, _switch_id, _action, _delay ) \
           ++(_cmds->sw_count); \
           _cmds->switch_id##_switch_count = _switch_id; \
-          _cmds->switch_action##_switch_count = _ACTION; 
+          _cmds->switch_action##_switch_count = _action; \
+          _cmds->switch_delay##_switch_count = _delay; 
         /* get dist between sensor and branch*/  
         int sensor2branch_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
+        int sensor2branch_time = SW_TIME;//FIXME: replace it with actual time
 
         /* issue switch commands */
         if(( prev_sensor_id == src_id && sensor2branch_dist >= safe_branch_dist) ||
@@ -105,6 +116,7 @@ void get_next_command( track_node_t* track_graph, int safe_branch_dist, int src_
                      track_graph[cur_node_id].num > 152 || 
                      track_graph[cur_node_id].num < 157, 
                      "num: %d", track_graph[cur_node_id].num );
+          assert( 1, i + 1 < steps_to_dest );
           assert( 1, (( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest == 
                       &track_graph[dest_path[i+1]] ) || 
                       ( track_graph[cur_node_id].edge[DIR_CURVED].dest == 
@@ -114,13 +126,13 @@ void get_next_command( track_node_t* track_graph, int safe_branch_dist, int src_
                      &track_graph[dest_path[i+1]] ) ? SW_STRAIGHT : SW_CURVED;
 
           if( switch_count == 0 ){
-            set_switch( cmds, 0, track_graph[cur_node_id].num, action );
+            set_switch( cmds, 0, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME );
           }
           else if( switch_count == 1 ) {
-            set_switch( cmds, 1, track_graph[cur_node_id].num, action );
+            set_switch( cmds, 1, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME);
           }
           else if( switch_count == 2 ) {
-            set_switch( cmds, 2, track_graph[cur_node_id].num, action );
+            set_switch( cmds, 2, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME );
           }
           else
             assert( 1, false );
@@ -420,16 +432,14 @@ void dijkstra( struct track_node* track_graph, int src_id, int* path, int* dist,
 
 
 void get_shortest_path( int* all_path, int* all_step, int src_id, int dest_id, int* dest_path ) {
-  int steps = all_step[dest_id];
-  while( steps ) {
+  int steps = all_step[dest_id] - 1;
+  while( steps >= 0 ) {
     dest_path[steps] = dest_id;
-
-    if( dest_id == src_id )
-      break;
-
     dest_id = all_path[dest_id];
     --(steps);
   }
+  assertm( 1, steps == -1, "steps: %d", steps );
+  
 }
 
 void print_shortest_path( track_node_t* track_graph, int* all_path, int* all_step, int src_id, int dest_id, int* dest_path ) {
@@ -444,6 +454,7 @@ void print_shortest_path( track_node_t* track_graph, int* all_path, int* all_ste
     tmp_id = all_path[tmp_id];
     --(steps);
   }
+  assert( 1, steps == -1 );
 
   steps = all_step[dest_id];
   int i;

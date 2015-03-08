@@ -46,6 +46,8 @@
 #define SW155  21 
 #define SW156  22 
 
+#define SW_TIME     100 // in ms
+
 struct track_node;
 
 typedef struct _commands_ {

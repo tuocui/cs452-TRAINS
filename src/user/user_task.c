@@ -495,7 +495,7 @@ void dijkstra_test( ) {
   int all_dist[NODE_MAX];
   int all_step[NODE_MAX];
 
-  int src_id = 71;
+  int src_id = 45;
   int dst_id = 14;
   int safe_branch_dist = 0;
 
