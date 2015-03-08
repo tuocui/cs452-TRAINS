@@ -48,7 +48,7 @@ void init_schedulers( global_context_t* gc ) {
 
 void add_to_priority( global_context_t *gc, task_descriptor_t *td ) {
   unsigned int priority = td->priority;
-  assert(0, priority != 0, "ERROR: should not pass in priority = 0");
+  assertm( 0, priority != 0, "ERROR: should not pass in priority = 0");
   scheduler_t *scheduler = &((gc->priorities)[priority]);
   task_descriptor_t *last_td = scheduler->last_in_queue;
   if ( last_td != NULL ) {
@@ -65,7 +65,7 @@ void add_to_priority( global_context_t *gc, task_descriptor_t *td ) {
   ++(scheduler->num_in_queue);
 
   assert(0, scheduler->num_in_queue > 0);
-  assert(0, scheduler->num_in_queue <= TD_MAX, "Fuck, scheduling fucked up");
+  assertm(0, scheduler->num_in_queue <= TD_MAX, "Fuck, scheduling fucked up");
 }
 
 task_descriptor_t *schedule( global_context_t *gc) {

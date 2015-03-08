@@ -4,7 +4,13 @@
 
 #define REDBOOT_OFFSET 0x218000
 #define NULL ((void *) 0)
+#define INT_MAX ((unsigned)0xFFFFFFFF) >> 1 
+//#define INT_MIN (signed)0xFFFFFFFF
 typedef unsigned int size_t;
+typedef enum {
+  false = 0,
+  true = 1,
+} bool;
 
 /* scheduling */
 /* NOTE: Lowest priority reserved for idle task */
@@ -58,4 +64,8 @@ typedef unsigned int size_t;
 #define COM2_OUT_IND        3
 #define COM2_IN_IND         4
 
+
+/* track and trains */
+#define TRACK_MAX 140
+#define NODE_MAX TRACK_MAX 
 #endif
