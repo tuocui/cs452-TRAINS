@@ -5,6 +5,8 @@
 
 #define NUM_SPEEDS 30
 
+#define TR_MAX 1
+
 #define TR_STOP   0
 #define TR_SPD_1  1 
 #define TR_SPD_2  2 
@@ -25,6 +27,7 @@
 #define SW_CURVED   0 
 #define SW_STRAIGHT 1 
 
+#define SW_MAX  23
 #define SW1     1 
 #define SW2     2 
 #define SW3     3
@@ -52,12 +55,11 @@
 
 struct track_node;
 
-typedef struct _commands_ {
-
+typedef struct _rail_cmds_ {
   int train_id;
   int train_action;
   int train_delay;
-
+  
   int sw_count;
   int switch_id0;
   int switch_action0;
@@ -68,31 +70,34 @@ typedef struct _commands_ {
   int switch_id2;
   int switch_action2;
   int switch_delay2;
-} commands_t;
+} rail_cmds_t;
 
 typedef struct _speed_info_ {
-  int speed;
+  int speed; //TODO
   int high_low;
-  int str_vel;
+  int straight_vel;
   int curved_vel;
   int stopping_distance;
   int stopping_time;
+  int safe_branch_distance;
   int accel_distance;
   int accel_time;
 } speed_info_t;
 
-typedef struct _train_ {
-  int prev_landmark;
-  int next_landmark;
-  int nm_past_landmark;
+typedef struct _train_state_ {
+  struct track_node* track_graph;
+  int train_id;
+  int prev_node_id;
+  int next_node_id;
+  int nm_past_landmark; // TODO
   int cur_speed;
   speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
-} train_t;
+} train_state_t;
 
-void init_command( commands_t* cmds );
+void init_rail_cmds( rail_cmds_t* cmds );
 
-void get_next_command( struct track_node * track_graph, int stop_dist, int src_id, int dst_id, commands_t* cmds );
 
+void get_next_command( train_state_t* train, rail_cmds_t* cmds );
 
 /* note: this is not a complete min heap library, it does not support inserting
  * any number to the heap. This heap is modified to better suit the needs of dijkstra's

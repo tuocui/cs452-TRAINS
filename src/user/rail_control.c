@@ -12,36 +12,45 @@
  * to decide which direction to go to. 
  */
 
-void init_command( commands_t* cmds ) {
+/* NOTES on get_next_command work flow:
+ * we are sitting on the first sensor, we set the prev_sensor to be the one we
+ * are sitting on. We update the prev_sensor when we see another one. For each
+ * branch, we check:
+ * if prev_sensor == src_id: 
+ *    if dist < safe_branch_dist, 
+ *       do not do anything
+ *    if dist >= safe_branch dist, 
+ *        branch it
+ * if prev_sensor == second_sensor after src_sensor:
+ *    if dist < safe_branch_dist 
+ *        branch it we wouldn't have time later
+ *    if dist >= safe_branch_dist
+ *        do not do anything
+ *
+ * overall:
+ * if (( prev_sensor == src_id && dist >= safe_branch_dist ) || 
+ *       prev_sensor == second_sensor && dist < safe_branch dist ) 
+ *       switch turn out
+ * else
+ *  do nothing
+ */
+
+
+inline void init_rail_cmds( rail_cmds_t* cmds ) {
   cmds->sw_count = cmds->train_id = cmds->train_action = cmds->train_delay = \
   cmds->switch_id0= cmds->switch_action0= cmds->switch_delay0= \
   cmds->switch_id1= cmds->switch_action1= cmds->switch_delay1= \
   cmds->switch_id2= cmds->switch_action2= cmds->switch_delay2= 0;
 }
 
-/* we are sitting on the first sensor, we set the prev_sensor to be the one we
-   * are sitting on. We update the prev_sensor when we see another one. For each
-   * branch, we check:
-   * if prev_sensor == src_id: 
-   *    if dist < safe_branch_dist, 
-   *       do not do anything
-   *    if dist >= safe_branch dist, 
-   *        branch it
-   * if prev_sensor == second_sensor after src_sensor:
-   *    if dist < safe_branch_dist 
-   *        branch it we wouldn't have time later
-   *    if dist >= safe_branch_dist
-   *        do not do anything
-   *
-   * overall:
-   * if (( prev-sensor == src_id && dist >= safe_branch_dist ) || 
-   *       prev_sensor == second_sensor && dist < safe_branch dist ) 
-   *       switch turn out
-   * else
-   *  do nothing
-   */
-//TODO: change input to a train struct 
-void get_next_command( track_node_t* track_graph, int stop_dist, int safe_branch_dist, int src_id, int dest_id, commands_t* cmds ) {
+void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
+  track_node_t* track_graph = train->track_graph;
+  int train_id = train->train_id;
+  int src_id = train->prev_node_id;
+  int dest_id = train->next_node_id;
+  int stop_dist;//TODO = train->speeds[1].stopping_time;
+  int safe_branch_dist; //TODO
+  int train_velocity; // TODO
 
   assert( 1, track_graph && cmds && src_id >= 0 && src_id < TRACK_MAX && dest_id >= 0 && dest_id < TRACK_MAX );
   /* currently we only run dijkstra on sensor hit, so src_id should be  a sensor */
@@ -165,7 +174,7 @@ void get_next_command( track_node_t* track_graph, int stop_dist, int safe_branch
 }
 
 
-//TODO: put below into a separate file "track_search"
+//TODO: put below into a separate file "rail_control_helper"
 inline void init_node( min_heap_node_t * node, int id, int dist ) {
   assert( 1, node || id >= 0 || id < NODE_MAX );
 

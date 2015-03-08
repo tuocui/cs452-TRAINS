@@ -13,6 +13,14 @@
 #define CURVED 34
 #define STRAIGHT 33
 
+typedef struct _sensor_data_ {
+
+  //TODO:
+  //thnk about what to send to the server, should it be an unprocessed byte,
+  //or a processed sensor ID. The server eventually needs a sensor ID 
+  //to examine which train was expeting to hit this sensor.
+} sensor_data_t;
+
 int track_go( );
 
 int track_stop( );

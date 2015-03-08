@@ -603,18 +603,21 @@ void dijkstra_test( ) {
   //  print_shortest_path( track_graph, all_path, all_step, src_id, i, all_dst_path );
   //}
   
-  commands_t cmds;
+  train_state_t train;
+  //TODO initialize safe_branch, prev_ and next_ node_id
+  rail_cmds_t cmds;
   while( safe_branch_dist < 500 ) {
-    init_command( &cmds );
-    get_next_command( track_graph, safe_branch_dist, src_id, dst_id, &cmds );
+    init_rail_cmds( &cmds );
+    //FIXME: assign values to train
+    get_next_command( &train, &cmds );
     safe_branch_dist += 50;
 
   debug( "Commandes: \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d \
                      \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d \
                      \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
-      cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
-      cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
-      cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+                        cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
+                        cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
+                        cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
   }
 
 }
