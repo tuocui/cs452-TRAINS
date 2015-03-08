@@ -41,19 +41,20 @@
 #define SW16   16
 #define SW17   17
 #define SW18   18
-#define SW153  153
-#define SW154  154
-#define SW155  155
-#define SW156  156
+#define SW153  19 
+#define SW154  20 
+#define SW155  21 
+#define SW156  22 
 
+struct track_node;
 
 typedef struct _commands_ {
-  bool has_cmd;
 
   int train_id;
   int train_action;
   int train_delay;
 
+  int sw_count;
   int switch_id0;
   int switch_action0;
   int switch_delay0;
@@ -65,16 +66,10 @@ typedef struct _commands_ {
   int switch_delay2;
 } commands_t;
 
-void init_command( commands_t* cmds ) {
-  cmds->has_cmd = cmds->train_id = cmds->train_action = cmds->train_delay = \
-  cmds->switch_id0= cmds->switch_action0= cmds->switch_delay0= \
-  cmds->switch_id1= cmds->switch_action1= cmds->switch_delay1= \
-  cmds->switch_id2= cmds->switch_action2= cmds->switch_delay2= 0;
-}
+void init_command( commands_t* cmds );
 
+void get_next_command( struct track_node * track_graph, int stop_dist, int src_id, int dst_id, commands_t* cmds );
 
-
-struct track_node;
 
 /* note: this is not a complete min heap library, it does not support inserting
  * any number to the heap. This heap is modified to better suit the needs of dijkstra's
