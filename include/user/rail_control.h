@@ -3,6 +3,8 @@
 
 #include "global.h"
 
+#define NUM_SPEEDS 30
+
 #define TR_STOP   0
 #define TR_SPD_1  1 
 #define TR_SPD_2  2 
@@ -67,6 +69,25 @@ typedef struct _commands_ {
   int switch_action2;
   int switch_delay2;
 } commands_t;
+
+typedef struct _speed_info_ {
+  int speed;
+  int high_low;
+  int str_vel;
+  int curved_vel;
+  int stopping_distance;
+  int stopping_time;
+  int accel_distance;
+  int accel_time;
+} speed_info_t;
+
+typedef struct _train_ {
+  int prev_landmark;
+  int next_landmark;
+  int nm_past_landmark;
+  int cur_speed;
+  speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
+} train_t;
 
 void init_command( commands_t* cmds );
 

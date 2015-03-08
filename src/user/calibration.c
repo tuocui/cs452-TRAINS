@@ -4,6 +4,7 @@
 #include "clock_server.h"
 #include "tools.h"
 #include "syscall.h"
+#include "rail_control.h"
 
 #define TRAIN_NUM 58
 #define WEIGHT_PREV 50
