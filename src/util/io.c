@@ -405,13 +405,13 @@ int Putstr( int channel, char *msg, int msg_len ) {
   int ret_val;
   switch( channel ) {
   case COM1: {
-    com_out_server_tid = 39;
+    com_out_server_tid = TD_MAX + 7;
     ret_val = Send( com_out_server_tid, (char *)&com_msg, com_msg_len, &rtn, 0 );
     assert( 1, ret_val >= 0 );
     break;
   }
   case COM2: {
-    com_out_server_tid = 35;
+    com_out_server_tid = TD_MAX + 3;
     ret_val = Send( com_out_server_tid, (char *)&com_msg, com_msg_len, &rtn, 0 );
     assert( 1, ret_val >= 0 );
     break;
@@ -434,7 +434,7 @@ int Getc( int channel ) {
     com_msg.request_type = COM_IN_GET;
     com_msg.msg_val = NULL;
     com_msg.msg_len = 0;
-    int com_in_server_tid = 41;
+    int com_in_server_tid = TD_MAX + 9;
     ret_val = Send( com_in_server_tid, (char *)&com_msg, sizeof( com_msg ), &rtn, 1 );
     assert( 1, ret_val >= 0 );
     return (int) rtn;
@@ -446,7 +446,7 @@ int Getc( int channel ) {
     com_msg.request_type = COM_IN_GET;
     com_msg.msg_val = NULL;
     com_msg.msg_len = 0;
-    int com_in_server_tid = 37;
+    int com_in_server_tid = TD_MAX + 5;
     ret_val = Send( com_in_server_tid, (char *)&com_msg, sizeof( com_msg ), &rtn, 1 );
     assert( 1, ret_val >= 0 );
     return (int) rtn;

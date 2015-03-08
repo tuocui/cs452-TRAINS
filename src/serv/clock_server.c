@@ -173,7 +173,7 @@ int Delay( int ticks ) {
     return 0;
   }
   //int clock_server_id = WhoIs( (char *)CLOCK_SERVER );
-  int clock_server_id = 43;
+  int clock_server_id =  TD_MAX + 11;
   if( clock_server_id < 0 ) {
     return -1;
   }
@@ -192,7 +192,7 @@ int DelayUntil( int ticks ) {
     return 0;
   }
   //int clock_server_id = WhoIs( (char *)CLOCK_SERVER );
-  int clock_server_id = 43;
+  int clock_server_id = TD_MAX + 11;
   if( clock_server_id < 0 ) {
     return -1;
   }
@@ -207,7 +207,7 @@ int DelayUntil( int ticks ) {
 
 int Time( ) {
   //int clock_server_id = WhoIs( (char *)CLOCK_SERVER );
-  int clock_server_id = 43;
+  int clock_server_id =  TD_MAX + 11;
   if( clock_server_id < 0 ) {
     return -1;
   }
