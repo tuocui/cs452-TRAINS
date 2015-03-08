@@ -21,7 +21,14 @@ typedef struct train_t {
   int prev_landmark;
   int next_landmark;
   int nm_past_landmark;
+  int time_at_last_landmark;
+  int dest_landmark;
   int cur_speed;
+  int prev_speed;
+  int speed_change_time;
+  int fallback_sensors[2];
+  int pickup_len;
+  int length;
   struct speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
 } train_t;
 

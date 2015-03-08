@@ -551,7 +551,7 @@ void first_user_task( ){
 #endif /* A3 */
 
 #ifdef A4
-  a4_test_task3( );
+  a4_test_task( );
   
 #endif /* A4 */
 

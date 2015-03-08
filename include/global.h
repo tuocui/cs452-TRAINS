@@ -58,4 +58,7 @@ typedef unsigned int size_t;
 #define COM2_OUT_IND        3
 #define COM2_IN_IND         4
 
+/* track */
+#define NUM_SWITCHES        22
+
 #endif
