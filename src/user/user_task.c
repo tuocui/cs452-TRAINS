@@ -23,9 +23,9 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-//#define A4 1
+#define A4 1
 //#define RING_TEST
-#define RAIL_TEST
+//#define RAIL_TEST
 
 
 //TODO remove testing struct
@@ -663,7 +663,7 @@ void first_user_task( ){
 #endif /* A3 */
 
 #ifdef A4
-  a4_test_task( );
+  a4_test_task2( );
   
 #endif /* A4 */
 
