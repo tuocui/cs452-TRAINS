@@ -97,6 +97,7 @@ int handle_rev( char *cmd_buffer, short *train_speeds ) {
   return 0;
 }
 
+// NEED TO SEND
 int handle_switch( char *cmd_buffer ) {
   int buf_ind = 3;
   short switch_num = parse_short( cmd_buffer, &buf_ind );
@@ -137,6 +138,10 @@ int handle_kill( ) {
   return 0;
 }
 
+int handle_quit( ) {
+  return QUIT_CMD;
+}
+
 int process_buffer( char *cmd_buffer, short *train_speeds ) {
   int cmd = get_cmd( cmd_buffer );
 
@@ -157,7 +162,7 @@ int process_buffer( char *cmd_buffer, short *train_speeds ) {
     handle_kill( );
     break;
   case QUIT_CMD:
-    return QUIT_CMD;
+    return handle_quit( );
     break;
   default:
     output_invalid( );

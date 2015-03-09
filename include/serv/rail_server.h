@@ -25,6 +25,19 @@ typedef struct _sensor_args_ {
   struct _train_state_ *trains;
 } sensor_args_t;
 
+typedef struct _train_cmd_args_ {
+  enum {
+    STOP,
+    REVERSE,
+    CHANGE_SPEED,
+  } cmd;
+  int speed_num;
+} train_cmd_args_t;
+
+typedef struct _switch_cmd_args_ {
+  int state;
+} switch_cmd_args_t;
+
 typedef struct _rail_msg_ {
   enum {
     SENSOR_DATA = 0,

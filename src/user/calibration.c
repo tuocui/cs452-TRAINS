@@ -655,21 +655,27 @@ void calibrate_accel_time( ) {
 /* TODO: Calibrate stopping time */
 /* 
   Things to calibrate:
-  - stopping time (once we have velocity and stopping distance) - Can do mathematically, = (2*d)/v0
-  - Figure out that accel/decel model, is it better to just model accel/decel as linear? - SAT/SUN (might have already done it?) 
-    - How what to assume for accel/decel distance/time? Can we assume a linear function with the difference in speed as x?
-  - How to send sensor signals to the controller?
-  - Calculate reverse costs - SUN
-  - Next sensor prediction (time it takes to hit next sensor) - SAT
+  - user commands - HIGH PRI - TONY - MON
+  - More accurate stopping distance - HIGH PRI - TONY - MON
+    - get value for accel/decel
+    - accel is more than decel
+  - stopping time (once we have velocity and stopping distance) - Can do mathematically, = (2*d)/v0 - HIGH PRI - TONY - MON
+  - update train speed on set_train_speed // HIGH PRI - TONY - MON
+  - update_costs( graph, velocity ) // MED-PRI - TONY
+  - Calculate reverse costs - SUN (LOW PRI - TONY)
+  - Assert ring buffer - LOW PRI - TONY
+  - Calibrate another train - VERY LOW PRI
+
+  - train initialization. how? - HIGH PRI - TONY/WILSON
+
+  - Next sensor prediction (time it takes to hit next sensor) - SAT (HIGH PRI, WILSON)
     - What's the next sensor?
-    - How long till next sensor?
-    - Actual time hit next sensor?
-  - time_to_next_node SO MUCH HARDER THAN I THOUGHT =(((((
-  - time_to_next_sensor (this assignment needs this) DONE woo
-  - get_next_sensor
-  - get dist between nodes
-  - update_costs( graph, velocity )
-  - update train speed on set_train_speed
-  - train initialization. how?
+    - get_next_sensor // HIGH PRI - WILSON
+    - get dist between sensor nodes // HIGH PRI - WILSON
+  - sensor hit to train mapping - WILSON
+
+  - How long till next sensor? // DONE, need testing
+  - time_to_next_sensor // DONE, need testing
+    - NOTE: Update this after graph search / speed changes
 */
 

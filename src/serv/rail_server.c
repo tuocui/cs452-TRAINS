@@ -141,6 +141,15 @@ void rail_server( ) {
   }
   sensor_args_t sensor_args;
   sensor_args.trains = trains;
+
+  /* Train action workers */
+  /*
+  int train_conductor_tids[TR_MAX];
+  for( i = 0; i < TR_MAX; ++i ) {
+    train_worker_tids[i] = Create( 10, &sensor_worker );
+    assert( 1, sensor_worker_tids[i] > 0 );
+    Send( sensor_worker_tids[i], (char *)&client_tid, 0, (char *)&client_tid, 0 );
+  }*/
   FOREVER { 
     Receive( &client_tid, (char *)&receive_msg, sizeof( rail_msg_t ));
     switch( receive_msg.request_type ) {
@@ -158,6 +167,11 @@ void rail_server( ) {
         }
         break;
       case USER_INPUT:
+        if( (receive_msg.to_server_content.rail_cmds)->train_id ) {
+          
+        } else if ( (receive_msg.to_server_content.rail_cmds)->switch_id0 ) {
+
+        }
         break;
       case TIMER_READY:
         // update all trains positions
