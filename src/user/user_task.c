@@ -35,7 +35,9 @@ struct Server {
 };
 
 void idle_task( ) {
-  debug( "IN IDLE TASK" );
+  // TODO: Figure out a way so that we can do things in this idle task.
+  // PROBLEM: How to make sure that we can sync without blocking.
+  // IDEA: Constantly reply to rail server.
   FOREVER {
   }
   Exit( );

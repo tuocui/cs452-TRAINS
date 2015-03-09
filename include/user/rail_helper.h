@@ -24,4 +24,8 @@ int get_next_sensor( struct _train_state_ *train, int *dist_to_next_sensor );
 
 void update_velocity( struct _train_state_ *train, int cur_time, int prev_time, int dist );
 
+void init_trains( struct _train_state_ *trains, int num_trains );
+
+void init_switches( int *switch_states, int num_switches );
+
 #endif

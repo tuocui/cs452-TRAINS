@@ -85,12 +85,12 @@ void sensor_worker( ) {
     train_state_t *train = &(trains[TRAIN_58]); 
     cur_time = Time( );
     if( train->state == INITIALIZING ) {
-      set_train_speed( train->train_id, 0 );
+      set_train_speed( train, 0 );
       train->cur_speed = 0;
       train->prev_speed = 0;
       train->speed_change_time = cur_time;
     } else {
-      update_velocity( train, cur_time, train->time_at_last_landmark, train->dist_to_next_sensor );
+      //update_velocity( train, cur_time, train->time_at_last_landmark, train->dist_to_next_sensor );
     }
     //assert( 2, train->next_sensor_id == sensor_num );
     train->prev_sensor_id = sensor_num;
@@ -103,6 +103,106 @@ void sensor_worker( ) {
   }
 }
 
+void train_exe_worker( ) {
+  rail_msg_t rail_msg;
+  rail_msg.request_type = TRAIN_EXE_READY;
+  rail_msg.to_server_content.nullptr = NULL;
+  rail_msg.from_server_content.nullptr = NULL;
+  int rail_server_tid;
+  train_state_t *train;
+  train_cmd_args_t train_cmd_args;
+  Receive( &rail_server_tid, (char *)&train, sizeof( train ) );
+  Reply( rail_server_tid, (char *)&rail_msg, 0 );
+
+  FOREVER {
+    Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&train_cmd_args, sizeof(train_cmd_args) );
+    if( train_cmd_args.delay_time > 0 ) {
+      Delay( train_cmd_args.delay_time );
+    }
+    switch( train_cmd_args.cmd ) {
+    case TR_STOP:
+      train->state = STOPPING;
+      set_train_speed( train, 0 );
+      break;
+    case TR_REVERSE:
+      {
+        train->state = REVERSING;
+        int prev_speed = train->cur_speed;
+        set_train_speed( train, 0 );
+        Delay( 350 ); // TODO: Change this to stopping time;
+        set_train_speed( train, 15 );
+        set_train_speed( train, prev_speed );
+        break;
+      }
+    case TR_CHANGE_SPEED:
+      train->state = BUSY;
+      set_train_speed( train, train_cmd_args.speed_num );
+      // rerun graph search / prediction
+      break;
+    default:
+      break;
+    }
+    train->state = READY;
+    // rerun prediction
+  }
+}
+
+void switch_exe_worker( ) {
+  rail_msg_t rail_msg;
+  rail_msg.request_type = SWITCH_EXE_READY;
+  rail_msg.to_server_content.nullptr = NULL;
+  rail_msg.from_server_content.nullptr = NULL;
+  int rail_server_tid;
+  int switch_num;
+  int state;
+  int *switch_states;
+  switch_cmd_args_t switch_cmd_args;
+  Receive( &rail_server_tid, (char *)&switch_num, sizeof( switch_num ) );
+  Reply( rail_server_tid, (char *)&rail_msg, 0 );
+
+  FOREVER {
+    Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&switch_cmd_args, sizeof(switch_cmd_args) );
+    if( switch_cmd_args.delay_time > 0 ) {
+      Delay( switch_cmd_args.delay_time );
+    }
+    state = switch_cmd_args.state;
+    switch_states = switch_cmd_args.switch_states;
+    switch( state ) {
+    case SW_STRAIGHT:
+      set_switch( switch_num, STRAIGHT, switch_states );
+      break;
+    case SW_CURVED:
+      set_switch( switch_num, CURVED, switch_states );
+      break;
+    default:
+      break;
+    }
+  }
+}
+
+void update_trains( ) {
+  train_state_t *trains;
+  int rail_server_tid;
+  update_train_args_t update_train_args;
+  Receive( &rail_server_tid, (char *)&update_train_args, sizeof( update_train_args ) );
+  Reply( rail_server_tid, (char *)&trains, 0 );
+  trains = update_train_args.trains;
+  int i;
+  int cur_time;
+  int last_mm_past_landmark = 0;
+  FOREVER {
+    cur_time = Delay( 1 );
+    for( i = 0; i < TR_MAX; ++i ) {
+      trains[i].mm_past_landmark = get_mm_past_last_landmark( &(trains[i]), cur_time );
+      if( trains[i].mm_past_landmark < last_mm_past_landmark ) {
+        Printf( COM2, "\0337\033[1A\033[2K\rdistance between sensors: %d\0338", last_mm_past_landmark );
+      }
+      last_mm_past_landmark = trains[i].mm_past_landmark;
+      //trains[i].cur_vel = get_cur_vel( &(train[i]), cur_time );
+    }
+  }
+}
+
 void rail_server( ) {
   if( RegisterAs( (char*)RAIL_SERVER ) == -1 ) {
     bwputstr( COM2, "ERROR: failed to register rail_server, aborting ...\n\r" );
@@ -110,7 +210,7 @@ void rail_server( ) {
   }
   int client_tid;
   
-  //int switch_states[SW_MAX];
+  int switch_states[SW_MAX];
   int train_graph_search_tid[TR_MAX]; 
   //bool train_graph_search_ready[TR_MAX];
   //bool train_delay_treads_arrived[TR_MAX]; TODO
@@ -118,6 +218,7 @@ void rail_server( ) {
   rail_msg_t receive_msg;
 
   init_trains( trains, TR_MAX );
+  init_switches( switch_states, SW_MAX );
 
   int i;
   for( i = 0; i < TR_MAX; ++i ) {
@@ -129,6 +230,11 @@ void rail_server( ) {
   assert( 1, sensor_courier_tid > 0 );
 
   //TODO: add secretary/courier
+
+  int update_trains_tid = Create( 13, &update_trains );
+  update_train_args_t update_train_args;
+  update_train_args.trains = trains;
+  Send( update_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
 
   int worker_tid;
   /* Sensor worker declarations */
@@ -143,13 +249,25 @@ void rail_server( ) {
   sensor_args.trains = trains;
 
   /* Train action workers */
-  /*
-  int train_conductor_tids[TR_MAX];
+  int train_exe_worker_tids[TR_MAX];
   for( i = 0; i < TR_MAX; ++i ) {
-    train_worker_tids[i] = Create( 10, &sensor_worker );
-    assert( 1, sensor_worker_tids[i] > 0 );
-    Send( sensor_worker_tids[i], (char *)&client_tid, 0, (char *)&client_tid, 0 );
-  }*/
+    train_exe_worker_tids[i] = Create( 10, &train_exe_worker );
+    assert( 1, train_exe_worker_tids[i] > 0 );
+    train_state_t *train = &(trains[i]);
+    Send( train_exe_worker_tids[i], (char *)&train, sizeof( train ), (char *)&client_tid, 0 );
+  }
+  train_cmd_args_t train_cmd_args;
+
+  /* Switch action workers */
+  int switch_exe_worker_tids[SW_MAX];
+  for( i = 1; i < SW_MAX; ++i ) {
+    switch_exe_worker_tids[i] = Create( 10, &switch_exe_worker );
+    assert( 1, switch_exe_worker_tids[i] > 0 );
+    Send( switch_exe_worker_tids[i], (char *)&i, sizeof( i ), (char *)&client_tid, 0 );
+  }
+  switch_cmd_args_t switch_cmd_args;
+  switch_cmd_args.switch_states = switch_states;
+
   FOREVER { 
     Receive( &client_tid, (char *)&receive_msg, sizeof( rail_msg_t ));
     switch( receive_msg.request_type ) {
@@ -167,10 +285,27 @@ void rail_server( ) {
         }
         break;
       case USER_INPUT:
+        Reply( client_tid, (char *)&receive_msg, 0 );
         if( (receive_msg.to_server_content.rail_cmds)->train_id ) {
-          
+          // TODO: Make a mapping between train number and idx
+          int train_exe_worker_tid;
+          switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
+          case 58:
+            train_exe_worker_tid = train_exe_worker_tids[TRAIN_58];
+            train_cmd_args.cmd = (receive_msg.to_server_content.rail_cmds)->train_action;
+            train_cmd_args.speed_num = (receive_msg.to_server_content.rail_cmds)->train_speed;
+            train_cmd_args.delay_time = (receive_msg.to_server_content.rail_cmds)->train_delay;
+            Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
+            break;
+          default:
+            break;
+          }
         } else if ( (receive_msg.to_server_content.rail_cmds)->switch_id0 ) {
-
+          int switch_exe_worker_tid = switch_exe_worker_tids[(receive_msg.to_server_content.rail_cmds)->switch_id0];
+          switch_cmd_args.state = (receive_msg.to_server_content.rail_cmds)->switch_action0;
+          switch_cmd_args.delay_time = 0;
+          //Printf( COM2, "sending task to %d", switch_exe_worker_tid );
+          Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
         }
         break;
       case TIMER_READY:
@@ -188,9 +323,8 @@ void rail_server( ) {
         // get train, graph search
         sensor_workers_push_back( client_tid );
         if( receive_msg.to_server_content.train_state != NULL ) {
-          Printf( COM2, "just got back stuff for train: %d\r\n", (receive_msg.to_server_content.train_state)->train_id );
+          // graph search
         }
-        // graph search
         break;
       default:
         assertm( 1, false, "ERROR: unrecognized request: %d", receive_msg.request_type );

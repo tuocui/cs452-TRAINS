@@ -2,8 +2,9 @@
 #include "io.h"
 #include "syscall.h"
 #include "clock_server.h"
-#include "track.h"
 #include "rail_server.h"
+#include "rail_control.h"
+#include "track.h"
 #include "nameserver.h"
 
 // TODO: Switch most printfs to putstrs, too lazy to count the number of chars
@@ -20,10 +21,40 @@ int track_stop( ) {
 }
 
 // Go train go!
-short set_train_speed( short train, short speed ) {
+short set_train_speed( train_state_t *train, short speed ) {
   if ( speed > 100 || speed < 0 ) {
     speed = 0;
   }
+
+  if( speed > 15 ) {
+    speed -= 15;
+  }
+
+  if( speed == 15 ) {
+    train->is_forward ^= 1;
+  } else {
+    int cur_speed = speed;
+    if( train->cur_speed < cur_speed ) {
+      cur_speed += 15;
+    }
+    train->prev_speed = train->cur_speed;
+    train->cur_speed = cur_speed;
+    train->speed_change_time = Time( );
+  }
+
+  char msg[2];
+  msg[0] = speed;
+  msg[1] = train->train_id;
+  Putstr( COM1, msg, 2 );
+  //Printf( COM2, "\0337\033[1A\033[2K\rTrain %d set to %d\0338", train, speed );
+  return speed;
+}
+
+short set_train_speed_old( short train, short speed ) {
+  if ( speed > 100 || speed < 0 ) {
+    speed = 0;
+  }
+
   char msg[2];
   msg[0] = speed;
   msg[1] = train;
@@ -59,7 +90,7 @@ int kill_switch( ) {
   return 0;
 }
 
-int set_switch( short switch_num, short c_s ) {
+int set_switch_old( short switch_num, short c_s ) {
   char c_s_c;
   char msg[2];
   msg[0] = c_s;
@@ -82,6 +113,31 @@ int set_switch( short switch_num, short c_s ) {
   return 0;
 }
 
+int set_switch( short switch_num, short c_s, int *switch_states ) {
+  char c_s_c;
+  char msg[2];
+  switch( c_s ) {
+  case STRAIGHT:
+    c_s_c = 'S';
+    switch_states[switch_num] = SW_STRAIGHT;
+    break;
+  case CURVED:
+    c_s_c = 'C';
+    switch_states[switch_num] = SW_CURVED;
+    break;
+  default:
+    c_s_c = '/';
+    break;
+  }
+  msg[0] = c_s;
+  msg[1] = switch_num;
+  Putstr( COM1, msg, 2 );
+  Delay( 20 );
+  kill_switch( );
+  update_switch_output( switch_num, c_s_c );
+  return 0;
+}
+
 
 // Initialize track
 int initialize_track( ) {
@@ -93,22 +149,21 @@ int initialize_track( ) {
   track_go( );
   while( !initialized ) {
     if ( switch_ind == 18 ) {
-      set_switch( 153, STRAIGHT );
+      set_switch_old( 153, STRAIGHT );
     } else if ( switch_ind == 19 ) {
-      set_switch( 154, CURVED );
+      set_switch_old( 154, CURVED );
     } else if ( switch_ind == 20 ) {
-      set_switch( 155, STRAIGHT );
+      set_switch_old( 155, STRAIGHT );
     } else if ( switch_ind == 21 ) {
-      set_switch( 156, CURVED );
+      set_switch_old( 156, CURVED );
       initialized = 1;
     } else {
-      set_switch( switch_ind + 1, CURVED );
+      set_switch_old( switch_ind + 1, CURVED );
     }
     ++switch_ind;
   }
   // And everything is good to go
   Putstr( COM2, "\033[2;0H\033[2K\033[24;0H>", 22 );
-
   return 0;
 }
 

@@ -49,21 +49,25 @@ int get_mm_past_last_landmark( train_state_t *train, int cur_time ) {
   int speed_finish_time = speed_change_time + get_accel_time( train->cur_speed, train->prev_speed );
   int cur_vel = train->speeds[train->cur_speed].straight_vel;
   int prev_vel = train->speeds[train->prev_speed].straight_vel;
+  cur_time *= 10;
   if( speed_finish_time < prev_sensor_time ) {
-    return ( ( cur_time - prev_sensor_time ) * cur_vel ) / 10000;
+    return ( ( cur_time - prev_sensor_time ) * cur_vel ) / 100000;
   } else if( speed_finish_time < cur_time ) {
-    return ( ( cur_time - speed_finish_time ) * cur_vel ) / 10000 + 
-           ( ( speed_finish_time - prev_sensor_time ) * prev_vel ) / 10000 + 
-           ( ( speed_finish_time - prev_sensor_time ) * ( cur_vel - prev_vel ) ) / 20000;
+    return ( ( cur_time - speed_finish_time ) * cur_vel ) / 100000 + 
+           ( ( speed_finish_time - prev_sensor_time ) * prev_vel ) / 100000 + 
+           ( ( speed_finish_time - prev_sensor_time ) * ( cur_vel - prev_vel ) ) / 200000;
   } else {
-    return ( ( cur_time - prev_sensor_time ) * prev_vel ) / 10000 + 
-           ( ( cur_time - prev_sensor_time ) * ( cur_vel - prev_vel ) ) / 20000;
+    return ( ( cur_time - prev_sensor_time ) * prev_vel ) / 100000 + 
+           ( ( cur_time - prev_sensor_time ) * ( cur_vel - prev_vel ) ) / 200000;
   }
+}
+
+int get_cur_vel( train_state_t *train, int cur_time ) {
+  return 123;
 }
 
 // node is index
 // returns time in ms
-// TODO: Figure this out
 // dist = distance from previous landmark it passed to the node
 int time_to_node( train_state_t *train, int dist_to_node, track_node_t *track ) {
   int cur_time = Time( ) * 10;
@@ -90,7 +94,6 @@ int time_to_node( train_state_t *train, int dist_to_node, track_node_t *track ) 
     }
   }
 }
-
 
 void init_trains( train_state_t *trains, int num_trains ) {
   int i;
@@ -130,14 +133,14 @@ void init_trains( train_state_t *trains, int num_trains ) {
   trains[TRAIN_58].speed_change_time = 0;
   trains[TRAIN_58].is_forward = 1;
   trains[TRAIN_58].state = NOT_INITIALIZED;
-  trains[TRAIN_58].speeds[14].straight_vel = 54179; // 14 LOW
-  trains[TRAIN_58].speeds[14].curved_vel = 53686;
+  trains[TRAIN_58].speeds[14].straight_vel = 50579; // 14 HIGH
+  trains[TRAIN_58].speeds[14].curved_vel = 50586;
   trains[TRAIN_58].speeds[14].stopping_distance = 1188;
-  trains[TRAIN_58].speeds[13].straight_vel = 53192; // 13 HIGH
-  trains[TRAIN_58].speeds[13].curved_vel = 53983;
+  trains[TRAIN_58].speeds[13].straight_vel = 50592; // 13 HIGH
+  trains[TRAIN_58].speeds[13].curved_vel = 50583;
   trains[TRAIN_58].speeds[13].stopping_distance = 1052;
   trains[TRAIN_58].speeds[12].straight_vel = 48798; // 12 HIGH
-  trains[TRAIN_58].speeds[12].curved_vel = 50517;
+  trains[TRAIN_58].speeds[12].curved_vel = 48517;
   trains[TRAIN_58].speeds[12].stopping_distance = 852;
   trains[TRAIN_58].speeds[11].straight_vel = 41440; // 11 HIGH
   trains[TRAIN_58].speeds[11].curved_vel = 41749;
@@ -154,14 +157,14 @@ void init_trains( train_state_t *trains, int num_trains ) {
   trains[TRAIN_58].speeds[23].straight_vel = 18907; // 8 LOW
   trains[TRAIN_58].speeds[23].curved_vel = 19127;
   trains[TRAIN_58].speeds[23].stopping_distance = 186;
-  trains[TRAIN_58].speeds[24].straight_vel = 25265; // 9 LOW
-  trains[TRAIN_58].speeds[24].curved_vel = 25270;
+  trains[TRAIN_58].speeds[24].straight_vel = 24265; // 9 LOW
+  trains[TRAIN_58].speeds[24].curved_vel = 24270;
   trains[TRAIN_58].speeds[24].stopping_distance = 289;
   trains[TRAIN_58].speeds[25].straight_vel = 31219; // 10 LOW
   trains[TRAIN_58].speeds[25].curved_vel = 31030;
   trains[TRAIN_58].speeds[25].stopping_distance = 402;
-  trains[TRAIN_58].speeds[26].straight_vel = 38121; // 11 LOW
-  trains[TRAIN_58].speeds[26].curved_vel = 38043;
+  trains[TRAIN_58].speeds[26].straight_vel = 37521; // 11 LOW
+  trains[TRAIN_58].speeds[26].curved_vel = 37543;
   trains[TRAIN_58].speeds[26].stopping_distance = 550;
   trains[TRAIN_58].speeds[27].straight_vel = 45551; // 12 LOW
   trains[TRAIN_58].speeds[27].curved_vel = 44540;
@@ -169,10 +172,35 @@ void init_trains( train_state_t *trains, int num_trains ) {
   trains[TRAIN_58].speeds[28].straight_vel = 52030; // 13 LOW
   trains[TRAIN_58].speeds[28].curved_vel = 51056;
   trains[TRAIN_58].speeds[28].stopping_distance = 916;
-  trains[TRAIN_58].speeds[29].straight_vel = 54344; // 14 LOW
+  trains[TRAIN_58].speeds[29].straight_vel = 53344; // 14 LOW
   trains[TRAIN_58].speeds[29].curved_vel = 52635;
   trains[TRAIN_58].speeds[29].stopping_distance = 1188;
 
+}
+
+void init_switches( int *switch_states, int num_switches ) {
+  switch_states[SW1] = SW_CURVED;
+  switch_states[SW2] = SW_CURVED;
+  switch_states[SW3] = SW_CURVED;
+  switch_states[SW4] = SW_CURVED;
+  switch_states[SW5] = SW_CURVED;
+  switch_states[SW6] = SW_CURVED;
+  switch_states[SW7] = SW_CURVED;
+  switch_states[SW8] = SW_CURVED;
+  switch_states[SW9] = SW_CURVED;
+  switch_states[SW10] = SW_CURVED;
+  switch_states[SW11] = SW_CURVED;
+  switch_states[SW12] = SW_CURVED;
+  switch_states[SW13] = SW_CURVED;
+  switch_states[SW14] = SW_CURVED;
+  switch_states[SW15] = SW_CURVED;
+  switch_states[SW16] = SW_CURVED;
+  switch_states[SW17] = SW_CURVED;
+  switch_states[SW18] = SW_CURVED;
+  switch_states[SW153] = SW_STRAIGHT;
+  switch_states[SW154] = SW_CURVED;
+  switch_states[SW155] = SW_STRAIGHT;
+  switch_states[SW156] = SW_CURVED;
 }
 
 void update_velocity( train_state_t *train, int cur_time, int prev_time, int dist ) {
