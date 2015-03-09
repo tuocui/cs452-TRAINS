@@ -17,15 +17,21 @@ typedef struct _sensor_data_ {
   int sensor_num;
 } sensor_data_t;
 
+struct _train_state_;
+
 int track_go( );
 
 int track_stop( );
 
-short set_train_speed( short train, short speed );
+short set_train_speed( struct _train_state_ *train, short speed );
+
+short set_train_speed_old( short train, short speed );
 
 int update_switch_output( short switch_num, char state );
 
-int set_switch( short switch_num, short c_s );
+int set_switch( short switch_num, short c_s, int *switch_states );
+
+int set_switch_old( short switch_num, short c_s );
 
 int kill_switch( );
 

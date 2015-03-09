@@ -27,10 +27,10 @@ void calibrate_train_velocity( ) {
   int k = 0;
   int l = 0;
   int cur_time;
-  set_train_speed( TRAIN_NUM, 30 );
+  set_train_speed_old( TRAIN_NUM, 30 );
   for( i = 14; i > 7; --i ) {
-    set_switch( 17, STRAIGHT );
-    set_switch( 13, STRAIGHT );
+    set_switch_old( 17, STRAIGHT );
+    set_switch_old( 13, STRAIGHT );
     int str_nsw_l = 0;
     int str_nsw_t = 0;
     int str_nsw_num = 0;
@@ -66,7 +66,7 @@ void calibrate_train_velocity( ) {
     //int c6_rdy = 0;
     //int e7_rdy = 0;
     //int d9_rdy = 0;
-    set_train_speed( TRAIN_NUM, i );
+    set_train_speed_old( TRAIN_NUM, i );
     Delay( 1500 );
     Putstr( COM1, &request_sensor, 1 );
     for( k = 0; k < NUM_SENSOR_BYTES; ++k ) {
@@ -253,10 +253,10 @@ void calibrate_train_velocity( ) {
     Printf( COM2, "trains[%d].speeds[%d].curved_vel = %d;\r\n", TRAIN_NUM, i, tight_nsw_t / tight_nsw_num );
     //Printf( COM2, "Going over a switch loses: %dms\r\n", ( ( str_nsw_t / str_nsw_num ) * 285 ) - ( str_sw_t / str_sw_num ) * 285 );
   }
-  set_train_speed( TRAIN_NUM, 0 );
+  set_train_speed_old( TRAIN_NUM, 0 );
   for( i = 8; i <= 14; ++i ) {
-    set_switch( 17, STRAIGHT );
-    set_switch( 13, STRAIGHT );
+    set_switch_old( 17, STRAIGHT );
+    set_switch_old( 13, STRAIGHT );
     int str_nsw_l = 0;
     int str_nsw_t = 0;
     int str_nsw_num = 0;
@@ -292,7 +292,7 @@ void calibrate_train_velocity( ) {
     //int c6_rdy = 0;
     //int e7_rdy = 0;
     //int d9_rdy = 0;
-    set_train_speed( TRAIN_NUM, i );
+    set_train_speed_old( TRAIN_NUM, i );
     Delay( 1500 );
     Putstr( COM1, &request_sensor, 1 );
     for( k = 0; k < NUM_SENSOR_BYTES; ++k ) {
@@ -479,7 +479,7 @@ void calibrate_train_velocity( ) {
     Printf( COM2, "trains[%d].speeds[%d].curved_vel = %d;\r\n", TRAIN_NUM, i + 15, tight_nsw_t / tight_nsw_num );
     //Printf( COM2, "Going over a switch loses: %d\r\n", ( ( str_nsw_t / str_nsw_num ) * 285 ) - ( str_sw_t / str_sw_num ) * 285 );
   }
-  set_train_speed( TRAIN_NUM, 0 ); 
+  set_train_speed_old( TRAIN_NUM, 0 ); 
   Exit( );
 }
 
@@ -497,8 +497,8 @@ void calibrate_stopping_distance( ) {
   char request_sensor = REQUEST_SENSOR;
   int k = 0;
   int l = 0;
-  set_switch( 17, STRAIGHT );
-  set_switch( 13, STRAIGHT );
+  set_switch_old( 17, STRAIGHT );
+  set_switch_old( 13, STRAIGHT );
   Putstr( COM1, &request_sensor, 1 );
   for( k = 0; k < NUM_SENSOR_BYTES; ++k ) {
     c = (char) Getc( COM1 );
@@ -531,7 +531,7 @@ void calibrate_stopping_distance( ) {
             //Printf( COM2, "sensor: %d\r\n", recent_sensor );
             switch( recent_sensor ) {
             case 205: // B5
-              set_train_speed( TRAIN_NUM, 0 );
+              set_train_speed_old( TRAIN_NUM, 0 );
               break;
             default:
               break;
@@ -543,7 +543,7 @@ void calibrate_stopping_distance( ) {
       ++module_num;
     }
   }
-  set_train_speed( TRAIN_NUM, 0 );
+  set_train_speed_old( TRAIN_NUM, 0 );
   Exit( );
 }
 
@@ -573,13 +573,13 @@ void calibrate_accel_time( ) {
   int v1;
   train_state_t trains[65];
   init_trains( trains, 65 );
-  set_switch( 17, STRAIGHT );
-  set_switch( 13, STRAIGHT );
+  set_switch_old( 17, STRAIGHT );
+  set_switch_old( 13, STRAIGHT );
   Putstr( COM1, &request_sensor, 1 );
   for( k = 0; k < NUM_SENSOR_BYTES; ++k ) {
     c = (char) Getc( COM1 );
   }
-  set_train_speed( TRAIN_NUM, 14 );
+  set_train_speed_old( TRAIN_NUM, 14 );
   Delay( 500 ) ;
   recent_sensor_triggered = 0;
   for( i = 14; i > 7; --i ) {
@@ -611,12 +611,12 @@ void calibrate_accel_time( ) {
                 switch( recent_sensor ) {
                 case 205: // B5
                   t0 = Time( );
-                  set_train_speed( TRAIN_NUM, j ) ;
+                  set_train_speed_old( TRAIN_NUM, j ) ;
                   break;
                 case 910: // E10
                   t2 = Time( ) - t0;
                   if( t0 ) {
-                    set_train_speed( TRAIN_NUM, i );
+                    set_train_speed_old( TRAIN_NUM, i );
                     v0 = trains[TRAIN_NUM].speeds[i].straight_vel;
                     v1 = trains[TRAIN_NUM].speeds[j].straight_vel;
                     t1 = (( (2*dt) - ( (2*t2*v1) / 10000 ) ) * 10000) / (v0 - v1);
@@ -648,28 +648,34 @@ void calibrate_accel_time( ) {
       }
     }
   }
-  set_train_speed( TRAIN_NUM, 0 );
+  set_train_speed_old( TRAIN_NUM, 0 );
   Exit( );
 }
 
 /* TODO: Calibrate stopping time */
 /* 
   Things to calibrate:
-  - stopping time (once we have velocity and stopping distance) - Can do mathematically, = (2*d)/v0
-  - Figure out that accel/decel model, is it better to just model accel/decel as linear? - SAT/SUN (might have already done it?) 
-    - How what to assume for accel/decel distance/time? Can we assume a linear function with the difference in speed as x?
-  - How to send sensor signals to the controller?
-  - Calculate reverse costs - SUN
-  - Next sensor prediction (time it takes to hit next sensor) - SAT
+  - More accurate stopping distance - HIGH PRI - TONY - MON
+    - get value for accel/decel
+    - accel is more than decel
+  - Update train position and velocity constantly (in idle task?)
+  - stopping time (once we have velocity and stopping distance) - Can do mathematically, = (2*d)/v0 - HIGH PRI - TONY - MON
+  - update train speed on set_train_speed_old // HIGH PRI - TONY - MON
+  - update_costs( graph, velocity ) // MED-PRI - TONY
+  - Calculate reverse costs - SUN (LOW PRI - TONY)
+  - Assert ring buffer - LOW PRI - TONY
+  - Calibrate another train - VERY LOW PRI
+
+  - train initialization. how? - HIGH PRI - TONY/WILSON
+
+  - Next sensor prediction (time it takes to hit next sensor) - SAT (HIGH PRI, WILSON)
     - What's the next sensor?
-    - How long till next sensor?
-    - Actual time hit next sensor?
-  - time_to_next_node SO MUCH HARDER THAN I THOUGHT =(((((
-  - time_to_next_sensor (this assignment needs this) DONE woo
-  - get_next_sensor
-  - get dist between nodes
-  - update_costs( graph, velocity )
-  - update train speed on set_train_speed
-  - train initialization. how?
+    - get_next_sensor // HIGH PRI - WILSON
+    - get dist between sensor nodes // HIGH PRI - WILSON
+  - sensor hit to train mapping - WILSON
+
+  - How long till next sensor? // DONE, need testing
+  - time_to_next_sensor // DONE, need testing
+    - NOTE: Update this after graph search / speed changes
 */
 

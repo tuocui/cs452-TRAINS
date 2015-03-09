@@ -11,7 +11,6 @@ struct _train_state;
 #define WEIGHT_NEW 20
 #define SENSOR_WORKER_MAX 4
 
-
 typedef union _content_ {
   struct _sensor_data_* sensor_data;
   struct _rail_cmds_  * rail_cmds;
@@ -24,6 +23,22 @@ typedef struct _sensor_args_ {
   int sensor_num;
   struct _train_state_ *trains;
 } sensor_args_t;
+
+typedef struct _train_cmd_args_ {
+  int cmd;
+  int speed_num;
+  int delay_time;
+} train_cmd_args_t;
+
+typedef struct _switch_cmd_args_ {
+  int state;
+  int delay_time;
+  int *switch_states;
+} switch_cmd_args_t;
+
+typedef struct _update_trains_args_ {
+  struct _train_state_ *trains;
+} update_train_args_t;
 
 typedef struct _rail_msg_ {
   enum {

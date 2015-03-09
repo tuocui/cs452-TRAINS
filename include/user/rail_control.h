@@ -55,12 +55,17 @@
 
 #define TRAIN_58 0
 
+#define TR_STOP         0
+#define TR_REVERSE      1
+#define TR_CHANGE_SPEED 2
+
 struct track_node;
 
 typedef struct _rail_cmds_ {
   int train_id;
   int train_action;
   int train_delay;
+  int train_speed;
   
   int sw_count;
   int switch_id0;
@@ -110,6 +115,7 @@ typedef struct _train_state_ {
   int pickup_len;
   int cur_speed;
   int prev_speed;
+  int cur_vel;
   int speed_change_time;
   int is_forward;
   speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
