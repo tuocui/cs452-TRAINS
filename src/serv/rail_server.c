@@ -82,7 +82,11 @@ void sensor_worker( ) {
     sensor_num = sensor_args.sensor_num;
     trains = sensor_args.trains;
     // TODO: WILSON, Figure out which train this is. If this sensor doesn't match a train, check whether or not there's a train initializing. Otherwise, a random sensor just went off.
+    // 1. loop through the train structs, return train_state_*, direct function call
+    // 2. if can't find matching train, go through to check INITIALIZIN state,
+    // 3. else, return NULL, maybe remember it for later user
     train_state_t *train = &(trains[TRAIN_58]); 
+    //TODO: check train == NULL;
     cur_time = Time( );
     if( train->state == INITIALIZING ) {
       set_train_speed( train->train_id, 0 );
@@ -95,11 +99,13 @@ void sensor_worker( ) {
     //assert( 2, train->next_sensor_id == sensor_num );
     train->prev_sensor_id = sensor_num;
     train->next_sensor_id = get_next_sensor(train, &dist_to_next_sensor); // TODO: WILSON, in rail_helper.c
+    // if no reverse, 
     train->time_at_last_landmark = cur_time;
     train->mm_past_landmark = 0;
     train->dist_to_next_sensor = dist_to_next_sensor;
     rail_msg.to_server_content.train_state = train;
-    // run prediction
+    // run simple prediction, which will be overwritten by comprehensive search
+    // output prediction
   }
 }
 
@@ -177,6 +183,7 @@ void rail_server( ) {
           Printf( COM2, "just got back stuff for train: %d\r\n", (receive_msg.to_server_content.train_state)->train_id );
         }
         // graph search
+        // and then run the comprehensive prediction to update the next sensor to hit
         break;
       default:
         assertm( 1, false, "ERROR: unrecognized request: %d", receive_msg.request_type );
