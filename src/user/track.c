@@ -4,6 +4,7 @@
 #include "clock_server.h"
 #include "track.h"
 #include "rail_server.h"
+#include "nameserver.h"
 
 // TODO: Switch most printfs to putstrs, too lazy to count the number of chars
 
@@ -127,6 +128,8 @@ void track_sensor_task( ) {
   char module_num_c;
   int recent_sensor_triggered = 0;
   char request_sensor = REQUEST_SENSOR;
+  RegisterAs( (char *) SENSOR_PROCESSING_TASK );
+  int courier_tid;
   FOREVER {
     Putstr( COM1, &request_sensor, 1 );
     module_num = 0;
@@ -151,7 +154,8 @@ void track_sensor_task( ) {
             ++num_sensors_triggered;
             most_recent_sensor = recent_sensor;
             recent_sensors_ind = ( recent_sensors_ind + 1 ) % NUM_RECENT_SENSORS;
-            // TODO: Send sensor to rail server
+            Receive( &courier_tid, &module_num_c, 0 );
+            Reply( courier_tid, (char *)&recent_sensor, sizeof(recent_sensor) );
           }
           ++sensor_num;
         }

@@ -655,27 +655,21 @@ void calibrate_accel_time( ) {
 /* TODO: Calibrate stopping time */
 /* 
   Things to calibrate:
-  - velocities (just need to hog track for a long ass time) DONE
-  - stopping distance (also, need to hog track for a long ass time) DONE
   - stopping time (once we have velocity and stopping distance) - Can do mathematically, = (2*d)/v0
   - Figure out that accel/decel model, is it better to just model accel/decel as linear? - SAT/SUN (might have already done it?) 
     - How what to assume for accel/decel distance/time? Can we assume a linear function with the difference in speed as x?
-  - Calibrate velocity on the fly - SAT
   - How to send sensor signals to the controller?
   - Calculate reverse costs - SUN
-  - Need to redo how sensor num calculated - SAT DONE
   - Next sensor prediction (time it takes to hit next sensor) - SAT
     - What's the next sensor?
     - How long till next sensor?
     - Actual time hit next sensor?
-  - Safe distance to branch (time to switch * velocity + length of train + buffer) DONE
-  - Safe distance to stop (stopping distance + length of train + buffer) DONE
   - time_to_next_node SO MUCH HARDER THAN I THOUGHT =(((((
   - time_to_next_sensor (this assignment needs this) DONE woo
   - get_next_sensor
   - get dist between nodes
   - update_costs( graph, velocity )
-  - update velocity
   - update train speed on set_train_speed
+  - train initialization. how?
 */
 

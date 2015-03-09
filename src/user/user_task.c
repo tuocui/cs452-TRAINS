@@ -14,6 +14,7 @@
 #include "rail_control.h"
 #include "track_node.h"
 #include "track_data_new.h"
+#include "rail_server.h"
 #include "calibration.h"
 
 #define CYCLES 1000
@@ -371,22 +372,58 @@ void a4_test_task4( ) {
   
   Exit( );
 }
+
+void a4_test_task5( ) {
+  setspeed( COM1, LOW_SPEED );
+  wait_cycles(1000);
+  enable_two_stop_bits( COM1 );
+  setfifo( COM1, OFF );
+  setfifo( COM2, ON );
+  int nameserver_tid = Create( 3, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
+  debug( "Idle tid: %d", idle_id );
+  int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
+  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
+  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
+  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
+  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  int clock_server_tid = Create( 3, &clock_server ); // 43
+  debug( "Clock Server tid: %d", clock_server_tid );
+  Printf( COM2, "\033[2J" );
+  initialize_track( );
+  int track_sensor_task_tid = Create( 4, &track_sensor_task );
+  debug( "Track Sensor task tid: %d", track_sensor_task_tid );
+  int rail_server_tid = Create( 3, &rail_server ); // 43
+  debug( "Rail Server tid: %d", rail_server_tid );
+  int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
+  debug( "User input task tid: %d", parse_user_input_tid );
+  int clock_user_tid = Create( 10, &clock_user_task ); // 46
+  debug( "Clock user task tid: %d", clock_user_tid );
+  int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
+  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
+  
+  Exit( );
+}
 #endif /* A4 */
 
 void ring_buf_test( ) {
   declare_ring_queue(int, test, 2 );
   debug( "buf_count: %d", test_count( ) );
   int idx;
-  idx = test_push_front( 1 );
+  idx = test_push_back( 1 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
-  idx = test_push_front( 2 );
+  idx = test_push_back( 2 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
-  idx = test_push_front( 3 );
+  idx = test_push_back( 3 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
   
-  idx = test_push_front( 4 );
+  idx = test_push_back( 4 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
   int elm;
@@ -414,30 +451,30 @@ void ring_buf_test( ) {
   elm = test_pop_front( );
   debug( "buf_count: %d, elm: %d", test_count( ), elm );
 
-  idx = test_push_front( 12 );
+  idx = test_push_back( 12 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
-  idx = test_push_front( 13 );
+  idx = test_push_back( 13 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
   
-  idx = test_push_front( 14 );
+  idx = test_push_back( 14 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
-  idx = test_push_front( 15 );
+  idx = test_push_back( 15 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
   declare_ring_queue( char, com2_buf, 3 );
   debug( "buf_count: %d", com2_buf_count( ) );
-  idx = com2_buf_push_front( 'a' );
+  idx = com2_buf_push_back( 'a' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  idx = com2_buf_push_front( 'b' );
+  idx = com2_buf_push_back( 'b' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
   
-  idx = com2_buf_push_front( 'c' );
+  idx = com2_buf_push_back( 'c' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  idx = com2_buf_push_front( 'd' );
+  idx = com2_buf_push_back( 'd' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   char c = com2_buf_pop_back( );
@@ -446,25 +483,25 @@ void ring_buf_test( ) {
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  idx = com2_buf_push_front( 'e' );
+  idx = com2_buf_push_back( 'e' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
   
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  idx = com2_buf_push_front( 'f' );
+  idx = com2_buf_push_back( 'f' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  idx = com2_buf_push_front( 'g' );
+  idx = com2_buf_push_back( 'g' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  idx = com2_buf_push_front( 'h' );
+  idx = com2_buf_push_back( 'h' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  idx = com2_buf_push_front( 'i' );
+  idx = com2_buf_push_back( 'i' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
   
   c = com2_buf_pop_back( );
@@ -476,7 +513,7 @@ void ring_buf_test( ) {
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  idx = com2_buf_push_front( 'j' );
+  idx = com2_buf_push_back( 'j' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   c = com2_buf_pop_back( );
@@ -491,13 +528,13 @@ void ring_buf_test( ) {
   test_struct_t st3; st3.a = 3;
 
   declare_ring_queue( test_struct_t *, st_buf, 3 );
-  idx = st_buf_push_front( &st1 );
+  idx = st_buf_push_back( &st1 );
   debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
 
-  idx = st_buf_push_front( &st2 );
+  idx = st_buf_push_back( &st2 );
   debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
 
-  idx = st_buf_push_front( &st3 );
+  idx = st_buf_push_back( &st3 );
   debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
 
   test_struct_t * st0;
@@ -663,7 +700,7 @@ void first_user_task( ){
 #endif /* A3 */
 
 #ifdef A4
-  a4_test_task2( );
+  a4_test_task5( );
   
 #endif /* A4 */
 

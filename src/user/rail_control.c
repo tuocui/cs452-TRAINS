@@ -46,11 +46,11 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
 void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   track_node_t* track_graph = train->track_graph;
   int train_id = train->train_id;
-  int src_id = train->prev_node_id;
-  int dest_id = train->next_node_id;
-  int stop_dist;//TODO = train->speeds[1].stopping_time;
-  int safe_branch_dist; //TODO
-  int train_velocity; // TODO
+  int src_id = train->prev_sensor_id;
+  int dest_id = train->dest_id;
+  int stop_dist = 1123;//TODO = train->speeds[1].stopping_time;
+  int safe_branch_dist = 132; //TODO
+  int train_velocity = (train->speeds[train->cur_speed]).straight_vel; // TODO
 
   assert( 1, track_graph && cmds && src_id >= 0 && src_id < TRACK_MAX && dest_id >= 0 && dest_id < TRACK_MAX );
   /* currently we only run dijkstra on sensor hit, so src_id should be  a sensor */

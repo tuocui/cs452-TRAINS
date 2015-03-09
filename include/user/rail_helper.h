@@ -3,7 +3,6 @@
 
 #include "global.h"
 
-#define SWITCH_TIME 250
 #define SWITCH_BUFFER 20 // 2cm buffer
 #define STOP_BUFFER 20
 
@@ -20,5 +19,9 @@ int time_to_next_node( struct _train_state_ *train, int next_node );
 int time_to_next_sensor( struct _train_state_ *train, int *switches );
 
 int get_mm_past_last_landmark( struct _train_state_ *train, int cur_time );
+
+int get_next_sensor( struct _train_state_ *train, int *dist_to_next_sensor );
+
+void update_velocity( struct _train_state_ *train, int cur_time, int prev_time, int dist );
 
 #endif
