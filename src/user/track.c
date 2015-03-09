@@ -4,6 +4,7 @@
 #include "clock_server.h"
 #include "track.h"
 #include "rail_server.h"
+#include "nameserver.h"
 
 // TODO: Switch most printfs to putstrs, too lazy to count the number of chars
 
@@ -127,13 +128,15 @@ void track_sensor_task( ) {
   char module_num_c;
   int recent_sensor_triggered = 0;
   char request_sensor = REQUEST_SENSOR;
+  RegisterAs( (char *) SENSOR_PROCESSING_TASK );
+  int courier_tid;
   FOREVER {
     Putstr( COM1, &request_sensor, 1 );
     module_num = 0;
     recent_sensor_triggered = 0;
     for( i = 0; i < NUM_SENSOR_BYTES; ++i ) {
       c = (char) Getc( COM1 );
-      sensor_num = 1;
+      sensor_num = 0;
       if ( c > 0 ) {
         if ( module_num % 2 == 1 ) {
           sensor_num += 8;
@@ -141,7 +144,7 @@ void track_sensor_task( ) {
         for( j = 0; j < 8 ; ++j ) {
           // Yay for bitwise operations
           if ( ( c >> ( 7 - j ) ) & 0x1 ) {
-            recent_sensor = ( module_num * 100 ) + sensor_num;
+            recent_sensor = ( module_num * 16 ) + sensor_num;
             if ( recent_sensor == most_recent_sensor ) {
               ++sensor_num;
               continue;
@@ -151,6 +154,8 @@ void track_sensor_task( ) {
             ++num_sensors_triggered;
             most_recent_sensor = recent_sensor;
             recent_sensors_ind = ( recent_sensors_ind + 1 ) % NUM_RECENT_SENSORS;
+            Receive( &courier_tid, &module_num_c, 0 );
+            Reply( courier_tid, (char *)&recent_sensor, sizeof(recent_sensor) );
           }
           ++sensor_num;
         }
@@ -162,8 +167,8 @@ void track_sensor_task( ) {
     for( j = 0 ; recent_sensor_triggered && j < NUM_RECENT_SENSORS && j < num_sensors_triggered; ++j ) {
       if ( recent_sensor_ind == -1 ) recent_sensor_ind = NUM_RECENT_SENSORS - 1;
       recent_sensor = recent_sensors[recent_sensor_ind];
-      sensor_num = recent_sensor % 100;
-      module_num = recent_sensor / 100;
+      sensor_num = ( recent_sensor % 16 ) + 1;
+      module_num = recent_sensor / 16;
       module_num_c = ( ( char ) ( module_num / 2 ) ) + 'A';
       Printf( COM2, "\0337\033[%d;0H     %c%d  \0338", j + 7, module_num_c, sensor_num );
       --recent_sensor_ind;

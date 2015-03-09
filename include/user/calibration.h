@@ -3,8 +3,6 @@
 
 #include "global.h"
 
-
-
 /* feel free to add to this */
 struct _train_state_;
 

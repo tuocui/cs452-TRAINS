@@ -51,7 +51,9 @@
 #define SW155  21 
 #define SW156  22 
 
-#define SW_TIME     100 // in ms
+#define SW_TIME     250 // in ms
+
+#define TRAIN_58 0
 
 struct track_node;
 
@@ -86,12 +88,30 @@ typedef struct _speed_info_ {
 
 typedef struct _train_state_ {
   struct track_node* track_graph;
+
+  enum {
+    READY = 0,
+    BUSY,
+    STOPPING,
+    ACCELERATING,
+    REVERSING,
+    INITIALIZING,
+    NOT_INITIALIZED,
+  } state;
+
   int train_id;
-  int prev_node_id;
-  int next_node_id;
-  int nm_past_landmark; // TODO
+  int prev_sensor_id;
+  int next_sensor_id;
+  int dest_id;
+  int dist_to_next_sensor;
+  int time_at_last_landmark;
+  int mm_past_landmark; // TODO
+  int length;
+  int pickup_len;
   int cur_speed;
   int prev_speed;
+  int speed_change_time;
+  int is_forward;
   speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
 } train_state_t;
 

@@ -357,7 +357,6 @@ void handle_await_event( global_context_t *gc ) {
       //debug("UART1_CTLR_OFFSET: %x", *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) );
       break;
     case COM1_IN_IND:
-      debug("com1 in task awaiting");
       *( (unsigned int*)(UART1_BASE + UART_CTLR_OFFSET)) |= RIEN_MASK;
       break;
     case COM2_OUT_IND:
@@ -418,7 +417,6 @@ void handle_uart1_combined_int( global_context_t *gc ) {
 
   // Don't need Receive timout, since COM1 doesn't have FIFO turned on yet.
   if( uart1_int_status & UART_RIS_MASK && *uart1_status_flags & RXFF_MASK) {
-    debug("RIEN interrupt hit");
     char c = *((unsigned int *)( UART1_BASE + UART_DATA_OFFSET ));
     task_descriptor_t *td = gc->interrupts[COM1_IN_IND];
     gc->interrupts[COM1_IN_IND] = NULL;
@@ -445,10 +443,8 @@ void handle_uart1_combined_int( global_context_t *gc ) {
 void handle_uart2_combined_int( global_context_t *gc ) {
   int uart2_int_status = *((unsigned int *)( UART2_BASE + UART_INTR_OFFSET ));
   int uart2_status_flags = *((unsigned int *)(UART2_BASE + UART_FLAG_OFFSET));
-  debug("uart2 int status: %x", uart2_int_status );
 
   if( uart2_int_status & UART_TIS_MASK && !(uart2_status_flags & TXFF_MASK) ) {
-    debug("Transmit interrupt hit");
     task_descriptor_t *td = gc->interrupts[COM2_OUT_IND];
 
     assertm( 0, td != NULL, "FUCK OUT TD IS NULL" );
@@ -460,7 +456,6 @@ void handle_uart2_combined_int( global_context_t *gc ) {
   }
 
   if( ( uart2_int_status & UART_RIS_MASK || uart2_int_status & UART_RTIS_MASK ) && !(uart2_status_flags & RXFE_MASK) ) {
-    debug("RIEN interrupt hit");
     task_descriptor_t *td = gc->interrupts[COM2_IN_IND];
     //debug( "In handle await event" );
     register int event_type_reg asm("r0");
