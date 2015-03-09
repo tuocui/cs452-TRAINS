@@ -91,6 +91,7 @@ typedef struct _train_state_ {
   int next_node_id;
   int nm_past_landmark; // TODO
   int cur_speed;
+  int prev_speed;
   speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
 } train_state_t;
 

@@ -48,9 +48,12 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   int train_id = train->train_id;
   int src_id = train->prev_node_id;
   int dest_id = train->next_node_id;
-  int stop_dist;//TODO = train->speeds[1].stopping_time;
-  int safe_branch_dist; //TODO
-  int train_velocity; // TODO
+  int speed_idx = ( train->cur_speed - train->prev_speed > 0 ) ? \
+                    train->cur_speed : train->cur_speed + 15;
+  int train_velocity = train->speeds[speed_idx].straight_vel; 
+  //int stop_time = train->speeds[speed_idx].stopping_time;
+  int stop_dist = train->speeds[speed_idx].stopping_distance;
+  int safe_branch_dist = train->speeds[speed_idx].safe_branch_distance; 
 
   assert( 1, track_graph && cmds && src_id >= 0 && src_id < TRACK_MAX && dest_id >= 0 && dest_id < TRACK_MAX );
   /* currently we only run dijkstra on sensor hit, so src_id should be  a sensor */
@@ -84,9 +87,11 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
       /* if we are the last sensor or the dest and second sensor is too close */
       if( prev_sensor_id == src_id || 
          ( prev_sensor_id == second_sensor_id && stop_dist > sensor2dest_dist )) {
+        int src2dest_dist = all_dist[cur_node_id];
+        
         cmds->train_id = train_id;
         cmds->train_action = TR_STOP;
-        cmds->train_delay = ( sensor2dest_dist - stop_dist ) / train_velocity;
+        cmds->train_delay = (( src2dest_dist - stop_dist ) > 0 ) ? ( src2dest_dist - stop_dist ) / train_velocity : 0;
       }
     }
     /* update prev_sensor iff cur_sensor is the sensor immediately after src */
@@ -94,83 +99,75 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
       second_sensor_id = cur_node_id;
       prev_sensor_id = second_sensor_id;
     } 
-    else if( track_graph[cur_node_id].type == NODE_BRANCH ) {
-      debug( "branch_name: %s", track_graph[cur_node_id].name );
-      action = -1;
-      /* reverse case */
-      if(( i - 1 >= 0 ) && track_graph[dest_path[i-1]].type == NODE_MERGE ) {
-        //TODO:
-        ;
-      }
-      /* branch case, and if there is dest after branch */
-      else if( i + 1 < steps_to_dest ) { 
-        assert( 1, switch_count < 3 );
+    /* check reverse before branch, but handle reverse on branch separately */
+    else if(( i - 1 ) >= 0 && ( track_graph[cur_node_id].reverse - track_graph == i - 1 )) {
+      assert( 1, i - 1 >= 0 && i < steps_to_dest );
 
-        #define set_switch( _cmds, _switch_count, _switch_id, _action, _delay ) \
-          ++(_cmds->sw_count); \
-          _cmds->switch_id##_switch_count = _switch_id; \
-          _cmds->switch_action##_switch_count = _action; \
-          _cmds->switch_delay##_switch_count = _delay; 
-        /* get dist between sensor and branch*/  
-        int sensor2branch_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
-        int sensor2branch_time = SW_TIME;//FIXME: replace it with actual time
+      cmds->train_id = train_id;
+      cmds->train_action = TR_RV;
+      cmds->train_delay = 0;
 
-        /* issue switch commands */
-        if(( prev_sensor_id == src_id && sensor2branch_dist >= safe_branch_dist) ||
-           ( prev_sensor_id == second_sensor_id && 
-                                sensor2branch_dist < safe_branch_dist )) {
-          assert( 1, switch_count < 3 );
-          assertm( 1, track_graph[cur_node_id].num > 0 || 
-                     track_graph[cur_node_id].num < 19 || 
-                     track_graph[cur_node_id].num > 152 || 
-                     track_graph[cur_node_id].num < 157, 
-                     "num: %d", track_graph[cur_node_id].num );
-          assert( 1, i + 1 < steps_to_dest );
-          assert( 1, (( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest == 
-                      &track_graph[dest_path[i+1]] ) || 
-                      ( track_graph[cur_node_id].edge[DIR_CURVED].dest == 
-                        &track_graph[dest_path[i+1]] )));
-
-          action = ( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest == 
-                     &track_graph[dest_path[i+1]] ) ? SW_STRAIGHT : SW_CURVED;
-
-          if( switch_count == 0 ){
-            set_switch( cmds, 0, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME );
-          }
-          else if( switch_count == 1 ) {
-            set_switch( cmds, 1, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME);
-          }
-          else if( switch_count == 2 ) {
-            set_switch( cmds, 2, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME );
-          }
-          else
-            assert( 1, false );
-          
-          ++switch_count;
-        }
+      /* deal with reverse on branch */
+      int sensor2reverse_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id];
+      if( track_graph[cur_node_id].type == NODE_BRANCH && ( prev_sensor_id == src_id || 
+            ( prev_sensor_id  == second_sensor_id && stop_dist > sensor2reverse_dist ))) {
+        assert( 1, track_graph[i-1].type == NODE_MERGE );
+        int src2reverse_dist = all_dist[cur_node_id];
+        cmds->train_delay = (( src2reverse_dist - stop_dist ) > 0 ) ? ( src2reverse_dist - stop_dist ) / train_velocity : 0;
       }
     }
-  }
+    /* finally, branching case */
+    else if( track_graph[cur_node_id].type == NODE_BRANCH && i + 1 < steps_to_dest ) {
+      debug( "branch_name: %s", track_graph[cur_node_id].name );
+      assert( 1, switch_count < 3 );
+      action = -1;
 
-  //if( all_step[dest_id] <= 1 ) {
-  //}
-  //else {
-  //  int node_id1 = dest_path[0]; 
-  //  int node_id2 = dest_path[1];
-  ///* check reverse condition, this approach is wrong, we need to factor in time */
-  //  if( track_graph[node_id1].reverse - track_graph == node_id2 ) {
-  //    assertm( 1, track_graph[node_id2].reverse - track_graph == node_id1,
-  //        "node_id1: %d, node_id2: %d", node_id1, node_id2 );
-  //    //FIXME: below time should be calculated
-  //    int reverse_delay = 3000;
-  //    int reverse_time = 5000; 
-  //    int switch_delay = reverse_delay + reverse_time;
-  //    cmds[cmd_pos++] = TR_RV;
-  //    cmds[cmd_pos++] = reverse_delay;
-  //    cmds[cmd_pos++] = switch_delay;
-  //  }
-  //  /* check merge condition */
-  //
+      #define set_switch( _cmds, _switch_count, _switch_id, _action, _delay ) \
+        ++(_cmds->sw_count); \
+        _cmds->switch_id##_switch_count = _switch_id; \
+        _cmds->switch_action##_switch_count = _action; \
+        _cmds->switch_delay##_switch_count = _delay; 
+      /* get dist between sensor and branch*/  
+      int sensor2branch_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
+      int sensor2branch_time = SW_TIME;//FIXME: replace it with actual time
+
+      /* issue switch commands */
+      if(( prev_sensor_id == src_id && sensor2branch_dist >= safe_branch_dist) ||
+         ( prev_sensor_id == second_sensor_id && 
+                              sensor2branch_dist < safe_branch_dist )) {
+        assert( 1, switch_count < 3 );
+        assertm( 1, track_graph[cur_node_id].num > 0 || 
+                   track_graph[cur_node_id].num < 19 || 
+                   track_graph[cur_node_id].num > 152 || 
+                   track_graph[cur_node_id].num < 157, 
+                   "num: %d", track_graph[cur_node_id].num );
+        assert( 1, i + 1 < steps_to_dest );
+        assert( 1, (( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest == 
+                    &track_graph[dest_path[i+1]] ) || 
+                    ( track_graph[cur_node_id].edge[DIR_CURVED].dest == 
+                      &track_graph[dest_path[i+1]] )));
+
+        action = ( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest == 
+                   &track_graph[dest_path[i+1]] ) ? SW_STRAIGHT : SW_CURVED;
+
+        if( switch_count == 0 ){
+          set_switch( cmds, 0, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME );
+        }
+        else if( switch_count == 1 ) {
+          set_switch( cmds, 1, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME);
+        }
+        else if( switch_count == 2 ) {
+          set_switch( cmds, 2, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME );
+        }
+        else
+          assert( 1, false );
+        
+        ++switch_count;
+      }
+      else 
+        assert( 1, false );
+    }
+  }
 }
 
 
@@ -474,3 +471,4 @@ void print_shortest_path( track_node_t* track_graph, int* all_path, int* all_ste
   }
   bwprintf( COM2, "\r\n" );
 }
+

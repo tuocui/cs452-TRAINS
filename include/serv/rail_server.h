@@ -29,5 +29,4 @@ typedef struct _rail_msg_ {
   content_t from_server_content;
 } rail_msg_t;
 
-
 #endif

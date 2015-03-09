@@ -12,7 +12,7 @@
 /* a notifier, will change to couriers if necessary */
 //NOTE: each train should have its own graph_search thread, becuase cmds is local
 // and is not synchronized
-void rail_graph_notifier( ) {
+void rail_graph_worker( ) {
   int rail_server_tid = MyParentTid( );
   assert( 1, rail_server_tid > 0 );
 
@@ -38,7 +38,7 @@ void rail_graph_notifier( ) {
   }
 }
 
-void sensor_data_notifier( ) {
+void sensor_data_courier( ) {
   int rail_server_tid = MyParentTid( );
   assert( 1, rail_server_tid > 0 );
   
@@ -69,7 +69,7 @@ void rail_server( ) {
 
   int i;
   for( i = 0; i < TR_MAX; ++i ) {
-    train_graph_search_tid[i] = Create( 10, &rail_graph_notifier);
+    train_graph_search_tid[i] = Create( 10, &rail_graph_worker );
     assert( 1, train_graph_search_tid[i] > 0 );
   }
   
