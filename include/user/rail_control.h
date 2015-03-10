@@ -59,6 +59,7 @@
 #define TR_STOP         0
 #define TR_REVERSE      1
 #define TR_CHANGE_SPEED 2
+#define TR_INIT         3
 
 struct _track_node_;
 

@@ -31,7 +31,7 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   int expected_train_idx = NONE;
   int initializing_train_idx = NONE;
   for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
-    assertm( 1, trains[cur_idx].next_sensor_id != NONE, "failure here indicates incorrect prediction functions" );
+    assertm( 1, trains[cur_idx].next_sensor_id != NONE && trains[cur_idx].state != INITIALIZING, "failure here indicates incorrect prediction functions" );
     if( trains[cur_idx].next_sensor_id == sensor_num ) {
       assert( 1, expected_train_idx == NONE );
       expected_train_idx = cur_idx;

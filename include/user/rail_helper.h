@@ -5,6 +5,7 @@
 
 #define SWITCH_BUFFER 20 // 2cm buffer
 #define STOP_BUFFER 20
+#define STOP_TIME_BUFFER 2
 
 struct _train_state_;
 struct _track_node_;

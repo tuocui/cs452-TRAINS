@@ -39,20 +39,22 @@ short set_train_speed( train_state_t *train, short speed ) {
     return speed;
   }
 
-  if( speed == 15 ) {
-    train->is_forward ^= 1;
-  } else {
-    // accelerating?
-    if( cur_speed_normalized < speed_normalized ) {
-      speed_normalized += 15;
+  if( speed_normalized >= 8 ) {
+    if( speed == 15 ) {
+      train->is_forward ^= 1;
+    } else {
+      // accelerating?
+      train->cur_speed = speed_normalized;
+      if( cur_speed_normalized < speed_normalized ) {
+        train->cur_speed += 15;
+      }
+      train->prev_speed = train->cur_speed;
+      train->speed_change_time = Time( );
     }
-    train->prev_speed = train->cur_speed;
-    train->cur_speed = speed_normalized;
-    train->speed_change_time = Time( );
   }
 
   char msg[2];
-  msg[0] = speed;
+  msg[0] = speed_normalized;
   msg[1] = train->train_id;
   Putstr( COM1, msg, 2 );
   //Printf( COM2, "\0337\033[1A\033[2K\rTrain %d set to %d\0338", train, speed );
@@ -147,6 +149,15 @@ int set_switch( short switch_num, short c_s, int *switch_states ) {
   return 0;
 }
 
+void sensor_id_to_name( int sensor_id, char *rtn ) {
+  int sensor_num = ( sensor_id % 16 ) + 1;
+  int module_num = sensor_id / 16;
+  rtn[0] = ( ( char ) ( module_num ) ) + 'A';
+  rtn[1] = ( ( char ) ( sensor_num / 10 ) ) + '0';
+  rtn[2] = ( ( char ) ( sensor_num % 10 ) ) + '0';
+  rtn[3] = '\0';
+  return;
+}
 
 // Initialize track
 int initialize_track( ) {
@@ -194,6 +205,7 @@ void track_sensor_task( ) {
   char request_sensor = REQUEST_SENSOR;
   RegisterAs( (char *) SENSOR_PROCESSING_TASK );
   int courier_tid;
+  char sensor_name[4];
   FOREVER {
     Putstr( COM1, &request_sensor, 1 );
     module_num = 0;
@@ -231,10 +243,8 @@ void track_sensor_task( ) {
     for( j = 0 ; recent_sensor_triggered && j < NUM_RECENT_SENSORS && j < num_sensors_triggered; ++j ) {
       if ( recent_sensor_ind == -1 ) recent_sensor_ind = NUM_RECENT_SENSORS - 1;
       recent_sensor = recent_sensors[recent_sensor_ind];
-      sensor_num = ( recent_sensor % 16 ) + 1;
-      module_num = recent_sensor / 16;
-      module_num_c = ( ( char ) ( module_num ) ) + 'A';
-      Printf( COM2, "\0337\033[%d;0H     %c%d  \0338", j + 7, module_num_c, sensor_num );
+      sensor_id_to_name( recent_sensor, sensor_name );
+      Printf( COM2, "\0337\033[%d;0H     %s  \0338", j + 7, sensor_name );
       --recent_sensor_ind;
     }
     //Delay( 1 );

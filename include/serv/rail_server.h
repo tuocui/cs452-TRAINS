@@ -10,6 +10,7 @@ struct _train_state;
 #define WEIGHT_PREV 80
 #define WEIGHT_NEW 20
 #define SENSOR_WORKER_MAX 4
+#define INIT_SPEED 2
 
 typedef union _content_ {
   struct _sensor_data_* sensor_data;

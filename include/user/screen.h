@@ -9,6 +9,7 @@
 #define SWITCH_CMD 2
 #define GO_CMD 3
 #define KILL_CMD 4
+#define INIT_CMD 5
 #define QUIT_CMD 99
 
 void parse_user_input( );
