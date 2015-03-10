@@ -43,6 +43,34 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
   cmds->switch_id2= cmds->switch_action2= cmds->switch_delay2= 0;
 }
 
+/* note for prediction:
+ * 1. sensor_worker gets sensor byte 
+ * 2. call static prediction
+ * 3. run graph search, graph search returns cmds and next expected node
+ * 4. issue commands first, this will update switch states used for static prediction in the future
+ * 5. if before next sensor there are reverses 
+ *      since the graph gives one reverse at a time, we find the reverse node, remaining distance after reverse node by
+ *      remainig = train_length + delay_dist + stop_dist - src2reverse_node
+ *      here we need to handle two things:
+ *        a. sensors hit before it stops, we put these sensors as a list of expected hits before it stops
+ *           discard the sensor when it's hit, and discard all (even if unhit) when the train hits any reverse of them
+ *        b. every merge we pass by, we need to examine the branches and determine if we need to switch them, and when
+ *           note that this step also generates commands but only for switches
+ *    if before next sensor there is a stop command
+ *      we get the remaining stopping distance after the destination by: 
+ *      remaining = train_length + stop_dist src2dest_node; ( delay should be 0 if stop_dist - src2dest > 0 )
+ *      we repeat 5.a, for each expected sensor hits, we store them in a list
+ *    if before next sensor there are branches, note this branch can't be after a merge, or it's a reverse case
+ *      at this stage the commands should have been issued and the internal switch_states should be updated
+ *      run static search for next expected sensor, and put it in the expected sensor
+ *    if there is no reverse nor branch
+ *      do not do anything, can assert on: recalculate a result, should be the same as the one calculated at step 2
+ */
+
+void predict_next_sensor_dynamic( train_state_t *train_state ) {
+
+}
+
 void predict_next_sensor_static( train_state_t *train_state ) {
   track_node_t* cur_node = &(train_state->track_graph[train_state->prev_sensor_id]);
   assert( 1, cur_node && cur_node->type == NODE_SENSOR );
@@ -129,7 +157,9 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
       second_sensor_id = cur_node_id;
       prev_sensor_id = second_sensor_id;
     } 
-    /* check reverse before branch, but handle reverse on branch separately */
+    /* check reverse before branch, but handle reverse on branch separately, 
+     * we should only handle one reverse at one
+     */
     else if(( i - 1 ) >= 0 && ( track_graph[cur_node_id].reverse - track_graph == i - 1 )) {
       assert( 1, i - 1 >= 0 && i < steps_to_dest );
 
@@ -146,6 +176,9 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         cmds->train_delay = (( src2reverse_dist - stop_dist ) > 0 ) ? \
           ( src2reverse_dist - stop_dist ) * 1000 / train_velocity : 0;
       }
+      
+      /* we handle one reverse at a time, so stop checking the further node */
+      break;
     }
     /* finally, branching case */
     else if( track_graph[cur_node_id].type == NODE_BRANCH && i + 1 < steps_to_dest ) {

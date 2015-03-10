@@ -671,8 +671,8 @@ void calibrate_accel_time( ) {
 
   - Next sensor prediction (time it takes to hit next sensor) - SAT (HIGH PRI, WILSON)
     - What's the next sensor?
-    - get_next_sensor // HIGH PRI - WILSON
-    - get dist between sensor nodes // HIGH PRI - WILSON
+    - get_next_sensor and distance static DONE, need more testing
+    - get_next_sensor and distance dynamic
   - sensor hit to train mapping - WILSON
 
   - How long till next sensor? // DONE, need testing

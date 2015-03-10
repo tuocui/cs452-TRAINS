@@ -11,6 +11,8 @@
 // time to switch branch * velocity of train + buffer + length of train
 // Assume 250ms to switch switch
 // returns distance in mm
+
+//TODO: TONY, give the magic 100000 and 200000 names 
 int safe_distance_to_branch( train_state_t *train ) {
   int vel = (train->speeds[train->cur_speed]).straight_vel;
   return ( vel * SW_TIME ) / 100000 + SWITCH_BUFFER + train->length;
@@ -209,10 +211,5 @@ void update_velocity( train_state_t *train, int cur_time, int prev_time, int dis
   int new_vel = ( dist * 10000 ) / ( cur_time - prev_time );
   (train->speeds[train->cur_speed]).straight_vel = 
     ( (80 * (train->speeds[train->cur_speed]).straight_vel ) + ( 20 * new_vel ) ) / 100;
-}
-
-// TODO: WILSON
-int get_next_sensor( struct _train_state_ *train, int *dist_to_next_sensor ) {
-  return 13;
 }
 

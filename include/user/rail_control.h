@@ -172,4 +172,6 @@ void decrease_dist( min_heap_t * min_heap, int id, int dist );
 
 void predict_next_sensor_static( train_state_t *train_state );
 
+void predict_next_sensor_dynamic( train_state_t *train_state );
+
 #endif
