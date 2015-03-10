@@ -44,11 +44,11 @@ short set_train_speed( train_state_t *train, short speed ) {
       train->is_forward ^= 1;
     } else {
       // accelerating?
+      train->prev_speed = train->cur_speed;
       train->cur_speed = speed_normalized;
       if( cur_speed_normalized < speed_normalized ) {
         train->cur_speed += 15;
       }
-      train->prev_speed = train->cur_speed;
       train->speed_change_time = Time( );
     }
   }
