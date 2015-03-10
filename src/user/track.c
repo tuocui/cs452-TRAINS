@@ -208,7 +208,7 @@ void track_sensor_task( ) {
         for( j = 0; j < 8 ; ++j ) {
           // Yay for bitwise operations
           if ( ( c >> ( 7 - j ) ) & 0x1 ) {
-            recent_sensor = ( module_num * 16 ) + sensor_num;
+            recent_sensor = ( ( module_num / 2 ) * 16 ) + sensor_num;
             if ( recent_sensor == most_recent_sensor ) {
               ++sensor_num;
               continue;
@@ -233,7 +233,7 @@ void track_sensor_task( ) {
       recent_sensor = recent_sensors[recent_sensor_ind];
       sensor_num = ( recent_sensor % 16 ) + 1;
       module_num = recent_sensor / 16;
-      module_num_c = ( ( char ) ( module_num / 2 ) ) + 'A';
+      module_num_c = ( ( char ) ( module_num ) ) + 'A';
       Printf( COM2, "\0337\033[%d;0H     %c%d  \0338", j + 7, module_num_c, sensor_num );
       --recent_sensor_ind;
     }

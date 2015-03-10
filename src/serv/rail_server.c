@@ -98,7 +98,7 @@ void sensor_worker( ) {
       train->speed_change_time = cur_time;
     } else {
       train->vel_at_last_landmark = train->cur_vel;
-      //update_velocity( train, cur_time, train->time_at_last_landmark, train->dist_to_next_sensor );
+      update_velocity( train, cur_time, train->time_at_last_landmark, train->dist_to_next_sensor );
     }
     //assert( 2, train->next_sensor_id == sensor_num );
     train->prev_sensor_id = sensor_num;
