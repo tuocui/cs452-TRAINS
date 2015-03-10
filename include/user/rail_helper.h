@@ -28,4 +28,8 @@ void init_trains( struct _train_state_ *trains, int num_trains );
 
 void init_switches( int *switch_states, int num_switches );
 
+int get_cur_velocity( struct _train_state_ *train, int cur_time );
+
+int get_cur_stopping_distance( struct _train_state_ *train );
+
 #endif

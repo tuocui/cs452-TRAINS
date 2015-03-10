@@ -26,19 +26,28 @@ short set_train_speed( train_state_t *train, short speed ) {
     speed = 0;
   }
 
+  int speed_normalized = speed;
   if( speed > 15 ) {
-    speed -= 15;
+    speed_normalized -= 15;
+  }
+  int cur_speed_normalized = train->cur_speed;
+  if( cur_speed_normalized > 15 ) {
+    cur_speed_normalized -= 15;
+  }
+  
+  if( speed_normalized == cur_speed_normalized ) {
+    return speed;
   }
 
   if( speed == 15 ) {
     train->is_forward ^= 1;
   } else {
-    int cur_speed = speed;
-    if( train->cur_speed < cur_speed ) {
-      cur_speed += 15;
+    // accelerating?
+    if( cur_speed_normalized < speed_normalized ) {
+      speed_normalized += 15;
     }
     train->prev_speed = train->cur_speed;
-    train->cur_speed = cur_speed;
+    train->cur_speed = speed_normalized;
     train->speed_change_time = Time( );
   }
 
