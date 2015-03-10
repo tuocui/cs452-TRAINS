@@ -25,9 +25,9 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-#define A4 1
+//#define A4 1
 //#define RING_TEST
-//#define RAIL_TEST
+#define RAIL_TEST
 
 
 //TODO remove testing struct
@@ -632,27 +632,30 @@ void dijkstra_test( ) {
   
   track_node_t track_graph[TRACK_MAX];
   init_trackb( track_graph );
+  int src_id;
+  int dest_id;
 
-  int all_path[NODE_MAX];
-  int all_dist[NODE_MAX];
-  int all_step[NODE_MAX];
+  // TESTING dijkstra
+  //int all_path[NODE_MAX];
+  //int all_dist[NODE_MAX];
+  //int all_step[NODE_MAX];
 
-  int src_id = 2;
-  int dest_id = 14;
+  //src_id = 2;
+  //dest_id = 14;
 
-  dijkstra( track_graph, src_id, all_path, all_dist, all_step );
+  //dijkstra( track_graph, src_id, all_path, all_dist, all_step );
 
-  debug( "steps: %d", all_step[dest_id] );
+  //debug( "steps: %d", all_step[dest_id] );
   //int dst_path[all_step[dest_id]];
   
-  debug( "dijkstra results: " );
-  int i;
-  for( i = 0; i < NODE_MAX; ++i ) {
-    //bwprintf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
-    //    i, all_dist[i], all_path[i], all_step[i] );
-  }
+  //debug( "dijkstra results: " );
+  //int i;
+  //for( i = 0; i < NODE_MAX; ++i ) {
+  //  bwprintf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
+  //      i, all_dist[i], all_path[i], all_step[i] );
+  //}
 
-    //int dst_path[NODE_MAX];
+  //int dst_path[NODE_MAX];
   //int *steps;
 
   //print_shortest_path( track_graph, all_path, all_step, src_id, dest_id, dst_path );
@@ -661,34 +664,56 @@ void dijkstra_test( ) {
   //  int all_dst_path[all_step[i]];
   //  print_shortest_path( track_graph, all_path, all_step, src_id, i, all_dst_path );
   //}
+  //=================================================================================
   
   int switch_states[SW_MAX];
   init_switches( switch_states );
 
+  rail_cmds_t cmds;
+  init_rail_cmds( &cmds );
+  
   train_state_t train;
   init_trains( &train, track_graph, switch_states );
-  train.prev_sensor_id = src_id;
-  train.dest_id = dest_id;
   train.cur_speed = 12;
   train.speeds[train.cur_speed].safe_branch_distance += 0;
+ 
+  //TESTING switch commands
+  //src_id = 2;
+  //dest_id = 14;
+  //train.prev_sensor_id = src_id;
+  //train.dest_id = dest_id;
+  //while( train.speeds[train.cur_speed].safe_branch_distance < 500 ) {
+  //  init_rail_cmds( &cmds );
+  //  //get_next_command( &train, &cmds );
+  //  train.speeds[train.cur_speed].safe_branch_distance += 50;
 
-  //TODO initialize safe_branch, prev_ and next_ node_id
-  rail_cmds_t cmds;
-  while( train.speeds[train.cur_speed].safe_branch_distance < 500 ) {
-    init_rail_cmds( &cmds );
-    //FIXME: assign values to train
-    //get_next_command( &train, &cmds );
-    train.speeds[train.cur_speed].safe_branch_distance += 50;
+  //debug( "Commandes: \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
+  //                   \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
+  //                   \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
+  //                      cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
+  //                      cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
+  //                      cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  //}
+  //=================================================================================
 
-  debug( "Commandes: \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d \
-                     \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d \
-                     \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
-                        cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
-                        cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
-                        cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
-  }
+  //TESTING reverse commands
+  init_rail_cmds( &cmds );
+  src_id = 15;
+  dest_id = 0;
+  train.prev_sensor_id = src_id;
+  train.dest_id= dest_id;
+  get_next_command( &train, &cmds );
+  debug( "Reverse commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d \
+                      \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d \
+                      \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d \
+                      \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
+                          cmds.train_id, cmds.train_action, cmds.train_delay,
+                          cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
+                          cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
+                          cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  //=================================================================================
 
-
+  //TESTING static prediction
   train.switch_states[14] = SW_STRAIGHT;
   predict_next_sensor_static( &train );
   debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );

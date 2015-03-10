@@ -7,6 +7,7 @@
 
 #define TR_MAX 1
 
+#define NONE      -1
 #define TR_STOP   0
 #define TR_SPD_1  1 
 #define TR_SPD_2  2 

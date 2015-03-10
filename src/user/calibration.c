@@ -657,6 +657,7 @@ void calibrate_accel_time( ) {
 /* 
   Things to calibrate:
   - delay time to stop
+  - dynamic stopping time
   - velocity calibration - TONY - HIGH PRO dependant on WILSON
   - Time to next sensor - TONY - HIGH PRI - Depedant on WILSON
   - update_costs( graph, velocity ) // MED-PRI - TONY

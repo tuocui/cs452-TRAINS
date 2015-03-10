@@ -41,30 +41,30 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
   cmds->sw_count = cmds->train_id = cmds->train_action = cmds->train_delay = \
   cmds->switch_id0= cmds->switch_action0= cmds->switch_delay0= \
   cmds->switch_id1= cmds->switch_action1= cmds->switch_delay1= \
-  cmds->switch_id2= cmds->switch_action2= cmds->switch_delay2= 0;
+  cmds->switch_id2= cmds->switch_action2= cmds->switch_delay2= NONE;
 }
 
+//TODO: call static search after switch comes back 
+//TODO: put this dynamic checking into a separate path
 /* note for prediction:
  * 1. sensor_worker gets sensor byte 
  * 2. call static prediction
- * 3. run graph search, graph search returns cmds and next expected node
+ * 3. run graph search, graph search returns cmds and next expected path 
  * 4. issue commands first, this will update switch states used for static prediction in the future
  * 5. if before next sensor there are reverses 
  *      since the graph gives one reverse at a time, we find the reverse node, remaining distance after reverse node by
- *      remainig = train_length + delay_dist + stop_dist - src2reverse_node
+ *      get_cur_stopping_distance( train );
  *      here we need to handle two things:
  *        a. sensors hit before it stops, we put these sensors as a list of expected hits before it stops
  *           discard the sensor when it's hit, and discard all (even if unhit) when the train hits any reverse of them
  *        b. every merge we pass by, we need to examine the branches and determine if we need to switch them, and when
  *           note that this step also generates commands but only for switches
+ *           when looking backward, if the merge is from the graph search, we do not check it's turnout
  *    if before next sensor there is a stop command
  *      we get the remaining stopping distance after the destination by: 
- *      remaining = train_length + stop_dist src2dest_node; ( delay should be 0 if stop_dist - src2dest > 0 )
+ *      get_cur_stopping_distance( train );
  *      we repeat 5.a, for each expected sensor hits, we store them in a list
- *    if before next sensor there are branches, note this branch can't be after a merge, or it's a reverse case
- *      at this stage the commands should have been issued and the internal switch_states should be updated
- *      run static search for next expected sensor, and put it in the expected sensor
- *    if there is no reverse nor branch
+ *    if there is no reverse nor stop 
  *      do not do anything, can assert on: recalculate a result, should be the same as the one calculated at step 2
  */
 
@@ -103,6 +103,7 @@ void predict_next_sensor_static( train_state_t *train_state ) {
 
 //int predict_next_sensor_dynamic(  );
 void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
+  debug( "get_next_command with cur_node_id: %d and dest_id: %d", train->prev_sensor_id, train->dest_id );
   track_node_t* track_graph = train->track_graph;
   int train_id = train->train_id;
   int src_id = train->prev_sensor_id;
@@ -141,7 +142,9 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   for( i = 0; i < steps_to_dest; ++i ) {
     cur_node_id = dest_path[i];
     /* if the node is the end of the route */
+    //FIXME: stop should be issued nodes ahead 
     if( i == steps_to_dest - 1 ) {
+      debug( "END OF THE ROUTE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       /* get dist between sensor and dest */  
       int sensor2dest_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
       /* if we are the last sensor or the dest and second sensor is too close */
@@ -156,13 +159,17 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
     }
     /* update prev_sensor iff cur_sensor is the sensor immediately after src */
     else if( track_graph[cur_node_id].type == NODE_SENSOR && second_sensor_id == -1 ) {
+      debug( "NODE SENSOR: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       second_sensor_id = cur_node_id;
       prev_sensor_id = second_sensor_id;
     } 
     /* check reverse before branch, but handle reverse on branch separately, 
-     * we should only handle one reverse at one
+     * we should only handle one reverse at a time 
      */
-    else if(( i - 1 ) >= 0 && ( track_graph[cur_node_id].reverse - track_graph == i - 1 )) {
+    else if(( i - 1 ) >= 0 && 
+        ( track_graph[cur_node_id].reverse == &track_graph[dest_path[i-1]] && cmds->train_action != TR_RV )) {
+      assert( 1, cmds->train_action == NONE );
+      debug( "REVERSE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       assert( 1, i - 1 >= 0 && i < steps_to_dest );
 
       cmds->train_id = train_id;
@@ -173,18 +180,18 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
       int sensor2reverse_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id];
       if( track_graph[cur_node_id].type == NODE_BRANCH && ( prev_sensor_id == src_id || 
             ( prev_sensor_id  == second_sensor_id && stop_dist > sensor2reverse_dist ))) {
-        assert( 1, track_graph[i-1].type == NODE_MERGE );
+        assert( 1, track_graph[dest_path[i-1]].type == NODE_MERGE );
         int src2reverse_dist = all_dist[cur_node_id];
         cmds->train_delay = (( src2reverse_dist - stop_dist ) > 0 ) ? \
-          ( src2reverse_dist - stop_dist ) * 1000 / train_velocity : 0;
+          ( src2reverse_dist - stop_dist ) * 10000 / train_velocity : 0;
+        /* needs to rerun this node for branching */
+        --i;
       }
       
-      /* we handle one reverse at a time, so stop checking the further node */
-      break;
     }
     /* finally, branching case */
     else if( track_graph[cur_node_id].type == NODE_BRANCH && i + 1 < steps_to_dest ) {
-      debug( "branch_name: %s", track_graph[cur_node_id].name );
+      debug( "BRANCH: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       assert( 1, switch_count < 3 );
       action = -1;
 
@@ -235,7 +242,7 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         ++switch_count;
       }
       else 
-        ;//debug(  );
+        debug( "UNHANDLED: %d, %s", cur_node_id, track_graph[cur_node_id].name );
     }
   }
 }
