@@ -29,6 +29,8 @@ typedef struct _train_cmd_args_ {
   int cmd;
   int speed_num;
   int delay_time;
+  int dest;
+  int mm_past_dest;
 } train_cmd_args_t;
 
 typedef struct _switch_cmd_args_ {

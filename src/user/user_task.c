@@ -631,7 +631,7 @@ void dijkstra_test( ) {
   //debug( "address diff %d", (node_3 - track_graph) );
   
   track_node_t track_graph[TRACK_MAX];
-  init_trackb( track_graph );
+  init_tracka( track_graph );
   int src_id;
   int dest_id;
 
@@ -698,8 +698,8 @@ void dijkstra_test( ) {
 
   //TESTING reverse commands
   init_rail_cmds( &cmds );
-  src_id = 15;
-  dest_id = 0;
+  src_id = 53;
+  dest_id = 15;
   train.prev_sensor_id = src_id;
   train.dest_id= dest_id;
   get_next_command( &train, &cmds );
@@ -714,13 +714,14 @@ void dijkstra_test( ) {
   //=================================================================================
 
   //TESTING static prediction
-  train.switch_states[14] = SW_STRAIGHT;
+  Printf( COM2, "\n\nAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHSW8: %d\r\n", SW8 );
+  train.switch_states[SW8] = SW_STRAIGHT;
   predict_next_sensor_static( &train );
-  debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+  Printf( COM2,  "static next sensor prediction: %d, dist_to_next_sensor: %d\r\n", train.next_sensor_id, train.dist_to_next_sensor );
 
-  train.switch_states[14] = SW_CURVED;
+  train.switch_states[SW8] = SW_CURVED;
   predict_next_sensor_static( &train );
-  debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+  Printf( COM2, "static next sensor prediction: %d, dist_to_next_sensor: %d\r\n", train.next_sensor_id, train.dist_to_next_sensor );
 }
 
 void first_user_task( ){

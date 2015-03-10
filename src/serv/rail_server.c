@@ -107,8 +107,8 @@ void sensor_worker( ) {
       update_velocity( train, cur_time, train->time_at_last_landmark, train->dist_to_next_sensor );
       train->vel_at_last_landmark = train->cur_vel;
       sensor_id_to_name( train->next_sensor_id, sensor_name );
-      Printf( COM2, "\0337\033[3A\033[2K\rExpected distance to sensor %s: %d    \0338", sensor_name, train->mm_past_landmark / 10 );
-      Printf( COM2, "\0337\033[4A\033[2K\rActual distance to sensor %s: %d    \0338", sensor_name, train->dist_to_next_sensor );
+      Printf( COM2, "\0337\033[3A\033[2K\rExpected distance to sensor %c%c%c: %d    \0338", sensor_name[0], sensor_name[1], sensor_name[2], train->mm_past_landmark / 10 );
+      Printf( COM2, "\0337\033[4A\033[2K\rActual distance to sensor %c%c%c: %d    \0338", sensor_name[0], sensor_name[1], sensor_name[2], train->dist_to_next_sensor );
       Printf( COM2, "\0337\033[5A\033[2K\rDistance difference: %d    \0338", ( train->mm_past_landmark / 10 ) - train->dist_to_next_sensor );
     }
     //assert( 2, train->next_sensor_id == sensor_num );
@@ -119,7 +119,7 @@ void sensor_worker( ) {
     train->mm_past_landmark = 0;
     predict_next_sensor_static( train );
     sensor_id_to_name( train->next_sensor_id, sensor_name );
-    Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %s    \0338", sensor_name );
+    Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );
     // if no reverse, 
   }
 }
@@ -167,6 +167,10 @@ void train_exe_worker( ) {
     case TR_INIT:
       train->state = INITIALIZING;
       set_train_speed( train, INIT_SPEED );
+      break;
+    case TR_DEST:
+      train->dest_id = train_cmd_args.dest;
+      train->mm_past_dest = train_cmd_args.mm_past_dest;
       break;
     default:
       break;
@@ -227,8 +231,10 @@ void update_trains( ) {
         trains[i].mm_past_landmark = get_mm_past_last_landmark( &(trains[i]), cur_time );
         trains[i].time_since_last_pos_update = cur_time;
         trains[i].vel_at_last_pos_update = trains[i].cur_vel;
-        Printf( COM2, "\0337\033[4A\033[20C%d    \0338", trains[i].mm_past_landmark / 10 );
-        Printf( COM2, "\0337\033[6A\033[16C%d    \0338", trains[i].cur_vel );
+        if( cur_time % 10 == 0 ) {
+          Printf( COM2, "\0337\033[18;22H%d    \0338", trains[i].mm_past_landmark / 10 );
+          Printf( COM2, "\0337\033[16;19H%d    \0338", trains[i].cur_vel );
+        }
       }
     }
   }
@@ -243,11 +249,10 @@ void rail_server( ) {
   
   /* track state initialization */
   track_node_t track_graph[TRACK_MAX];
-  init_trackb( (track_node_t*)track_graph );
+  init_tracka( (track_node_t*)track_graph );
   int switch_states[SW_MAX];
   int train_graph_search_tid[TR_MAX]; 
 
-  
   /* trains initialization */
   train_state_t trains[TR_MAX];
   init_trains( trains, (track_node_t*)track_graph, switch_states );
@@ -297,10 +302,15 @@ void rail_server( ) {
 
   /* Switch action workers */
   int switch_exe_worker_tids[SW_MAX];
+  int switch_num;
   for( i = 1; i < SW_MAX; ++i ) {
     switch_exe_worker_tids[i] = Create( 10, &switch_exe_worker );
     assert( 1, switch_exe_worker_tids[i] > 0 );
-    Send( switch_exe_worker_tids[i], (char *)&i, sizeof( i ), (char *)&client_tid, 0 );
+    switch_num = i;
+    if( switch_num > 18 ) {
+      switch_num += 134;
+    }
+    Send( switch_exe_worker_tids[i], (char *)&switch_num, sizeof( switch_num ), (char *)&client_tid, 0 );
   }
   switch_cmd_args_t switch_cmd_args;
   switch_cmd_args.switch_states = switch_states;
@@ -322,7 +332,6 @@ void rail_server( ) {
         break;
       case USER_INPUT:
         Reply( client_tid, (char *)&receive_msg, 0 );
-        // TODO: Initialize train
         if( (receive_msg.to_server_content.rail_cmds)->train_id ) {
           // TODO: Make a mapping between train number and idx
           int train_exe_worker_tid;
@@ -332,13 +341,19 @@ void rail_server( ) {
             train_cmd_args.cmd = (receive_msg.to_server_content.rail_cmds)->train_action;
             train_cmd_args.speed_num = (receive_msg.to_server_content.rail_cmds)->train_speed;
             train_cmd_args.delay_time = (receive_msg.to_server_content.rail_cmds)->train_delay;
+            train_cmd_args.dest = (receive_msg.to_server_content.rail_cmds)->train_dest;
+            train_cmd_args.mm_past_dest = (receive_msg.to_server_content.rail_cmds)->train_mm_past_dest;
             Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
             break;
           default:
             break;
           }
         } else if ( (receive_msg.to_server_content.rail_cmds)->switch_id0 ) {
-          int switch_exe_worker_tid = switch_exe_worker_tids[(receive_msg.to_server_content.rail_cmds)->switch_id0];
+          int switch_id = (receive_msg.to_server_content.rail_cmds)->switch_id0;
+          if ( switch_id > 18 ) {
+            switch_id -= 134;
+          }
+          int switch_exe_worker_tid = switch_exe_worker_tids[switch_id];
           switch_cmd_args.state = (receive_msg.to_server_content.rail_cmds)->switch_action0;
           switch_cmd_args.delay_time = 0;
           Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
@@ -357,9 +372,10 @@ void rail_server( ) {
         // longest code3 that this server runs
         for( i = 0; i < TR_MAX; ++i ) {
           if( trains[i].state != NOT_INITIALIZED ) {
+            // Worst case, don't predict now
             predict_next_sensor_static( &(trains[i]) );
             sensor_id_to_name( trains[i].next_sensor_id, sensor_name );
-            Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %s    \0338", sensor_name );
+            Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );
           }
         }
         break;

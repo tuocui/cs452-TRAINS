@@ -34,6 +34,15 @@ short set_train_speed( train_state_t *train, short speed ) {
   if( cur_speed_normalized > 15 ) {
     cur_speed_normalized -= 15;
   }
+
+  char msg[2];
+
+  if( train->state == INITIALIZING ) {
+    msg[0] = speed_normalized;
+    msg[1] = train->train_id;
+    Putstr( COM1, msg, 2 );
+    return speed;
+  }
   
   if( speed_normalized == cur_speed_normalized ) {
     return speed;
@@ -53,7 +62,6 @@ short set_train_speed( train_state_t *train, short speed ) {
     }
   }
 
-  char msg[2];
   msg[0] = speed_normalized;
   msg[1] = train->train_id;
   Putstr( COM1, msg, 2 );
@@ -127,14 +135,20 @@ int set_switch_old( short switch_num, short c_s ) {
 int set_switch( short switch_num, short c_s, int *switch_states ) {
   char c_s_c;
   char msg[2];
+  int switch_idx;
+  switch_idx = switch_num;
+  if( switch_idx > 18 ) {
+    switch_idx -= 134;
+  }
+  Printf( COM2, "switching %d, with idx %d from state %d to state %d", switch_num, switch_idx, switch_states[switch_idx], c_s );
   switch( c_s ) {
   case STRAIGHT:
     c_s_c = 'S';
-    switch_states[switch_num] = SW_STRAIGHT;
+    switch_states[switch_idx] = SW_STRAIGHT;
     break;
   case CURVED:
     c_s_c = 'C';
-    switch_states[switch_num] = SW_CURVED;
+    switch_states[switch_idx] = SW_CURVED;
     break;
   default:
     c_s_c = '/';
@@ -155,7 +169,6 @@ void sensor_id_to_name( int sensor_id, char *rtn ) {
   rtn[0] = ( ( char ) ( module_num ) ) + 'A';
   rtn[1] = ( ( char ) ( sensor_num / 10 ) ) + '0';
   rtn[2] = ( ( char ) ( sensor_num % 10 ) ) + '0';
-  rtn[3] = '\0';
   return;
 }
 
@@ -173,9 +186,9 @@ int initialize_track( ) {
     } else if ( switch_ind == 19 ) {
       set_switch_old( 154, CURVED );
     } else if ( switch_ind == 20 ) {
-      set_switch_old( 155, STRAIGHT );
+      set_switch_old( 155, CURVED );
     } else if ( switch_ind == 21 ) {
-      set_switch_old( 156, CURVED );
+      set_switch_old( 156, STRAIGHT );
       initialized = 1;
     } else {
       set_switch_old( switch_ind + 1, CURVED );
@@ -205,7 +218,7 @@ void track_sensor_task( ) {
   char request_sensor = REQUEST_SENSOR;
   RegisterAs( (char *) SENSOR_PROCESSING_TASK );
   int courier_tid;
-  char sensor_name[4];
+  char sensor_name[3];
   FOREVER {
     Putstr( COM1, &request_sensor, 1 );
     module_num = 0;
@@ -244,7 +257,7 @@ void track_sensor_task( ) {
       if ( recent_sensor_ind == -1 ) recent_sensor_ind = NUM_RECENT_SENSORS - 1;
       recent_sensor = recent_sensors[recent_sensor_ind];
       sensor_id_to_name( recent_sensor, sensor_name );
-      Printf( COM2, "\0337\033[%d;0H     %s  \0338", j + 7, sensor_name );
+      Printf( COM2, "\0337\033[%d;0H     %c%c%c  \0338", j + 7, sensor_name[0], sensor_name[1], sensor_name[2] );
       --recent_sensor_ind;
     }
     //Delay( 1 );

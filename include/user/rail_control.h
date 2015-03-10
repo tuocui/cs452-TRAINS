@@ -36,7 +36,7 @@
 #define SW5     5
 #define SW6     6
 #define SW7     7
-#define SW8     7
+#define SW8     8
 #define SW9     9
 #define SW10   10
 #define SW11   11
@@ -60,6 +60,7 @@
 #define TR_REVERSE      1
 #define TR_CHANGE_SPEED 2
 #define TR_INIT         3
+#define TR_DEST         4
 
 struct _track_node_;
 
@@ -68,6 +69,8 @@ typedef struct _rail_cmds_ {
   int train_action;
   int train_delay;
   int train_speed;
+  int train_dest;
+  int train_mm_past_dest;
   
   int sw_count;
   int switch_id0;
@@ -111,6 +114,7 @@ typedef struct _train_state_ {
   int prev_sensor_id;
   int next_sensor_id;
   int dest_id;
+  int mm_past_dest;
   int dist_to_next_sensor;
   int time_at_last_landmark;
   int time_since_last_pos_update;

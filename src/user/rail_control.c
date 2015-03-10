@@ -77,18 +77,31 @@ void predict_next_sensor_static( train_state_t *train_state ) {
   assert( 1, cur_node && cur_node->type == NODE_SENSOR );
   int next_sensor_id = -1; // might be an Exit node
   int ret_node_dist = cur_node->edge[DIR_AHEAD].dist;
+  int branch_ind;
   cur_node = cur_node->edge[DIR_AHEAD].dest;
 
   while( next_sensor_id < 0 ) {
-    if( cur_node->type == NODE_SENSOR || cur_node->type == NODE_EXIT ) {
-      next_sensor_id = cur_node - train_state->track_graph; 
+    //Printf( COM2, "cur_node->type: %d, cur_node->num: %d\r\n", cur_node->type, cur_node->num );
+    if( cur_node->type == NODE_SENSOR ) {
+      //Printf( COM2, "sensor node\r\n" );
+      next_sensor_id = cur_node->num; 
       assert( 1, next_sensor_id >= 0 );
     }
     else if( cur_node->type == NODE_BRANCH ) {
-      ret_node_dist += cur_node->edge[train_state->switch_states[cur_node->num]].dist;
-      cur_node = cur_node->edge[train_state->switch_states[cur_node->num]].dest;
+     // Printf( COM2, "branch node\r\n" );
+      branch_ind = cur_node->num;
+      if( branch_ind > 152 ) {
+        branch_ind -= 134;
+      }
+      //Printf( COM2, "branch_ind: %d, branch_state: %d\r\n", branch_ind, train_state->switch_states[branch_ind] );
+      ret_node_dist += cur_node->edge[train_state->switch_states[branch_ind]].dist;
+      cur_node = cur_node->edge[train_state->switch_states[branch_ind]].dest;
+    } else if( cur_node->type == NODE_EXIT ) {
+      //Printf( COM2, "exit node\r\n" );
+      break;
     }
     else { /* any other node */
+      //Printf( COM2, "other node\r\n" );
       ret_node_dist += cur_node->edge[DIR_AHEAD].dist;
       cur_node = cur_node->edge[DIR_AHEAD].dest;
     }

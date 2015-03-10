@@ -8,4 +8,6 @@ struct _track_node_;
 
 void init_trackb( struct _track_node_ *track);
 
+void init_tracka( struct _track_node_ *track);
+
 #endif
