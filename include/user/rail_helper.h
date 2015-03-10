@@ -33,4 +33,5 @@ int get_cur_velocity( struct _train_state_ *train, int cur_time );
 
 int get_cur_stopping_distance( struct _train_state_ *train );
 
+inline int get_expected_train_idx( struct _train_state_* trains, int sensor_num );
 #endif

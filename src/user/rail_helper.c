@@ -24,6 +24,27 @@ int safe_distance_to_stop( train_state_t *train ) {
   return (train->speeds[train->cur_speed]).stopping_distance + STOP_BUFFER + train->length;
 }
 
+inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
+  //FIXME TODO: handle expected sensor hit list for stopping
+  /* loop thorugh the trains to find the expected train for this sensor hit */ 
+  int cur_idx;
+  int expected_train_idx = NONE;
+  int initializing_train_idx = NONE;
+  for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
+    assertm( 1, trains[cur_idx].next_sensor_id != NONE, "failure here indicates incorrect prediction functions" );
+    if( trains[cur_idx].next_sensor_id == sensor_num ) {
+      assert( 1, expected_train_idx == NONE );
+      expected_train_idx = cur_idx;
+    }
+    if( trains[cur_idx].state == INITIALIZING )
+      initializing_train_idx = cur_idx;
+  }
+  /* if can't find matching train, assign the initializing train */ 
+  if( expected_train_idx == NONE && initializing_train_idx != NONE ) {
+    expected_train_idx = initializing_train_idx;
+  }
+  return expected_train_idx;
+}
 // returns in ms
 int get_accel_time( int cur_speed, int prev_speed, train_state_t *train ) {
   int cur_vel = (train->speeds[cur_speed]).straight_vel;
@@ -155,8 +176,8 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
   for( i = 0; i < TR_MAX; ++i ) {
     trains[i].track_graph = track_graph;
     trains[i].switch_states = switch_states;
-    trains[i].prev_sensor_id= 0;
-    trains[i].next_sensor_id= 0;
+    trains[i].prev_sensor_id= NONE;
+    trains[i].next_sensor_id= NONE;
     trains[i].mm_past_landmark = 0;
     trains[i].cur_speed = 0;
     for( j = 0; j < NUM_SPEEDS; ++j ) {

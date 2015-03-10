@@ -75,19 +75,18 @@ void sensor_worker( ) {
   int rail_server_tid;
   int sensor_num;
   int cur_time;
+  int expected_train_idx;
   train_state_t *trains;
   sensor_args_t sensor_args;
   Receive( &rail_server_tid, (char *)&rail_msg, 0 );
   Reply( rail_server_tid, (char *)&rail_msg, 0 );
   FOREVER {
     Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&sensor_args, sizeof(sensor_args) );
-    sensor_num = sensor_args.sensor_num;
     trains = sensor_args.trains;
-    // TODO: WILSON, Figure out which train this is. If this sensor doesn't match a train, check whether or not there's a train initializing. Otherwise, a random sensor just went off.
-    // 1. loop through the train structs, return train_state_*, direct function call
-    // 2. if can't find matching train, go through to check INITIALIZIN state,
-    // 3. else, return NULL, maybe remember it for later user
-    train_state_t *train = &(trains[TRAIN_58]); 
+    sensor_num = sensor_args.sensor_num;
+    
+    expected_train_idx = get_expected_train_idx( trains, sensor_num );
+    train_state_t *train = expected_train_idx == NONE ? NULL : &( trains[expected_train_idx] ); 
     assert( 1, train );
 
     cur_time = Time( );
