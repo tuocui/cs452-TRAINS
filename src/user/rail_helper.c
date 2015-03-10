@@ -25,17 +25,29 @@ int safe_distance_to_stop( train_state_t *train ) {
 }
 
 // returns in ms
-int get_accel_time( int cur_speed, int prev_speed ) {
-  int speed_diff = cur_speed - prev_speed;
-  int offset = 300;
-  if( speed_diff < 0 ) {
-    speed_diff = 0 - speed_diff;
-    offset = 500;
+int get_accel_time( int cur_speed, int prev_speed, train_state_t *train ) {
+  int cur_vel = (train->speeds[cur_speed]).straight_vel;
+  int prev_vel = (train->speeds[prev_speed]).straight_vel;
+  int t;
+  if( cur_speed > 15 ) {
+    cur_speed -= 15;
   }
-  if( speed_diff == 1 ) {
-    return offset;
+  if( prev_speed > 15 ) {
+    prev_speed -= 15;
   }
-  return ( 300 * speed_diff ) - offset;
+
+  // slowing down
+  if( cur_speed < prev_speed ) {
+    t = ( ( prev_vel - cur_vel ) * 10 ) / train->decel_rate;
+  } else { // speeding up
+    t = ( ( cur_vel - prev_vel ) * 10 ) / train->accel_rate;
+  }
+  //Printf( COM2, "change from %d, to %d, accel/decel time: %d\r\n", prev_speed, cur_speed, t );
+  if( t < 0 ){
+    return 0;
+  } else {
+    return t;
+  }
 }
 
 // returns in ms
@@ -45,12 +57,13 @@ int time_to_dist_constant_vel( int dist, int vel ) {
   return (dist * 100000) / vel;
 }
 
+// TODO: A little iffy, fix this up
 int get_mm_past_last_landmark( train_state_t *train, int cur_time ) {
   int speed_change_time = train->speed_change_time * 10;
   int prev_sensor_time = train->time_at_last_landmark * 10;
-  int speed_finish_time = speed_change_time + get_accel_time( train->cur_speed, train->prev_speed );
-  int cur_vel = train->speeds[train->cur_speed].straight_vel;
-  int prev_vel = train->speeds[train->prev_speed].straight_vel;
+  int speed_finish_time = speed_change_time + get_accel_time( train->cur_speed, train->prev_speed, train );
+  int cur_vel = train->cur_vel;
+  int prev_vel = train->vel_at_last_landmark;
   cur_time *= 10;
   if( speed_finish_time < prev_sensor_time ) {
     return ( ( cur_time - prev_sensor_time ) * cur_vel ) / 100000;
@@ -64,8 +77,37 @@ int get_mm_past_last_landmark( train_state_t *train, int cur_time ) {
   }
 }
 
-int get_cur_vel( train_state_t *train, int cur_time ) {
-  return 123;
+int get_cur_velocity( train_state_t *train, int cur_time ) {
+  int cur_vel;
+  int speed_change_time = train->speed_change_time * 10;
+  int speed_finish_time = speed_change_time + get_accel_time( train->cur_speed, train->prev_speed, train );
+  cur_time *= 10;
+  if( cur_time > speed_finish_time ) {
+    return (train->speeds[train->cur_speed]).straight_vel;
+  }
+  int cur_speed_normalized = train->cur_speed;
+  int prev_speed_normalized = train->prev_speed;
+  if( train->cur_speed > 15 ) {
+    cur_speed_normalized -= 15;
+  }
+  if( train->prev_speed > 15 ) {
+    prev_speed_normalized -= 15;
+  }
+
+  int a = 0;
+  // decelerating
+  if( cur_speed_normalized < prev_speed_normalized ) {
+    a = 0 - train->decel_rate;
+  } else if ( cur_speed_normalized > prev_speed_normalized ) {
+    a = train->accel_rate;
+  }
+  //Printf( COM2, "Some values, time_diff: %d, a: %d, prev_vel: %d\r\n", cur_time - speed_change_time, a, (train->speeds[train->prev_speed]).straight_vel );
+  cur_vel = ( ( (cur_time - speed_change_time) * a ) / 10 ) + (train->speeds[train->prev_speed]).straight_vel;
+  //Printf( COM2, "cur_vel: %d\r\n", cur_vel );
+  if( cur_vel < 0 ) {
+    return 0;
+  }
+  return cur_vel;
 }
 
 // node is index
@@ -75,7 +117,7 @@ int time_to_node( train_state_t *train, int dist_to_node, track_node_t *track ) 
   int cur_time = Time( ) * 10;
   int speed_change_time = train->speed_change_time * 10;
 
-  int accel_time = get_accel_time( train->cur_speed, train->prev_speed );
+  int accel_time = get_accel_time( train->cur_speed, train->prev_speed, train );
   int speed_finish_time = speed_change_time + accel_time;
   // Finished accel/decel before cur_time?
   int mm_past = get_mm_past_last_landmark( train, cur_time );
@@ -95,6 +137,16 @@ int time_to_node( train_state_t *train, int dist_to_node, track_node_t *track ) 
       return speed_finish_time + time_to_dist_constant_vel( dist_to_node - dist_to_const_vel, train->speeds[train->cur_speed].straight_vel );
     }
   }
+}
+
+// returns stopping distance in mm;
+int get_cur_stopping_distance( train_state_t *train ) {
+  if( train->cur_vel != (train->speeds[train->cur_speed]).straight_vel ) {
+    int stopping_dist;
+    stopping_dist = ( (train->cur_vel / 10) * (train->cur_vel / 10) ) / ( 200 * train->decel_rate );
+    return stopping_dist;
+  }
+  return (train->speeds[train->cur_speed]).stopping_distance;
 }
 
 void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_states ) {
@@ -137,6 +189,8 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
   trains[TRAIN_58].speed_change_time = 0;
   trains[TRAIN_58].is_forward = 1;
   trains[TRAIN_58].state = NOT_INITIALIZED;
+  trains[TRAIN_58].decel_rate = 120;
+  trains[TRAIN_58].accel_rate = 100;
   trains[TRAIN_58].speeds[14].straight_vel = 50579; // 14 HIGH
   trains[TRAIN_58].speeds[14].curved_vel = 50586;
   trains[TRAIN_58].speeds[14].stopping_distance = 1188;
@@ -161,14 +215,14 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
   trains[TRAIN_58].speeds[23].straight_vel = 18907; // 8 LOW
   trains[TRAIN_58].speeds[23].curved_vel = 19127;
   trains[TRAIN_58].speeds[23].stopping_distance = 186;
-  trains[TRAIN_58].speeds[24].straight_vel = 24265; // 9 LOW
-  trains[TRAIN_58].speeds[24].curved_vel = 24270;
+  trains[TRAIN_58].speeds[24].straight_vel = 24765; // 9 LOW
+  trains[TRAIN_58].speeds[24].curved_vel = 24770;
   trains[TRAIN_58].speeds[24].stopping_distance = 289;
   trains[TRAIN_58].speeds[25].straight_vel = 31219; // 10 LOW
   trains[TRAIN_58].speeds[25].curved_vel = 31030;
   trains[TRAIN_58].speeds[25].stopping_distance = 402;
-  trains[TRAIN_58].speeds[26].straight_vel = 37521; // 11 LOW
-  trains[TRAIN_58].speeds[26].curved_vel = 37543;
+  trains[TRAIN_58].speeds[26].straight_vel = 37021; // 11 LOW
+  trains[TRAIN_58].speeds[26].curved_vel = 37043;
   trains[TRAIN_58].speeds[26].stopping_distance = 550;
   trains[TRAIN_58].speeds[27].straight_vel = 45551; // 12 LOW
   trains[TRAIN_58].speeds[27].curved_vel = 44540;

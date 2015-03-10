@@ -97,7 +97,8 @@ void sensor_worker( ) {
       train->prev_speed = 0;
       train->speed_change_time = cur_time;
     } else {
-      //update_velocity( train, cur_time, train->time_at_last_landmark, train->dist_to_next_sensor );
+      train->vel_at_last_landmark = train->cur_vel;
+      update_velocity( train, cur_time, train->time_at_last_landmark, train->dist_to_next_sensor );
     }
     //assert( 2, train->next_sensor_id == sensor_num );
     train->prev_sensor_id = sensor_num;
@@ -202,9 +203,11 @@ void update_trains( ) {
       trains[i].mm_past_landmark = get_mm_past_last_landmark( &(trains[i]), cur_time );
       if( trains[i].mm_past_landmark < last_mm_past_landmark ) {
         Printf( COM2, "\0337\033[1A\033[2K\rdistance between sensors: %d\0338", last_mm_past_landmark );
+        Printf( COM2, "\0337\033[2A\033[2K\rTrain %d, cur_vel: %d    \0338", trains[i].train_id, trains[i].cur_vel );
+        Printf( COM2, "\0337\033[2A\033[2K\rTrain %d, stopping dist: %d    \0338", trains[i].train_id, get_cur_stopping_distance( &(trains[i] ) ) );
       }
       last_mm_past_landmark = trains[i].mm_past_landmark;
-      //trains[i].cur_vel = get_cur_vel( &(train[i]), cur_time );
+      trains[i].cur_vel = get_cur_velocity( &(trains[i]), cur_time );
     }
   }
 }
@@ -315,12 +318,8 @@ void rail_server( ) {
           int switch_exe_worker_tid = switch_exe_worker_tids[(receive_msg.to_server_content.rail_cmds)->switch_id0];
           switch_cmd_args.state = (receive_msg.to_server_content.rail_cmds)->switch_action0;
           switch_cmd_args.delay_time = 0;
-          //Printf( COM2, "sending task to %d", switch_exe_worker_tid );
           Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
         }
-        break;
-      case TIMER_READY:
-        // update all trains positions
         break;
       case RAIL_CMDS:
         // get train state

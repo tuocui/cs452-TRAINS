@@ -656,15 +656,14 @@ void calibrate_accel_time( ) {
 /* TODO: Calibrate stopping time */
 /* 
   Things to calibrate:
-  - More accurate stopping distance - HIGH PRI - TONY - MON
-    - get value for accel/decel
-    - accel is more than decel
-  - Update train position and velocity constantly (in idle task?)
-  - stopping time (once we have velocity and stopping distance) - Can do mathematically, = (2*d)/v0 - HIGH PRI - TONY - MON
-  - update train speed on set_train_speed_old // HIGH PRI - TONY - MON
+  - delay time to stop
+  - velocity calibration - TONY - HIGH PRO dependant on WILSON
+  - Time to next sensor - TONY - HIGH PRI - Depedant on WILSON
   - update_costs( graph, velocity ) // MED-PRI - TONY
+  - stopping time (once we have velocity and stopping distance) - Can do mathematically, = (2*d)/v0 - MED PRI - TONY - MON
   - Calculate reverse costs - SUN (LOW PRI - TONY)
   - Assert ring buffer - LOW PRI - TONY
+  - accelation mm from last_sensor - LOW PRI - FIX UP
   - Calibrate another train - VERY LOW PRI
 
   - train initialization. how? - HIGH PRI - TONY/WILSON

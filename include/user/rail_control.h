@@ -111,9 +111,12 @@ typedef struct _train_state_ {
   int dest_id;
   int dist_to_next_sensor;
   int time_at_last_landmark;
+  int vel_at_last_landmark;
   int mm_past_landmark; // TODO
   int length;
   int pickup_len;
+  int decel_rate;       // mm/s^2
+  int accel_rate;
   int cur_speed;
   int prev_speed;
   int cur_vel;
