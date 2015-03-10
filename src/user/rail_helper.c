@@ -13,14 +13,14 @@
 // returns distance in mm
 
 //TODO: TONY, give the magic 100000 and 200000 names 
-int safe_distance_to_branch( train_state_t *train ) {
+inline int safe_distance_to_branch( train_state_t *train ) {
   int vel = (train->speeds[train->cur_speed]).straight_vel;
   return ( vel * SW_TIME ) / 100000 + SWITCH_BUFFER + train->length;
 }
 
 // stopping distance + buffer + length of train
 // return distance in mm
-int safe_distance_to_stop( train_state_t *train ) {
+inline int safe_distance_to_stop( train_state_t *train ) {
   return (train->speeds[train->cur_speed]).stopping_distance + STOP_BUFFER + train->length;
 }
 
@@ -74,7 +74,7 @@ int get_accel_time( int cur_speed, int prev_speed, train_state_t *train ) {
 // returns in ms
 // dist in mm
 // vel in mm/100s
-int time_to_dist_constant_vel( int dist, int vel ) {
+inline int time_to_dist_constant_vel( int dist, int vel ) {
   return (dist * 100000) / vel;
 }
 

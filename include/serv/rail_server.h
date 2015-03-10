@@ -57,6 +57,7 @@ typedef struct _rail_msg_ {
   } response_type;
 
   content_t to_server_content;
+  //FIXME: remove from_server_content;
   content_t from_server_content;
 } rail_msg_t;
 

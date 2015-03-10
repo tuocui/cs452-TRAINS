@@ -20,8 +20,6 @@
 
 #define CYCLES 1000
 
-// TODO: Split this into user task and test task files
-
 //#define A1 1
 //#define A2 1 
 //#define A3 1
@@ -30,7 +28,6 @@
 //#define RAIL_TEST
 
 
-//TODO remove testing struct
 struct Server {
   char arr[4];
 };
@@ -697,13 +694,36 @@ void dijkstra_test( ) {
   //=================================================================================
 
   //TESTING reverse commands
+  //init_rail_cmds( &cmds );
+  //src_id = 15;
+  //dest_id = 0;
+  //train.prev_sensor_id = src_id;
+  //train.dest_id= dest_id;
+  //get_next_command( &train, &cmds );
+  //debug( "Reverse commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d 
+  //                    \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
+  //                    \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
+  //                    \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
+  //                        cmds.train_id, cmds.train_action, cmds.train_delay,
+  //                        cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
+  //                        cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
+  //                        cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  //=================================================================================
+
+  //TESTING stop prediction
   init_rail_cmds( &cmds );
-  src_id = 15;
-  dest_id = 0;
+  src_id = 20;
+  dest_id = 53;
   train.prev_sensor_id = src_id;
-  train.dest_id= dest_id;
-  get_next_command( &train, &cmds );
-  debug( "Reverse commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d \
+  train.dest_id = dest_id;
+  train.speeds[train.cur_speed].stopping_distance = 0;
+  
+  while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
+    init_rail_cmds( &cmds );
+    get_next_command( &train, &cmds );
+    train.speeds[train.cur_speed].stopping_distance += 100;
+
+    debug( "stop commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d \
                       \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d \
                       \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d \
                       \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
@@ -711,16 +731,17 @@ void dijkstra_test( ) {
                           cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
                           cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
                           cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  }
   //=================================================================================
-
+  
   //TESTING static prediction
-  train.switch_states[14] = SW_STRAIGHT;
-  predict_next_sensor_static( &train );
-  debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+  //train.switch_states[14] = SW_STRAIGHT;
+  //predict_next_sensor_static( &train );
+  //debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
 
-  train.switch_states[14] = SW_CURVED;
-  predict_next_sensor_static( &train );
-  debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+  //train.switch_states[14] = SW_CURVED;
+  //predict_next_sensor_static( &train );
+  //debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
 }
 
 void first_user_task( ){
