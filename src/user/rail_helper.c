@@ -58,22 +58,36 @@ int time_to_dist_constant_vel( int dist, int vel ) {
 }
 
 // TODO: A little iffy, fix this up
+// NOTE: This isn't mm, it's (1/10)mm, need to maintain accuracy
 int get_mm_past_last_landmark( train_state_t *train, int cur_time ) {
   int speed_change_time = train->speed_change_time * 10;
   int prev_sensor_time = train->time_at_last_landmark * 10;
+  int prev_update_time = train->time_since_last_pos_update * 10;
   int speed_finish_time = speed_change_time + get_accel_time( train->cur_speed, train->prev_speed, train );
   int cur_vel = train->cur_vel;
-  int prev_vel = train->vel_at_last_landmark;
-  cur_time *= 10;
-  if( speed_finish_time < prev_sensor_time ) {
-    return ( ( cur_time - prev_sensor_time ) * cur_vel ) / 100000;
-  } else if( speed_finish_time < cur_time ) {
-    return ( ( cur_time - speed_finish_time ) * cur_vel ) / 100000 + 
-           ( ( speed_finish_time - prev_sensor_time ) * prev_vel ) / 100000 + 
-           ( ( speed_finish_time - prev_sensor_time ) * ( cur_vel - prev_vel ) ) / 200000;
+  int prev_vel;
+  int prev_time;
+  int mm_so_far;
+  // If we have passed over a sensor since last update
+  if( prev_sensor_time > prev_update_time ) {
+    prev_time = prev_sensor_time;
+    mm_so_far = 0;
+    prev_vel = train->vel_at_last_landmark;
   } else {
-    return ( ( cur_time - prev_sensor_time ) * prev_vel ) / 100000 + 
-           ( ( cur_time - prev_sensor_time ) * ( cur_vel - prev_vel ) ) / 200000;
+    prev_time = prev_update_time;
+    mm_so_far = train->mm_past_landmark;
+    prev_vel = train->vel_at_last_pos_update;
+  }
+  cur_time *= 10;
+  if( speed_finish_time < prev_time ) {
+    return mm_so_far + ( ( cur_time - prev_time ) * cur_vel ) / 10000;
+  } else if( speed_finish_time < cur_time ) {
+    return ( mm_so_far + ( ( cur_time - speed_finish_time ) * cur_vel ) / 10000 + 
+           ( ( speed_finish_time - prev_time ) * prev_vel ) / 10000 + 
+           ( ( speed_finish_time - prev_time ) * ( cur_vel - prev_vel ) ) / 20000 );
+  } else {
+    return ( mm_so_far + ( ( cur_time - prev_time ) * prev_vel ) / 10000 + 
+           ( ( cur_time - prev_time ) * ( cur_vel - prev_vel ) ) / 20000 );
   }
 }
 
@@ -147,6 +161,14 @@ int get_cur_stopping_distance( train_state_t *train ) {
     return stopping_dist;
   }
   return (train->speeds[train->cur_speed]).stopping_distance;
+}
+
+// returns in ms
+// TODO: Double check that this is correct (95% sure)
+int get_cur_stopping_time( train_state_t *train ) {
+  int cur_stopping_distance = get_cur_stopping_distance( train );
+  return ( 200000 * cur_stopping_distance ) / (train->cur_vel);
+  
 }
 
 void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_states ) {
@@ -262,8 +284,15 @@ void init_switches( int *switch_states ) {
 }
 
 void update_velocity( train_state_t *train, int cur_time, int prev_time, int dist ) {
+  int speed_change_time = train->speed_change_time * 10;
+  int speed_finish_time = speed_change_time + get_accel_time( train->cur_speed, train->prev_speed, train );
+  // Only do this after train has hit steady velocity
+  if( dist == 0 || prev_time * 10 <= speed_finish_time || train->prev_sensor_id == 41 ) {
+    return;
+  }
   int new_vel = ( dist * 10000 ) / ( cur_time - prev_time );
   (train->speeds[train->cur_speed]).straight_vel = 
     ( (80 * (train->speeds[train->cur_speed]).straight_vel ) + ( 20 * new_vel ) ) / 100;
+  Printf( COM2, "\0337\033[5A\033[2K\rTrain %d, updated speed %d velocity: %d    \0338", train->train_id, train->cur_speed, (train->speeds[train->cur_speed]).straight_vel );
 }
 

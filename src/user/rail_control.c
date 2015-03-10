@@ -74,7 +74,6 @@ void predict_next_sensor_dynamic( train_state_t *train_state ) {
 
 void predict_next_sensor_static( train_state_t *train_state ) {
   track_node_t* cur_node = &(train_state->track_graph[train_state->prev_sensor_id]);
-  Printf( COM2, "prev_sensor_id: %d\r\n", train_state->prev_sensor_id );
   assert( 1, cur_node && cur_node->type == NODE_SENSOR );
   int next_sensor_id = -1; // might be an Exit node
   int ret_node_dist = cur_node->edge[DIR_AHEAD].dist;

@@ -33,4 +33,6 @@ int get_cur_velocity( struct _train_state_ *train, int cur_time );
 
 int get_cur_stopping_distance( struct _train_state_ *train );
 
+int get_cur_stopping_time( struct _train_state_ *train );
+
 #endif

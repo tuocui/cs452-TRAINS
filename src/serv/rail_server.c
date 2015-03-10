@@ -200,14 +200,17 @@ void update_trains( ) {
   FOREVER {
     cur_time = Delay( 1 );
     for( i = 0; i < TR_MAX; ++i ) {
+      trains[i].cur_vel = get_cur_velocity( &(trains[i]), cur_time );
       trains[i].mm_past_landmark = get_mm_past_last_landmark( &(trains[i]), cur_time );
+      trains[i].time_since_last_pos_update = cur_time;
+      trains[i].vel_at_last_pos_update = trains[i].cur_vel;
       if( trains[i].mm_past_landmark < last_mm_past_landmark ) {
-        Printf( COM2, "\0337\033[1A\033[2K\rdistance between sensors: %d\0338", last_mm_past_landmark );
+        Printf( COM2, "\0337\033[1A\033[2K\rdistance between sensors: %d\0338", last_mm_past_landmark / 10 );
         Printf( COM2, "\0337\033[2A\033[2K\rTrain %d, cur_vel: %d    \0338", trains[i].train_id, trains[i].cur_vel );
-        Printf( COM2, "\0337\033[2A\033[2K\rTrain %d, stopping dist: %d    \0338", trains[i].train_id, get_cur_stopping_distance( &(trains[i] ) ) );
+        Printf( COM2, "\0337\033[3A\033[2K\rTrain %d, stopping dist: %d    \0338", trains[i].train_id, get_cur_stopping_distance( &(trains[i] ) ) );
+        Printf( COM2, "\0337\033[4A\033[2K\rTrain %d, stopping time: %d    \0338", trains[i].train_id, get_cur_stopping_time( &(trains[i] ) ) );
       }
       last_mm_past_landmark = trains[i].mm_past_landmark;
-      trains[i].cur_vel = get_cur_velocity( &(trains[i]), cur_time );
     }
   }
 }
