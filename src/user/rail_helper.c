@@ -95,10 +95,12 @@ int time_to_node( train_state_t *train, int dist_to_node, track_node_t *track ) 
   }
 }
 
-void init_trains( train_state_t *trains, int num_trains ) {
+void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_states ) {
   int i;
   int j;
-  for( i = 0; i < num_trains; ++i ) {
+  for( i = 0; i < TR_MAX; ++i ) {
+    trains[i].track_graph = track_graph;
+    trains[i].switch_states = switch_states;
     trains[i].prev_sensor_id= 0;
     trains[i].next_sensor_id= 0;
     trains[i].mm_past_landmark = 0;
@@ -178,7 +180,7 @@ void init_trains( train_state_t *trains, int num_trains ) {
 
 }
 
-void init_switches( int *switch_states, int num_switches ) {
+void init_switches( int *switch_states ) {
   switch_states[SW1] = SW_CURVED;
   switch_states[SW2] = SW_CURVED;
   switch_states[SW3] = SW_CURVED;

@@ -5,6 +5,7 @@
 #include "tools.h"
 #include "syscall.h"
 #include "rail_control.h"
+#include "rail_helper.h"
 
 #define TRAIN_NUM 58
 #define WEIGHT_PREV 50
@@ -571,8 +572,8 @@ void calibrate_accel_time( ) {
   int t1;
   int v0;
   int v1;
-  train_state_t trains[65];
-  init_trains( trains, 65 );
+  train_state_t trains[TR_MAX];
+  init_trains( trains, NULL, NULL );
   set_switch_old( 17, STRAIGHT );
   set_switch_old( 13, STRAIGHT );
   Putstr( COM1, &request_sensor, 1 );
@@ -617,8 +618,8 @@ void calibrate_accel_time( ) {
                   t2 = Time( ) - t0;
                   if( t0 ) {
                     set_train_speed_old( TRAIN_NUM, i );
-                    v0 = trains[TRAIN_NUM].speeds[i].straight_vel;
-                    v1 = trains[TRAIN_NUM].speeds[j].straight_vel;
+                    v0 = trains[TRAIN_58].speeds[i].straight_vel;
+                    v1 = trains[TRAIN_58].speeds[j].straight_vel;
                     t1 = (( (2*dt) - ( (2*t2*v1) / 10000 ) ) * 10000) / (v0 - v1);
 
                     Printf( COM2, "%d\r\n", t2);

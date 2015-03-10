@@ -16,6 +16,7 @@
 #include "track_data_new.h"
 #include "rail_server.h"
 #include "calibration.h"
+#include "rail_helper.h"
 
 #define CYCLES 1000
 
@@ -24,9 +25,9 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-#define A4 1
+//#define A4 1
 //#define RING_TEST
-//#define RAIL_TEST
+#define RAIL_TEST
 
 
 //TODO remove testing struct
@@ -557,6 +558,26 @@ void ring_buf_test( ) {
 
 void dijkstra_test( ) {
   debug( "dijkstra_test" );
+  setspeed( COM1, LOW_SPEED );
+  wait_cycles(1000);
+  enable_two_stop_bits( COM1 );
+  setfifo( COM1, OFF );
+  setfifo( COM2, ON );
+  int nameserver_tid = Create( 3, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
+  debug( "Idle tid: %d", idle_id );
+  int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
+  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
+  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
+  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
+  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  int clock_server_tid = Create( 3, &clock_server ); // 43
+  debug( "Clock Server tid: %d", clock_server_tid );
+
   /* initialize the heap */
 
   //min_heap_t min_heap;
@@ -616,14 +637,13 @@ void dijkstra_test( ) {
   int all_dist[NODE_MAX];
   int all_step[NODE_MAX];
 
-  int src_id = 45;
-  int dst_id = 14;
-  int safe_branch_dist = 0;
+  int src_id = 2;
+  int dest_id = 14;
 
   dijkstra( track_graph, src_id, all_path, all_dist, all_step );
 
-  debug( "steps: %d", all_step[dst_id] );
-  //int dst_path[all_step[dst_id]];
+  debug( "steps: %d", all_step[dest_id] );
+  //int dst_path[all_step[dest_id]];
   
   debug( "dijkstra results: " );
   int i;
@@ -635,21 +655,30 @@ void dijkstra_test( ) {
     //int dst_path[NODE_MAX];
   //int *steps;
 
-  //print_shortest_path( track_graph, all_path, all_step, src_id, dst_id, dst_path );
+  //print_shortest_path( track_graph, all_path, all_step, src_id, dest_id, dst_path );
 
   //for( i = 0; i < NODE_MAX; ++i ) {
   //  int all_dst_path[all_step[i]];
   //  print_shortest_path( track_graph, all_path, all_step, src_id, i, all_dst_path );
   //}
   
+  int switch_states[SW_MAX];
+  init_switches( switch_states );
+
   train_state_t train;
+  init_trains( &train, track_graph, switch_states );
+  train.prev_sensor_id = src_id;
+  train.dest_id = dest_id;
+  train.cur_speed = 12;
+  train.speeds[train.cur_speed].safe_branch_distance += 0;
+
   //TODO initialize safe_branch, prev_ and next_ node_id
   rail_cmds_t cmds;
-  while( safe_branch_dist < 500 ) {
+  while( train.speeds[train.cur_speed].safe_branch_distance < 500 ) {
     init_rail_cmds( &cmds );
     //FIXME: assign values to train
-    get_next_command( &train, &cmds );
-    safe_branch_dist += 50;
+    //get_next_command( &train, &cmds );
+    train.speeds[train.cur_speed].safe_branch_distance += 50;
 
   debug( "Commandes: \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d \
                      \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d \
@@ -659,6 +688,14 @@ void dijkstra_test( ) {
                         cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
   }
 
+
+  train.switch_states[14] = SW_STRAIGHT;
+  predict_next_sensor_static( &train );
+  debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+
+  train.switch_states[14] = SW_CURVED;
+  predict_next_sensor_static( &train );
+  debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
 }
 
 void first_user_task( ){

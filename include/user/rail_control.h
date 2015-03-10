@@ -24,8 +24,8 @@
 #define TR_SPD_14 14 
 #define TR_RV     15
 
-#define SW_CURVED   0 
-#define SW_STRAIGHT 1 
+#define SW_STRAIGHT 0 
+#define SW_CURVED   1 
 
 #define SW_MAX  23
 #define SW1     1 
@@ -59,7 +59,7 @@
 #define TR_REVERSE      1
 #define TR_CHANGE_SPEED 2
 
-struct track_node;
+struct _track_node_;
 
 typedef struct _rail_cmds_ {
   int train_id;
@@ -92,7 +92,8 @@ typedef struct _speed_info_ {
 } speed_info_t;
 
 typedef struct _train_state_ {
-  struct track_node* track_graph;
+  struct _track_node_* track_graph;
+  int * switch_states;
 
   enum {
     READY = 0,
@@ -161,12 +162,14 @@ min_heap_node_t * extract_min( min_heap_t * min_heap );
 
 inline void print_min_heap( min_heap_t * min_heap );
 
-void dijkstra( struct track_node* track_graph, int src_id, int* all_path, int* all_dist, int* all_step );
+void dijkstra( struct _track_node_* track_graph, int src_id, int* all_path, int* all_dist, int* all_step );
 
 void get_shortest_path( int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
 
-void print_shortest_path( struct track_node * track_graph, int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
+void print_shortest_path( struct _track_node_ * track_graph, int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
 
 void decrease_dist( min_heap_t * min_heap, int id, int dist );
+
+void predict_next_sensor_static( train_state_t *train_state );
 
 #endif

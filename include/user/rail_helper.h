@@ -7,6 +7,7 @@
 #define STOP_BUFFER 20
 
 struct _train_state_;
+struct _track_node_;
 
 // time to switch branch * velocity of train + buffer + length of train
 int safe_distance_to_branch( struct _train_state_ *train );
@@ -24,8 +25,8 @@ int get_next_sensor( struct _train_state_ *train, int *dist_to_next_sensor );
 
 void update_velocity( struct _train_state_ *train, int cur_time, int prev_time, int dist );
 
-void init_trains( struct _train_state_ *trains, int num_trains );
+void init_switches( int *switch_states );
 
-void init_switches( int *switch_states, int num_switches );
+void init_trains( struct _train_state_ *trains, struct _track_node_* track_graph, int* switch_states );
 
 #endif
