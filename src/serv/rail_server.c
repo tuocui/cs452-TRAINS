@@ -12,6 +12,9 @@
 #include "clock_server.h"
 #include "ring_buf.h"
 
+#include "track_data_new.h"
+#include "track_node.h"
+
 
 /* a notifier, will change to couriers if necessary */
 //NOTE: each train should have its own graph_search thread, becuase cmds is local
@@ -71,7 +74,6 @@ void sensor_worker( ) {
   rail_msg.from_server_content.nullptr = NULL;
   int rail_server_tid;
   int sensor_num;
-  int dist_to_next_sensor;
   int cur_time;
   train_state_t *trains;
   sensor_args_t sensor_args;
@@ -82,7 +84,12 @@ void sensor_worker( ) {
     sensor_num = sensor_args.sensor_num;
     trains = sensor_args.trains;
     // TODO: WILSON, Figure out which train this is. If this sensor doesn't match a train, check whether or not there's a train initializing. Otherwise, a random sensor just went off.
+    // 1. loop through the train structs, return train_state_*, direct function call
+    // 2. if can't find matching train, go through to check INITIALIZIN state,
+    // 3. else, return NULL, maybe remember it for later user
     train_state_t *train = &(trains[TRAIN_58]); 
+    assert( 1, train );
+
     cur_time = Time( );
     if( train->state == INITIALIZING ) {
       set_train_speed( train, 0 );
@@ -95,12 +102,11 @@ void sensor_worker( ) {
     }
     //assert( 2, train->next_sensor_id == sensor_num );
     train->prev_sensor_id = sensor_num;
-    train->next_sensor_id = get_next_sensor(train, &dist_to_next_sensor); // TODO: WILSON, in rail_helper.c
+    predict_next_sensor_static( train ); 
+    // if no reverse, 
     train->time_at_last_landmark = cur_time;
     train->mm_past_landmark = 0;
-    train->dist_to_next_sensor = dist_to_next_sensor;
     rail_msg.to_server_content.train_state = train;
-    // run prediction
   }
 }
 
@@ -213,16 +219,21 @@ void rail_server( ) {
   }
   int client_tid;
   
+  /* track state initialization */
+  track_node_t track_graph[TRACK_MAX];
+  init_trackb( (track_node_t*)track_graph );
   int switch_states[SW_MAX];
   int train_graph_search_tid[TR_MAX]; 
+
+  
+  /* trains initialization */
+  train_state_t trains[TR_MAX];
+  init_trains( trains, (track_node_t*)track_graph, switch_states );
+  init_switches( switch_states );
+
   //bool train_graph_search_ready[TR_MAX];
   //bool train_delay_treads_arrived[TR_MAX]; TODO
-  train_state_t trains[TR_MAX];
   rail_msg_t receive_msg;
-
-  init_trains( trains, TR_MAX );
-  init_switches( switch_states, SW_MAX );
-
   int i;
   for( i = 0; i < TR_MAX; ++i ) {
     train_graph_search_tid[i] = Create( 10, &rail_graph_worker );
@@ -324,6 +335,8 @@ void rail_server( ) {
         if( receive_msg.to_server_content.train_state != NULL ) {
           // graph search
         }
+        // graph search
+        // and then run the comprehensive prediction to update the next sensor to hit
         break;
       default:
         assertm( 1, false, "ERROR: unrecognized request: %d", receive_msg.request_type );

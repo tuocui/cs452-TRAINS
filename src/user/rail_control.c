@@ -43,17 +43,47 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
   cmds->switch_id2= cmds->switch_action2= cmds->switch_delay2= 0;
 }
 
+void predict_next_sensor_static( train_state_t *train_state ) {
+  track_node_t* cur_node = &(train_state->track_graph[train_state->prev_sensor_id]);
+  assert( 1, cur_node && cur_node->type == NODE_SENSOR );
+  int next_sensor_id = -1; // might be an Exit node
+  int ret_node_dist = cur_node->edge[DIR_AHEAD].dist;
+  cur_node = cur_node->edge[DIR_AHEAD].dest;
+
+  while( next_sensor_id < 0 ) {
+    if( cur_node->type == NODE_SENSOR || cur_node->type == NODE_EXIT ) {
+      next_sensor_id = cur_node - train_state->track_graph; 
+      assert( 1, next_sensor_id >= 0 );
+    }
+    else if( cur_node->type == NODE_BRANCH ) {
+      ret_node_dist += cur_node->edge[train_state->switch_states[cur_node->num]].dist;
+      cur_node = cur_node->edge[train_state->switch_states[cur_node->num]].dest;
+    }
+    else { /* any other node */
+      ret_node_dist += cur_node->edge[DIR_AHEAD].dist;
+      cur_node = cur_node->edge[DIR_AHEAD].dest;
+    }
+  }
+  
+  debug( "dist_to_next_sensor: %d", ret_node_dist );
+  debug( "next_sensor_id: %d", next_sensor_id );
+  train_state->dist_to_next_sensor = ret_node_dist;
+  train_state->next_sensor_id = next_sensor_id; 
+}
+
+//int predict_next_sensor_dynamic(  );
 void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   track_node_t* track_graph = train->track_graph;
   int train_id = train->train_id;
   int src_id = train->prev_sensor_id;
   int dest_id = train->dest_id;
   int speed_idx = train->cur_speed;
-  assert( 1, speed_idx >= 8 && speed_idx <= 14 && speed_idx >= 23 && speed_idx <= 29 );
+  assertm( 1, ( speed_idx >= 8 && speed_idx <= 14 ) || ( speed_idx >= 23 || speed_idx <= 29 ), "cur_speed: %d", speed_idx );
   int train_velocity = train->speeds[speed_idx].straight_vel; 
   //int stop_time = train->speeds[speed_idx].stopping_time;
   int stop_dist = train->speeds[speed_idx].stopping_distance;
   int safe_branch_dist = train->speeds[speed_idx].safe_branch_distance; 
+  debug( "safe_branch_dist: %d", safe_branch_dist );
 
   assert( 1, track_graph && cmds && src_id >= 0 && src_id < TRACK_MAX && dest_id >= 0 && dest_id < TRACK_MAX );
   /* currently we only run dijkstra on sensor hit, so src_id should be  a sensor */
@@ -91,7 +121,7 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         
         cmds->train_id = train_id;
         cmds->train_action = TR_STOP;
-        cmds->train_delay = (( src2dest_dist - stop_dist ) > 0 ) ? ( src2dest_dist - stop_dist ) / train_velocity : 0;
+        cmds->train_delay = (( src2dest_dist - stop_dist ) > 0 ) ? ( src2dest_dist - stop_dist ) * 10000 / train_velocity : 0;
       }
     }
     /* update prev_sensor iff cur_sensor is the sensor immediately after src */
@@ -113,7 +143,8 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
             ( prev_sensor_id  == second_sensor_id && stop_dist > sensor2reverse_dist ))) {
         assert( 1, track_graph[i-1].type == NODE_MERGE );
         int src2reverse_dist = all_dist[cur_node_id];
-        cmds->train_delay = (( src2reverse_dist - stop_dist ) > 0 ) ? ( src2reverse_dist - stop_dist ) / train_velocity : 0;
+        cmds->train_delay = (( src2reverse_dist - stop_dist ) > 0 ) ? \
+          ( src2reverse_dist - stop_dist ) * 1000 / train_velocity : 0;
       }
     }
     /* finally, branching case */
@@ -129,12 +160,16 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         _cmds->switch_delay##_switch_count = _delay; 
       /* get dist between sensor and branch*/  
       int sensor2branch_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
-      int sensor2branch_time = SW_TIME;//FIXME: replace it with actual time
+      int src2branch_dist = all_dist[cur_node_id];
+      int branch_delay_time = (( src2branch_dist - safe_branch_dist ) * 10000 / train_velocity - SW_TIME/10 ) > 0 ? \
+                        ( src2branch_dist - safe_branch_dist ) * 10000 / train_velocity - SW_TIME/10  : 0;
+      debug( "%d - %d * 1000 / %d - %d", src2branch_dist, safe_branch_dist, train_velocity, SW_TIME );
 
       /* issue switch commands */
       if(( prev_sensor_id == src_id && sensor2branch_dist >= safe_branch_dist) ||
          ( prev_sensor_id == second_sensor_id && 
                               sensor2branch_dist < safe_branch_dist )) {
+        //FIXME: this is faling, should handle 4 branchees
         assert( 1, switch_count < 3 );
         assertm( 1, track_graph[cur_node_id].num > 0 || 
                    track_graph[cur_node_id].num < 19 || 
@@ -151,13 +186,13 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
                    &track_graph[dest_path[i+1]] ) ? SW_STRAIGHT : SW_CURVED;
 
         if( switch_count == 0 ){
-          set_switch( cmds, 0, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME );
+          set_switch( cmds, 0, track_graph[cur_node_id].num, action, branch_delay_time );
         }
         else if( switch_count == 1 ) {
-          set_switch( cmds, 1, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME);
+          set_switch( cmds, 1, track_graph[cur_node_id].num, action, branch_delay_time );
         }
         else if( switch_count == 2 ) {
-          set_switch( cmds, 2, track_graph[cur_node_id].num, action, sensor2branch_time - SW_TIME );
+          set_switch( cmds, 2, track_graph[cur_node_id].num, action, branch_delay_time );
         }
         else
           assert( 1, false );
@@ -165,7 +200,7 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         ++switch_count;
       }
       else 
-        assert( 1, false );
+        ;//debug(  );
     }
   }
 }
@@ -328,7 +363,7 @@ inline void print_min_heap( min_heap_t * min_heap ) {
   bwprintf( COM2, "\n\r" );
 }
 
-void dijkstra( struct track_node* track_graph, int src_id, int* path, int* dist, int* step ) {
+void dijkstra( struct _track_node_* track_graph, int src_id, int* path, int* dist, int* step ) {
   assert( 1, track_graph || src_id >= 0 || src_id < NODE_MAX )
   
   /* initialize the heap */
