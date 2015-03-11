@@ -64,6 +64,7 @@
 #define TR_DEST         4
 #define TR_ACCEL        5
 #define TR_DECEL        6
+#define TR_CH_DIR       7
 
 #define NUM_FALLBACK 5
 

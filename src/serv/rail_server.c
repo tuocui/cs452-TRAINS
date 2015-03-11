@@ -213,6 +213,14 @@ void train_exe_worker( ) {
     case TR_DECEL:
       train->decel_rate = train_cmd_args.decel_rate;
       break;
+    case TR_CH_DIR:
+      train->is_forward ^= 1;
+      if( train->is_forward ) {
+        Printf( COM2, "\0337\033[1A\033[2K\rTrain %d now facing forwards\0338", train->train_id );
+      } else {
+        Printf( COM2, "\0337\033[1A\033[2K\rTrain %d now facing backwards\0338", train->train_id );
+      }
+      break;
     default:
       break;
     }

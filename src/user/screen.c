@@ -42,6 +42,9 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 'd' && cmd2 == 'c' ) {
     return DECEL_CMD;  
   }
+  if ( cmd1 == 'c' && cmd2 == 'd' ) {
+    return CH_DIR_CMD;  
+  }
   if ( cmd1 == 't' && cmd2 == 'd' ) {
     return DEST_CMD;  
   }
@@ -270,6 +273,21 @@ int handle_decel( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  )
   return 0;
 }
 
+int handle_ch_dir( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+
+  if ( train <= 0 ){
+    output_invalid( );
+    return -1;
+  }
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_CH_DIR;
+  
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  return 0;
+}
+
 int handle_go( ) {
   track_go( );
   Putstr( COM2, "\0337\033[1A\033[2K\rTrack ON\0338", 21 );
@@ -310,6 +328,9 @@ int process_buffer( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg,
     break;
   case DECEL_CMD:
     handle_decel( cmd_buffer, rail_msg, rail_server_tid );
+    break;
+  case CH_DIR_CMD:
+    handle_ch_dir( cmd_buffer, rail_msg, rail_server_tid );
     break;
   case GO_CMD:
     handle_go( );

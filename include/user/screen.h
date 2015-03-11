@@ -13,6 +13,7 @@
 #define DEST_CMD 6
 #define ACCEL_CMD 7
 #define DECEL_CMD 8
+#define CH_DIR_CMD 9
 #define QUIT_CMD 99
 
 void parse_user_input( );
