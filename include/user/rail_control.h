@@ -62,6 +62,8 @@
 #define TR_CHANGE_SPEED 2
 #define TR_INIT         3
 #define TR_DEST         4
+#define TR_ACCEL        5
+#define TR_DECEL        6
 
 #define NUM_FALLBACK 5
 

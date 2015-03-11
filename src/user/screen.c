@@ -36,6 +36,12 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 't' && cmd2 == 'i' ) {
     return INIT_CMD;  
   }
+  /*if ( cmd1 == 'a' && cmd2 == 'c' ) {
+    return ACCEL_CMD;  
+  }
+  if ( cmd1 == 'd' && cmd2 == 'c' ) {
+    return DECEL_CMD;  
+  }*/
   if ( cmd1 == 't' && cmd2 == 'd' ) {
     return DEST_CMD;  
   }

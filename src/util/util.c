@@ -23,7 +23,7 @@ void idle_percent_task( ) {
       cumulative_pct,
       recent_pct
     );
-    Delay( 50 );
+    Delay( 100 );
   }
   Exit( );
 }

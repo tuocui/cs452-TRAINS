@@ -11,6 +11,8 @@
 #define KILL_CMD 4
 #define INIT_CMD 5
 #define DEST_CMD 6
+#define ACCEL_CMD 7
+#define DECEL_CMD 8
 #define QUIT_CMD 99
 
 void parse_user_input( );

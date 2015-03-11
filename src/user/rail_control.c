@@ -102,7 +102,7 @@ void predict_next_sensor_dynamic( train_state_t* train_state ) {
   int branch_ind;
   cur_node = cur_node->edge[DIR_AHEAD].dest;
   //int stop_dist = get_cur_stopping_distance( train_state );
-  int stop_dist = train_state->speeds[train_state->cur_speed].stopping_distance;
+  int stop_dist = get_cur_stopping_distance( train_state );
   while( next_sensor_id < 0 && next_sensor_dist <= stop_dist ) {
     debug("whileloop, next_sensor_dist: %d, stop_dist: %d", next_sensor_dist, stop_dist ) ;
     if( cur_node->type == NODE_SENSOR ) {
@@ -130,18 +130,10 @@ void predict_next_sensor_dynamic( train_state_t* train_state ) {
     }
   }
 
-  train_state->prev_sensor_id = train_state->next_sensor_id;
-  train_state->next_sensor_id = next_sensor_id;
-  train_state->dist_to_next_sensor = next_sensor_dist;
   if( next_sensor_id == NONE && train_state->state == REVERSING ) {
     debug( "5" );
     train_state->next_sensor_id = train_state->track_graph[train_state->prev_sensor_id].reverse - train_state->track_graph;
-    train_state->dist_to_next_sensor = stop_dist * 2;
-  }
-  if( next_sensor_id == NONE && train_state->cur_speed == 0 ) {
-    debug( "6" );
-    train_state->next_sensor_id = NONE;
-    train_state->dist_to_next_sensor = 0;
+    train_state->dist_to_next_sensor = (stop_dist * 2) - train_state->pickup_len > 0 ? (stop_dist * 2) - train_state->pickup_len : 0;
   }
 
 }
@@ -190,6 +182,22 @@ void predict_next_sensor_static( train_state_t *train_state ) {
 void predict_next_fallback_sensors_static( train_state_t *train ) {
   track_node_t* cur_node = &(train->track_graph[train->prev_sensor_id]);
   int expected_sensor_num = train->next_sensor_id;
+  if( (cur_node->reverse)->num == expected_sensor_num ) {
+    cur_node = cur_node->edge[DIR_AHEAD].dest;
+    int branch_ind;
+    while( cur_node->type != NODE_SENSOR ) {
+      if( cur_node->type == NODE_BRANCH ) {
+        branch_ind = cur_node->num;
+        if( branch_ind > 152 ) {
+          branch_ind -= 134;
+        }
+        cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
+      } else {
+        cur_node = cur_node->edge[DIR_AHEAD].dest;
+      }
+    }
+    cur_node = cur_node->reverse;
+  }
   int saw_expected_sensor = 0;
   assert( 1, cur_node && cur_node->type == NODE_SENSOR );
   int branch_ind;

@@ -23,9 +23,9 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-//#define A4 1
+#define A4 1
 //#define RING_TEST
-#define RAIL_TEST
+//#define RAIL_TEST
 
 
 struct Server {
@@ -748,10 +748,11 @@ void dijkstra_test( ) {
   train.speeds[train.cur_speed].stopping_distance = 0;
   //train.state = REVERSING;
 
-  while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
+  src_id = 7;
+  int next_id = 6;
+  dest_id = 53;
+  /*while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
   debug( "AHHHHHHHHHHHHHHHHHHHHHHHHHHH: %d", train.speeds[train.cur_speed].stopping_distance );
-    src_id = 5;
-    dest_id = 53;
     train.prev_sensor_id = src_id;
     train.next_sensor_id = dest_id;
     train.speeds[train.cur_speed].stopping_distance += 100;
@@ -761,7 +762,14 @@ void dijkstra_test( ) {
 
     predict_next_sensor_dynamic( &train );
     debug( "dynamic next sensor prediction: new previous sensor: %d, next_sensor: %d, dist_to_next_sensor: %d", train.prev_sensor_id, train.next_sensor_id, train.dist_to_next_sensor );
+  }*/
+  train.prev_sensor_id = src_id;
+  train.next_sensor_id = next_id;
+  predict_next_fallback_sensors_static( &train );
+  for( i = 0; i < 5 && train.fallback_sensors[i] != -1; ++i ) {
+    Printf( COM2, "Fallback sensor: %d\r\n", train.fallback_sensors[i] );
   }
+  Delay( 100 );
 
   //=================================================================================
 }

@@ -133,7 +133,11 @@ void sensor_worker( ) {
     train->time_at_last_landmark = cur_time;
     train->prev_sensor_id = sensor_num;
     train->mm_past_landmark = 0;
-    predict_next_sensor_static( train );
+    if( train->state == REVERSING ) {
+      predict_next_sensor_dynamic( train );
+    } else {
+      predict_next_sensor_static( train );
+    }
     predict_next_fallback_sensors_static( train );
     sensor_id_to_name( train->next_sensor_id, sensor_name );
     Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );

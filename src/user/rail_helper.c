@@ -308,16 +308,16 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
   trains[TRAIN_58].accel_rate = 100;
   trains[TRAIN_58].speeds[14].straight_vel = 50579; // 14 HIGH
   trains[TRAIN_58].speeds[14].curved_vel = 50586;
-  trains[TRAIN_58].speeds[14].stopping_distance = 1118;
+  trains[TRAIN_58].speeds[14].stopping_distance = 2058;
   trains[TRAIN_58].speeds[13].straight_vel = 50092; // 13 HIGH
   trains[TRAIN_58].speeds[13].curved_vel = 50083;
-  trains[TRAIN_58].speeds[13].stopping_distance = 975;
+  trains[TRAIN_58].speeds[13].stopping_distance = 1075;
   trains[TRAIN_58].speeds[12].straight_vel = 48798; // 12 HIGH
   trains[TRAIN_58].speeds[12].curved_vel = 48517;
-  trains[TRAIN_58].speeds[12].stopping_distance = 752;
+  trains[TRAIN_58].speeds[12].stopping_distance = 852;
   trains[TRAIN_58].speeds[11].straight_vel = 41440; // 11 HIGH
   trains[TRAIN_58].speeds[11].curved_vel = 41749;
-  trains[TRAIN_58].speeds[11].stopping_distance = 645;
+  trains[TRAIN_58].speeds[11].stopping_distance = 705;
   trains[TRAIN_58].speeds[10].straight_vel = 33814; // 10 HIGH
   trains[TRAIN_58].speeds[10].curved_vel = 34627;
   trains[TRAIN_58].speeds[10].stopping_distance = 460;
@@ -338,16 +338,16 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
   trains[TRAIN_58].speeds[25].stopping_distance = 402;
   trains[TRAIN_58].speeds[26].straight_vel = 37021; // 11 LOW
   trains[TRAIN_58].speeds[26].curved_vel = 37043;
-  trains[TRAIN_58].speeds[26].stopping_distance = 550;
+  trains[TRAIN_58].speeds[26].stopping_distance = 600;
   trains[TRAIN_58].speeds[27].straight_vel = 45551; // 12 LOW
   trains[TRAIN_58].speeds[27].curved_vel = 44540;
-  trains[TRAIN_58].speeds[27].stopping_distance = 704;
-  trains[TRAIN_58].speeds[28].straight_vel = 50030; // 13 LOW
-  trains[TRAIN_58].speeds[28].curved_vel = 50056;
-  trains[TRAIN_58].speeds[28].stopping_distance = 916;
-  trains[TRAIN_58].speeds[29].straight_vel = 53344; // 14 LOW
-  trains[TRAIN_58].speeds[29].curved_vel = 52635;
-  trains[TRAIN_58].speeds[29].stopping_distance = 1088;
+  trains[TRAIN_58].speeds[27].stopping_distance = 754;
+  trains[TRAIN_58].speeds[28].straight_vel = 49030; // 13 LOW
+  trains[TRAIN_58].speeds[28].curved_vel = 49056;
+  trains[TRAIN_58].speeds[28].stopping_distance = 966;
+  trains[TRAIN_58].speeds[29].straight_vel = 51344; // 14 LOW
+  trains[TRAIN_58].speeds[29].curved_vel = 51635;
+  trains[TRAIN_58].speeds[29].stopping_distance = 2058;
 }
 
 void init_switches( int *switch_states ) {
