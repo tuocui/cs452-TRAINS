@@ -377,7 +377,6 @@ void rail_server( ) {
         // longest code3 that this server runs
         for( i = 0; i < TR_MAX; ++i ) {
           if( trains[i].state != NOT_INITIALIZED ) {
-            // Worst case, don't predict now
             predict_next_sensor_static( &(trains[i]) );
             sensor_id_to_name( trains[i].next_sensor_id, sensor_name );
             Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );
