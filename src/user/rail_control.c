@@ -137,7 +137,6 @@ void predict_next_fallback_sensors_static( train_state_t *train ) {
         saw_expected_sensor = 1;
         node_id_push_back( cur_node->edge[DIR_AHEAD].dest );
       } else {
-        Printf( COM2, "in else\r\n" );
         train->fallback_sensors[fallback_idx++] = cur_node->num;
       }
     }

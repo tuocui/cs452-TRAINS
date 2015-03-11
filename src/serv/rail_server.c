@@ -113,7 +113,7 @@ void sensor_worker( ) {
         Printf( COM2, "\0337\033[4A\033[2K\rActual distance to sensor %c%c%c: %d    \0338", sensor_name[0], sensor_name[1], sensor_name[2], train->dist_to_next_sensor );
         Printf( COM2, "\0337\033[5A\033[2K\rDistance difference: %d    \0338", ( train->mm_past_landmark / 10 ) - train->dist_to_next_sensor );
       } else {
-        Printf( COM2, "WOAH NELLY! Almost lost the train\r\n" );
+        Printf( COM2, "\0337\033[11A\033[2K\rWOAH NELLY, ALMOST LOST THE TRAIN: %d\0338", cur_time );
       }
       train->vel_at_last_landmark = train->cur_vel;
     }
