@@ -92,10 +92,64 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
 //
 //}
 
+void predict_next_sensor_dynamic( train_state_t* train_state ) {
+  assert( 1, train_state->cur_speed == 0 || train_state->state == REVERSING );
+  track_node_t* cur_node = &( train_state->track_graph[train_state->prev_sensor_id] );
+  assert( 1, cur_node );
+  assert( 1, cur_node->type == NODE_SENSOR );
+  int next_sensor_id = NONE;
+  int next_sensor_dist = cur_node->edge[DIR_AHEAD].dist;
+  int branch_ind;
+  cur_node = cur_node->edge[DIR_AHEAD].dest;
+  //int stop_dist = get_cur_stopping_distance( train_state );
+  int stop_dist = train_state->speeds[train_state->cur_speed].stopping_distance;
+  while( next_sensor_id < 0 && next_sensor_dist <= stop_dist ) {
+    debug("whileloop, next_sensor_dist: %d, stop_dist: %d", next_sensor_dist, stop_dist ) ;
+    if( cur_node->type == NODE_SENSOR ) {
+      debug( "1" );
+      next_sensor_id = cur_node->num;
+      assert( 1, next_sensor_id >= 0 );
+    }
+    else if( cur_node->type == NODE_BRANCH ) {
+      debug( "2" );
+      branch_ind = cur_node->num;
+      if( branch_ind > 152 ) {
+        branch_ind -= 134;
+      }
+      next_sensor_dist += cur_node->edge[train_state->switch_states[branch_ind]].dist;
+      cur_node = cur_node->edge[train_state->switch_states[branch_ind]].dest;
+    }
+    else if( cur_node->type == NODE_EXIT ) {
+      debug( "3" );
+      break;
+    }
+    else {
+      debug( "4" );
+      next_sensor_dist += cur_node->edge[DIR_AHEAD].dist;
+      cur_node = cur_node->edge[DIR_AHEAD].dest;
+    }
+  }
+
+  train_state->prev_sensor_id = train_state->next_sensor_id;
+  train_state->next_sensor_id = next_sensor_id;
+  train_state->dist_to_next_sensor = next_sensor_dist;
+  if( next_sensor_id == NONE && train_state->state == REVERSING ) {
+    debug( "5" );
+    train_state->next_sensor_id = train_state->track_graph[train_state->prev_sensor_id].reverse - train_state->track_graph;
+    train_state->dist_to_next_sensor = stop_dist * 2;
+  }
+  if( next_sensor_id == NONE && train_state->cur_speed == 0 ) {
+    debug( "6" );
+    train_state->next_sensor_id = NONE;
+    train_state->dist_to_next_sensor = 0;
+  }
+
+}
+
 void predict_next_sensor_static( train_state_t *train_state ) {
   track_node_t* cur_node = &(train_state->track_graph[train_state->prev_sensor_id]);
   assert( 1, cur_node && cur_node->type == NODE_SENSOR );
-  int next_sensor_id = -1; // might be an Exit node
+  int next_sensor_id = NONE; // might be an Exit node
   int ret_node_dist = cur_node->edge[DIR_AHEAD].dist;
   int branch_ind;
   cur_node = cur_node->edge[DIR_AHEAD].dest;
