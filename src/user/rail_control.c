@@ -311,7 +311,7 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         
         cmds->train_id = train_id;
         cmds->train_action = TR_STOP;
-        cmds->train_delay = (( src2dest_dist - stop_dist ) > 0 ) ? (( src2dest_dist - stop_dist ) * 10000 ) / train_velocity : 0;
+        cmds->train_delay = (( src2dest_dist - stop_dist ) > 0 ) ? (( src2dest_dist - stop_dist - get_len_train_ahead( train ) ) * 10000 ) / train_velocity : 0;
         debug( "( %d - %d ) * 10000 / %d ", src2dest_dist, stop_dist, train_velocity );
 
         /* clear train destination */
@@ -560,12 +560,12 @@ inline bool heap_find( min_heap_t * min_heap, int id ) {
 
 inline void print_min_heap( min_heap_t * min_heap ) {
   assert( 1, min_heap );
-  Printf( COM2, "size: %d\n\r", min_heap->size );
+  //Printf( COM2, "size: %d\n\r", min_heap->size );
   int idx;
   for( idx = 0; idx < min_heap->size; ++idx ) {
-    Printf( COM2, "id: %d, dist: %d", min_heap->nodes[idx].id, min_heap->nodes[idx].dist );
+    //Printf( COM2, "id: %d, dist: %d", min_heap->nodes[idx].id, min_heap->nodes[idx].dist );
   }
-  Printf( COM2, "\n\r" );
+  //Printf( COM2, "\n\r" );
 }
 
 void dijkstra( struct _track_node_* track_graph, int src_id, int* path, int* dist, int* step ) {

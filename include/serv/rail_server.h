@@ -31,6 +31,8 @@ typedef struct _train_cmd_args_ {
   int delay_time;
   int dest;
   int mm_past_dest;
+  int accel_rate;
+  int decel_rate;
 } train_cmd_args_t;
 
 typedef struct _switch_cmd_args_ {

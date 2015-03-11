@@ -16,5 +16,7 @@
 #define QUIT_CMD 99
 
 void parse_user_input( );
+short parse_sensor_name( char *cmd_buffer, int *buf_ind_ptr );
+short parse_short( char *cmd_buffer, int *buf_ind_ptr );
 
 #endif

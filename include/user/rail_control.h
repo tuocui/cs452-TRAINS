@@ -81,6 +81,8 @@ typedef struct _rail_cmds_ {
   int train_speed;
   int train_dest;
   int train_mm_past_dest;
+  int train_accel;
+  int train_decel;
   
   int sw_count;
   int switch_id0;
@@ -133,6 +135,8 @@ typedef struct _train_state_ {
   int prev_sensor_id;
   int next_sensor_id;
   int dest_id;
+  int front_len;
+  int back_len;
   int mm_past_dest;
   int dist_to_next_sensor;
   int time_at_last_landmark;

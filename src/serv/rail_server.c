@@ -106,6 +106,7 @@ void sensor_worker( ) {
     }
     if( train->state == INITIALIZING ) {
       set_train_speed( train, 0 );
+      init_58( train );
       train->cur_speed = 0;
       train->prev_speed = 0;
       train->speed_change_time = cur_time;
@@ -194,8 +195,23 @@ void train_exe_worker( ) {
       set_train_speed( train, INIT_SPEED );
       break;
     case TR_DEST:
-      train->dest_id = train_cmd_args.dest;
-      train->mm_past_dest = train_cmd_args.mm_past_dest;
+      {
+        train->dest_id = train_cmd_args.dest;
+        train->mm_past_dest = train_cmd_args.mm_past_dest;
+        char dest[3];
+        sensor_id_to_name( train->dest_id, dest );
+        if( train->dest_id == -1 ) {
+          Printf( COM2, "\0337\033[9A\033[2K\rCurrent destination: N/A\0338" );
+        } else {
+          Printf( COM2, "\0337\033[9A\033[2K\rCurrent destination: %c%c%c\0338", dest[0], dest[1], dest[2] );
+        }
+        break;
+      }
+    case TR_ACCEL:
+      train->accel_rate = train_cmd_args.accel_rate;
+      break;
+    case TR_DECEL:
+      train->decel_rate = train_cmd_args.decel_rate;
       break;
     default:
       break;
@@ -390,6 +406,8 @@ void rail_server( ) {
             train_cmd_args.delay_time = (receive_msg.to_server_content.rail_cmds)->train_delay;
             train_cmd_args.dest = (receive_msg.to_server_content.rail_cmds)->train_dest;
             train_cmd_args.mm_past_dest = (receive_msg.to_server_content.rail_cmds)->train_mm_past_dest;
+            train_cmd_args.accel_rate = (receive_msg.to_server_content.rail_cmds)->train_accel;
+            train_cmd_args.decel_rate = (receive_msg.to_server_content.rail_cmds)->train_decel;
             ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
             //FIXME: if the train_exe_worker_tid is not ready, should not Reply, or add a secretary
             assertm( 1, ret_val == 0, "ret_val: %d", ret_val );

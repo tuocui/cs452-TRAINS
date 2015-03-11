@@ -771,6 +771,57 @@ void dijkstra_test( ) {
   }
   Delay( 100 );
 
+  char input[9];
+  int sensor_num;
+  int other_num;
+  input[3] = ' ';
+  input[4] = '5';
+  input[5] = '2';
+  input[6] = '9';
+  input[7] = '9';
+  input[8] = 0;
+  for( i = 0; i < 80; ++i ) {
+    int idx = 0;
+    sensor_id_to_name( i, input );
+    sensor_num = parse_sensor_name( input, &idx );
+    idx++;
+    other_num = parse_short( input, &idx );
+    if( !(i == sensor_num && other_num == 5299) ) {
+      Printf( COM2, "FUUUUUCCCCKKKKKK" );
+    }
+    Printf( COM2, "i: %d, actual input: %s, sensor_num: %d, other_num: %d\r\n", i, input, sensor_num, other_num );
+    Delay( 1 );
+  }
+
+  for( i = 0; i < 80; ++i ) {
+    int idx = 0;
+    input[3] = ' ';
+    input[4] = '5';
+    input[5] = '2';
+    input[6] = '9';
+    input[7] = '9';
+    input[8] = 0;
+    sensor_id_to_name( i, input );
+    if( input[1] == '0' ) {
+      input[1] = input[2];
+      input[2] = input[3];
+      input[3] = input[4];
+      input[4] = input[5];
+      input[5] = input[6];
+      input[6] = input[7];
+      input[7] = input[8];
+    }
+    sensor_num = parse_sensor_name( input, &idx );
+    idx++;
+    other_num = parse_short( input, &idx );
+    if( !(i == sensor_num && other_num == 5299) ) {
+      Printf( COM2, "FUUUUUCCCCKKKKKK" );
+    }
+    Printf( COM2, "i: %d, actual input: %s, sensor_num: %d, other_num: %d\r\n", i, input, sensor_num, other_num );
+    Delay( 1 );
+  }
+  Delay( 100 );
+
   //=================================================================================
 }
 

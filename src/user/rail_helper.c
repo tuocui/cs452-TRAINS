@@ -51,7 +51,6 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   if( fallback_idx != NONE ) {
     return fallback_idx;
   }
-  Printf( COM2, "\0337\033[9A\033[2K\rreturning expected train: %d    \0338", expected_train_idx );
   return expected_train_idx;
 }
 // returns in ms
@@ -185,12 +184,12 @@ int time_to_node( train_state_t *train, int dist_to_node, track_node_t *track ) 
 
 // returns stopping distance in mm;
 int get_cur_stopping_distance( train_state_t *train ) {
-  if( train->cur_vel != (train->speeds[train->cur_speed]).straight_vel ) {
+  //if( train->cur_vel != (train->speeds[train->cur_speed]).straight_vel ) {
     int stopping_dist;
     stopping_dist = ( (train->cur_vel / 10) * (train->cur_vel / 10) ) / ( 200 * train->decel_rate );
     return stopping_dist;
-  }
-  return (train->speeds[train->cur_speed]).stopping_distance;
+  //}
+  //return (train->speeds[train->cur_speed]).stopping_distance;
 }
 
 // stopping distance + buffer + length of train
@@ -204,6 +203,14 @@ inline int safe_distance_to_stop( train_state_t *train ) {
 int get_cur_stopping_time( train_state_t *train ) {
   int cur_stopping_distance = get_cur_stopping_distance( train );
   return ( 200000 * cur_stopping_distance ) / (train->cur_vel);
+}
+
+int get_len_train_ahead( train_state_t *train ) {
+  if( train->is_forward ) {
+    return train->front_len;
+  } else {
+    return train->back_len;
+  }
 }
 
 // returns in ms
@@ -250,17 +257,88 @@ int get_delay_time_to_stop( train_state_t *train, int dist ) {
     stopping_dist_if_immediate = (cur_vel * accel_finish_time_rel) + ( ( (finish_vel - cur_vel) * accel_finish_time_rel) / 2 ) + ( ( finish_vel * stopping_time_at_finish_vel ) / 2 );
     stopping_dist_if_immediate = stopping_dist_if_immediate / 100000;
     // need to find intersection
-    return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
+    //return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
     // TODO: Finish this off
-    /*if( stopping_dist_if_immediate < dist ) {
+    if( stopping_dist_if_immediate < dist ) {
+      // TODO: Figure this out
+      return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( cur_vel );
     } else {
-      
-    }*/
+      int num = ( (200000 * dist) + (finish_vel * stopping_time_at_finish_vel) ) - ( (finish_vel * accel_finish_time_rel) + (cur_vel * accel_finish_time_rel) );
+      return ( num / (2 * finish_vel) );
+    }
   }
 
   return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
 
   // if accel
+}
+
+void init_58( train_state_t *train ) {
+
+  /* Copypasta calibration output here */
+  // Velocity in mm/100s, divide by 1000 to get cm/s
+  // Stopping distance in mm
+  // (2*d)/v0 d = stopping distance, v0 = velocity
+  train->length = 210;
+  train->pickup_len = 50;
+  train->front_len = 25;
+  train->back_len = 145;
+  train->train_id = 58;
+  train->prev_sensor_id = NONE;
+  train->next_sensor_id = NONE;
+  train->dest_id = NONE;
+  train->dist_to_next_sensor = NONE;
+  train->time_at_last_landmark = 0;
+  train->mm_past_landmark = 0;
+  train->cur_speed = 0;
+  train->prev_speed = 0;
+  train->speed_change_time = 0;
+  train->is_forward = 1;
+  train->state = NOT_INITIALIZED;
+  train->decel_rate = 119;
+  train->accel_rate = 90;
+  (train->speeds[14]).straight_vel = 50579; // 14 HIGH
+  (train->speeds[14]).curved_vel = 50586;
+  (train->speeds[14]).stopping_distance = 2158;
+  (train->speeds[13]).straight_vel = 50092; // 13 HIGH
+  (train->speeds[13]).curved_vel = 50083;
+  (train->speeds[13]).stopping_distance = 975;
+  (train->speeds[12]).straight_vel = 48798; // 12 HIGH
+  (train->speeds[12]).curved_vel = 48517;
+  (train->speeds[12]).stopping_distance = 802;
+  (train->speeds[11]).straight_vel = 41440; // 11 HIGH
+  (train->speeds[11]).curved_vel = 41749;
+  (train->speeds[11]).stopping_distance = 678;
+  (train->speeds[10]).straight_vel = 33814; // 10 HIGH
+  (train->speeds[10]).curved_vel = 34627;
+  (train->speeds[10]).stopping_distance = 460;
+  (train->speeds[9]).straight_vel = 28004; // 9 HIGH
+  (train->speeds[9]).curved_vel = 27860;
+  (train->speeds[9]).stopping_distance = 336;
+  (train->speeds[8]).straight_vel = 22133; // 8 HIGH
+  (train->speeds[8]).curved_vel = 22370;
+  (train->speeds[8]).stopping_distance = 231;
+  (train->speeds[23]).straight_vel = 18907; // 8 LOW
+  (train->speeds[23]).curved_vel = 19127;
+  (train->speeds[23]).stopping_distance = 176;
+  (train->speeds[24]).straight_vel = 24765; // 9 LOW
+  (train->speeds[24]).curved_vel = 24770;
+  (train->speeds[24]).stopping_distance = 285;
+  (train->speeds[25]).straight_vel = 31219; // 10 LOW
+  (train->speeds[25]).curved_vel = 31030;
+  (train->speeds[25]).stopping_distance = 412;
+  (train->speeds[26]).straight_vel = 37021; // 11 LOW
+  (train->speeds[26]).curved_vel = 37043;
+  (train->speeds[26]).stopping_distance = 580;
+  (train->speeds[27]).straight_vel = 45551; // 12 LOW
+  (train->speeds[27]).curved_vel = 44540;
+  (train->speeds[27]).stopping_distance = 664;
+  (train->speeds[28]).straight_vel = 49030; // 13 LOW
+  (train->speeds[28]).curved_vel = 49056;
+  (train->speeds[28]).stopping_distance = 916;
+  (train->speeds[29]).straight_vel = 51344; // 14 LOW
+  (train->speeds[29]).curved_vel = 51635;
+  (train->speeds[29]).stopping_distance = 2158;
 }
 
 void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_states ) {
@@ -286,68 +364,7 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
     }
   }
 
-  /* Copypasta calibration output here */
-  // Velocity in mm/100s, divide by 1000 to get cm/s
-  // Stopping distance in mm
-  // (2*d)/v0 d = stopping distance, v0 = velocity
-  trains[TRAIN_58].length = 210;
-  trains[TRAIN_58].pickup_len = 50;
-  trains[TRAIN_58].train_id = 58;
-  trains[TRAIN_58].prev_sensor_id = NONE;
-  trains[TRAIN_58].next_sensor_id = NONE;
-  trains[TRAIN_58].dest_id = NONE;
-  trains[TRAIN_58].dist_to_next_sensor = NONE;
-  trains[TRAIN_58].time_at_last_landmark = 0;
-  trains[TRAIN_58].mm_past_landmark = 0;
-  trains[TRAIN_58].cur_speed = 0;
-  trains[TRAIN_58].prev_speed = 0;
-  trains[TRAIN_58].speed_change_time = 0;
-  trains[TRAIN_58].is_forward = 1;
-  trains[TRAIN_58].state = NOT_INITIALIZED;
-  trains[TRAIN_58].decel_rate = 120;
-  trains[TRAIN_58].accel_rate = 100;
-  trains[TRAIN_58].speeds[14].straight_vel = 50579; // 14 HIGH
-  trains[TRAIN_58].speeds[14].curved_vel = 50586;
-  trains[TRAIN_58].speeds[14].stopping_distance = 2058;
-  trains[TRAIN_58].speeds[13].straight_vel = 50092; // 13 HIGH
-  trains[TRAIN_58].speeds[13].curved_vel = 50083;
-  trains[TRAIN_58].speeds[13].stopping_distance = 1075;
-  trains[TRAIN_58].speeds[12].straight_vel = 48798; // 12 HIGH
-  trains[TRAIN_58].speeds[12].curved_vel = 48517;
-  trains[TRAIN_58].speeds[12].stopping_distance = 852;
-  trains[TRAIN_58].speeds[11].straight_vel = 41440; // 11 HIGH
-  trains[TRAIN_58].speeds[11].curved_vel = 41749;
-  trains[TRAIN_58].speeds[11].stopping_distance = 705;
-  trains[TRAIN_58].speeds[10].straight_vel = 33814; // 10 HIGH
-  trains[TRAIN_58].speeds[10].curved_vel = 34627;
-  trains[TRAIN_58].speeds[10].stopping_distance = 460;
-  trains[TRAIN_58].speeds[9].straight_vel = 28004; // 9 HIGH
-  trains[TRAIN_58].speeds[9].curved_vel = 27860;
-  trains[TRAIN_58].speeds[9].stopping_distance = 336;
-  trains[TRAIN_58].speeds[8].straight_vel = 22133; // 8 HIGH
-  trains[TRAIN_58].speeds[8].curved_vel = 22370;
-  trains[TRAIN_58].speeds[8].stopping_distance = 231;
-  trains[TRAIN_58].speeds[23].straight_vel = 18907; // 8 LOW
-  trains[TRAIN_58].speeds[23].curved_vel = 19127;
-  trains[TRAIN_58].speeds[23].stopping_distance = 186;
-  trains[TRAIN_58].speeds[24].straight_vel = 24765; // 9 LOW
-  trains[TRAIN_58].speeds[24].curved_vel = 24770;
-  trains[TRAIN_58].speeds[24].stopping_distance = 289;
-  trains[TRAIN_58].speeds[25].straight_vel = 31219; // 10 LOW
-  trains[TRAIN_58].speeds[25].curved_vel = 31030;
-  trains[TRAIN_58].speeds[25].stopping_distance = 402;
-  trains[TRAIN_58].speeds[26].straight_vel = 37021; // 11 LOW
-  trains[TRAIN_58].speeds[26].curved_vel = 37043;
-  trains[TRAIN_58].speeds[26].stopping_distance = 600;
-  trains[TRAIN_58].speeds[27].straight_vel = 45551; // 12 LOW
-  trains[TRAIN_58].speeds[27].curved_vel = 44540;
-  trains[TRAIN_58].speeds[27].stopping_distance = 754;
-  trains[TRAIN_58].speeds[28].straight_vel = 49030; // 13 LOW
-  trains[TRAIN_58].speeds[28].curved_vel = 49056;
-  trains[TRAIN_58].speeds[28].stopping_distance = 966;
-  trains[TRAIN_58].speeds[29].straight_vel = 51344; // 14 LOW
-  trains[TRAIN_58].speeds[29].curved_vel = 51635;
-  trains[TRAIN_58].speeds[29].stopping_distance = 2058;
+  init_58( &(trains[TRAIN_58]) );
 }
 
 void init_switches( int *switch_states ) {
@@ -385,5 +402,7 @@ void update_velocity( train_state_t *train, int cur_time, int prev_time, int dis
   int new_vel = ( dist * 10000 ) / ( cur_time - prev_time );
   (train->speeds[train->cur_speed]).straight_vel = 
     ( (80 * (train->speeds[train->cur_speed]).straight_vel ) + ( 20 * new_vel ) ) / 100;
+  train->cur_vel = (train->speeds[train->cur_speed]).straight_vel;
+  (train->speeds[train->cur_speed]).stopping_distance = get_cur_stopping_distance( train );
 }
 

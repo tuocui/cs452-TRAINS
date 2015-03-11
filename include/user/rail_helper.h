@@ -38,4 +38,8 @@ int get_cur_stopping_time( struct _train_state_ *train );
 
 inline int get_expected_train_idx( struct _train_state_* trains, int sensor_num );
 
+int get_len_train_ahead( struct _train_state_ *train );
+
+void init_58( struct _train_state_ *train );
+
 #endif

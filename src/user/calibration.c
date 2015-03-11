@@ -655,23 +655,12 @@ void calibrate_accel_time( ) {
 
 /* 
   Things to calibrate:
-  - delay time to stop
-  - update_costs( graph, velocity ) // MED-PRI - TONY
+  - delay time to stop // FINISH
+  - update_costs( graph, velocity ) with time // MED-PRI - TONY
   - Calculate reverse costs - SUN (LOW PRI - TONY)
   - Assert ring buffer - LOW PRI - TONY
-  - accelation mm from last_sensor - LOW PRI - FIX UP
   - Calibrate another train - VERY LOW PRI
 
-  - train initialization. how? - HIGH PRI - TONY/WILSON
-
-  - Next sensor prediction (time it takes to hit next sensor) - SAT (HIGH PRI, WILSON)
-    - What's the next sensor?
-    - get_next_sensor and distance static DONE, need more testing
-    - get_next_sensor and distance dynamic
-  - sensor hit to train mapping - WILSON
-
   - How long till next sensor? // DONE, need testing
-  - time_to_next_sensor // DONE, need testing
-    - NOTE: Update this after graph search / speed changes
 */
 
