@@ -3,8 +3,8 @@
 
 #include "global.h"
 
-#define SWITCH_BUFFER 20 // 2cm buffer
-#define STOP_BUFFER 20
+#define SWITCH_BUFFER 150 // 10cm buffer
+#define STOP_BUFFER 150 // 10cm buffer
 #define STOP_TIME_BUFFER 2
 
 struct _train_state_;

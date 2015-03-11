@@ -15,7 +15,7 @@
 //TODO: TONY, give the magic 100000 and 200000 names 
 inline int safe_distance_to_branch( train_state_t *train ) {
   int vel = train->cur_vel;
-  return ( vel * SW_TIME ) / 100000 + SWITCH_BUFFER + train->length;
+  return ( vel * SW_TIME ) / 100000 + SWITCH_BUFFER;
 }
 
 inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
@@ -27,7 +27,7 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   int fallback_idx = NONE;
   int i;
   for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
-    assertm( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
+    //assertm( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
     if( trains[cur_idx].next_sensor_id == sensor_num ) {
       return cur_idx;
     }
@@ -204,7 +204,63 @@ inline int safe_distance_to_stop( train_state_t *train ) {
 int get_cur_stopping_time( train_state_t *train ) {
   int cur_stopping_distance = get_cur_stopping_distance( train );
   return ( 200000 * cur_stopping_distance ) / (train->cur_vel);
-  
+}
+
+// returns in ms
+int get_delay_time_to_stop( train_state_t *train, int dist ) {
+  int cur_vel = train->cur_vel;
+  int cur_stopping_dist = get_cur_stopping_distance( train );
+  int cur_stopping_time = get_cur_stopping_time( train );
+  if( cur_stopping_dist <= dist || train->cur_speed == 0 ) {
+    return 0;
+  }
+  int cur_time = train->time_since_last_pos_update * 10;
+  int speed_change_time = train->speed_change_time * 10;
+  int accel_time = get_accel_time( train->cur_speed, train->prev_speed, train );
+  int speed_finish_time = speed_change_time + accel_time;
+  // if no longer accel/decel
+  if( speed_finish_time <= cur_time ) {
+    return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
+  }
+
+  int cur_speed_normalized = train->cur_speed;
+  int prev_speed_normalized = train->prev_speed;
+  int finish_vel = (train->speeds[train->cur_speed]).straight_vel;
+  int finish_vel_stopping_dist = (train->speeds[train->cur_speed]).stopping_distance;
+  int stopping_time_at_finish_vel = ( 200000 * finish_vel_stopping_dist ) / (finish_vel);
+  int accel_finish_time_rel = speed_finish_time - cur_time;
+  if( cur_speed_normalized > 15 ) {
+    cur_speed_normalized -= 15;
+  }
+  if( prev_speed_normalized > 15 ) {
+    prev_speed_normalized -= 15;
+  }
+
+  // decelerating?
+  if( cur_speed_normalized < prev_speed_normalized ) {
+    int dist_to_stop_so_far = dist;
+    dist_to_stop_so_far -= ( ( ( ( cur_vel - finish_vel ) * accel_finish_time_rel ) / 2 ) + ( finish_vel * accel_finish_time_rel ) ) / 100000;
+    assert( 1, dist_to_stop_so_far >= 0 );
+    return ( ( 200000 *  dist_to_stop_so_far ) - ( stopping_time_at_finish_vel * finish_vel ) ) / ( 2 * finish_vel );
+  }
+
+  // accelerating?
+  if( cur_speed_normalized > prev_speed_normalized ) {
+    int stopping_dist_if_immediate;
+    stopping_dist_if_immediate = (cur_vel * accel_finish_time_rel) + ( ( (finish_vel - cur_vel) * accel_finish_time_rel) / 2 ) + ( ( finish_vel * stopping_time_at_finish_vel ) / 2 );
+    stopping_dist_if_immediate = stopping_dist_if_immediate / 100000;
+    // need to find intersection
+    return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
+    // TODO: Finish this off
+    /*if( stopping_dist_if_immediate < dist ) {
+    } else {
+      
+    }*/
+  }
+
+  return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
+
+  // if accel
 }
 
 void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_states ) {
@@ -252,13 +308,13 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
   trains[TRAIN_58].accel_rate = 100;
   trains[TRAIN_58].speeds[14].straight_vel = 50579; // 14 HIGH
   trains[TRAIN_58].speeds[14].curved_vel = 50586;
-  trains[TRAIN_58].speeds[14].stopping_distance = 1188;
-  trains[TRAIN_58].speeds[13].straight_vel = 50592; // 13 HIGH
-  trains[TRAIN_58].speeds[13].curved_vel = 50583;
-  trains[TRAIN_58].speeds[13].stopping_distance = 1052;
+  trains[TRAIN_58].speeds[14].stopping_distance = 1118;
+  trains[TRAIN_58].speeds[13].straight_vel = 50092; // 13 HIGH
+  trains[TRAIN_58].speeds[13].curved_vel = 50083;
+  trains[TRAIN_58].speeds[13].stopping_distance = 975;
   trains[TRAIN_58].speeds[12].straight_vel = 48798; // 12 HIGH
   trains[TRAIN_58].speeds[12].curved_vel = 48517;
-  trains[TRAIN_58].speeds[12].stopping_distance = 852;
+  trains[TRAIN_58].speeds[12].stopping_distance = 752;
   trains[TRAIN_58].speeds[11].straight_vel = 41440; // 11 HIGH
   trains[TRAIN_58].speeds[11].curved_vel = 41749;
   trains[TRAIN_58].speeds[11].stopping_distance = 645;
@@ -285,14 +341,13 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
   trains[TRAIN_58].speeds[26].stopping_distance = 550;
   trains[TRAIN_58].speeds[27].straight_vel = 45551; // 12 LOW
   trains[TRAIN_58].speeds[27].curved_vel = 44540;
-  trains[TRAIN_58].speeds[27].stopping_distance = 754;
-  trains[TRAIN_58].speeds[28].straight_vel = 52030; // 13 LOW
-  trains[TRAIN_58].speeds[28].curved_vel = 51056;
+  trains[TRAIN_58].speeds[27].stopping_distance = 704;
+  trains[TRAIN_58].speeds[28].straight_vel = 50030; // 13 LOW
+  trains[TRAIN_58].speeds[28].curved_vel = 50056;
   trains[TRAIN_58].speeds[28].stopping_distance = 916;
   trains[TRAIN_58].speeds[29].straight_vel = 53344; // 14 LOW
   trains[TRAIN_58].speeds[29].curved_vel = 52635;
-  trains[TRAIN_58].speeds[29].stopping_distance = 1188;
-
+  trains[TRAIN_58].speeds[29].stopping_distance = 1088;
 }
 
 void init_switches( int *switch_states ) {
@@ -330,6 +385,5 @@ void update_velocity( train_state_t *train, int cur_time, int prev_time, int dis
   int new_vel = ( dist * 10000 ) / ( cur_time - prev_time );
   (train->speeds[train->cur_speed]).straight_vel = 
     ( (80 * (train->speeds[train->cur_speed]).straight_vel ) + ( 20 * new_vel ) ) / 100;
-  Printf( COM2, "\0337\033[5A\033[2K\rTrain %d, updated speed %d velocity: %d    \0338", train->train_id, train->cur_speed, (train->speeds[train->cur_speed]).straight_vel );
 }
 

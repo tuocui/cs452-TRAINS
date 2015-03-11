@@ -7,8 +7,8 @@ struct _sensor_data_;
 struct _rail_cmds_;
 struct _train_state;
 
-#define WEIGHT_PREV 80
-#define WEIGHT_NEW 20
+#define WEIGHT_PREV 85
+#define WEIGHT_NEW 15
 #define SENSOR_WORKER_MAX 4
 #define INIT_SPEED 2
 

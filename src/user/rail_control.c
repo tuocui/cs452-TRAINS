@@ -40,10 +40,10 @@
 
 
 inline void init_rail_cmds( rail_cmds_t* cmds ) {
-  cmds->sw_count = cmds->train_id = cmds->train_action = cmds->train_delay = \
-  cmds->switch_id0 = cmds->switch_action0= cmds->switch_delay0= \
-  cmds->switch_id1 = cmds->switch_action1= cmds->switch_delay1= \
-  cmds->switch_id2 = cmds->switch_action2= cmds->switch_delay2= \
+  cmds->sw_count = cmds->train_id = cmds->train_action = cmds->train_delay = cmds->train_speed = \
+  cmds->switch_id0 = cmds->switch_action0= cmds->switch_delay0 = \
+  cmds->switch_id1 = cmds->switch_action1= cmds->switch_delay1 = \
+  cmds->switch_id2 = cmds->switch_action2= cmds->switch_delay2 = \
   cmds->switch_id3 = cmds->switch_action3 = cmds->switch_delay3 = NONE;
 
 }
@@ -198,7 +198,7 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   debug( "safe_branch_dist: %d", safe_branch_dist );
 
   //DEBUG
-  Printf( COM2, "get_next_command with: train_id: %d, src_id: %d, dest_id: %d, speed_idx: %d, train_velocity: %d, stop_dist: %d, safe_branch_dist: %d\n\r", train_id, src_id, dest_id, speed_idx, train_velocity, stop_dist, safe_branch_dist );
+  //Printf( COM2, "get_next_command with: train_id: %d, src_id: %d, dest_id: %d, speed_idx: %d, train_velocity: %d, stop_dist: %d, safe_branch_dist: %d\n\r", train_id, src_id, dest_id, speed_idx, train_velocity, stop_dist, safe_branch_dist );
 
   assert( 1, track_graph && cmds && src_id >= 0 && src_id < TRACK_MAX && dest_id >= 0 && dest_id < TRACK_MAX );
   /* currently we only run dijkstra on sensor hit, so src_id should be  a sensor */
@@ -235,7 +235,7 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
     } 
 
     /* if the node is the end of the route */
-    if( i == steps_to_dest - 1 ) {
+    if( i == steps_to_dest - 1 && train->cur_speed != 0 ) {
       debug( "END OF ROUTE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       /* get dist between sensor and dest */  
       int sensor2dest_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id] + train->mm_past_dest; 
@@ -298,8 +298,8 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
       /* get dist between sensor and branch*/  
       int sensor2branch_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
       int src2branch_dist = all_dist[cur_node_id];
-      int branch_delay_time = ((( src2branch_dist - safe_branch_dist ) * 10000 ) / train_velocity - SW_TIME/10 ) > 0 ? \
-                        (( src2branch_dist - safe_branch_dist ) * 10000 ) / train_velocity - SW_TIME/10  : 0;
+      int branch_delay_time = 0;//((( src2branch_dist - safe_branch_dist ) * 10000 ) / train_velocity - SW_TIME/10 ) > 0 ?
+                        //(( src2branch_dist - safe_branch_dist ) * 10000 ) / train_velocity - SW_TIME/10  : 0;
       debug( "( %d - %d ) * 1000 / %d - %d", src2branch_dist, safe_branch_dist, train_velocity, SW_TIME );
 
       /* issue switch commands */
@@ -643,13 +643,13 @@ void print_shortest_path( track_node_t* track_graph, int* all_path, int* all_ste
   steps = all_step[dest_id];
   int i;
 #if( DEBUG == 0 )
-  Printf( COM2, "SHORTEST PATH: " ); 
-  Printf( COM2, "%d steps from %s to %s:\t%s", steps, track_graph[src_id].name,
-      track_graph[dest_id].name, track_graph[src_id].name );
+  //Printf( COM2, "SHORTEST PATH: " ); 
+  //Printf( COM2, "%d steps from %s to %s:\t%s", steps, track_graph[src_id].name,
+  //    track_graph[dest_id].name, track_graph[src_id].name );
   for( i = 0; i < steps; ++i ) {
-    Printf( COM2, "->%s", track_graph[dest_path[i]].name );
+    //Printf( COM2, "->%s", track_graph[dest_path[i]].name );
   }
-  Printf( COM2, "\r\n" );
+  //Printf( COM2, "\r\n" );
 #else 
   bwprintf( COM2, "SHORTEST PATH: " ); 
   bwprintf( COM2, "%d steps from %s to %s:\t%s", steps, track_graph[src_id].name,

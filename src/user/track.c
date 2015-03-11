@@ -48,7 +48,7 @@ short set_train_speed( train_state_t *train, short speed ) {
     return speed;
   }
 
-  if( speed_normalized >= 8 ) {
+  if( speed_normalized >= 8 || speed_normalized == 0 ) {
     if( speed == 15 ) {
       train->is_forward ^= 1;
     } else {
@@ -140,7 +140,6 @@ int set_switch( short switch_num, short c_s, int *switch_states ) {
   if( switch_idx > 18 ) {
     switch_idx -= 134;
   }
-  Printf( COM2, "switching %d, with idx %d from state %d to state %d", switch_num, switch_idx, switch_states[switch_idx], c_s );
   switch( c_s ) {
   case STRAIGHT:
     c_s_c = 'S';

@@ -51,7 +51,7 @@
 #define SW155  21 
 #define SW156  22 
 
-#define SW_TIME     250 // in ms
+#define SW_TIME     100 // in ms
 
 //FIXME: do dynamic mapping for a2
 #define RUNNING_TRAIN_NUM 58
