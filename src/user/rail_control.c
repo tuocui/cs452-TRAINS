@@ -4,6 +4,7 @@
 #include "track_node.h"
 #include "global.h"
 #include "io.h" 
+#include "ring_buf.h"
 
 /* get_next_command calls graph search to get the shortest path,
  * for now, if the path only has length of one, the we issue stop command.
@@ -129,6 +130,55 @@ void predict_next_sensor_static( train_state_t *train_state ) {
   debug( "next_sensor_id: %d", next_sensor_id );
   train_state->dist_to_next_sensor = ret_node_dist;
   train_state->next_sensor_id = next_sensor_id; 
+}
+
+void predict_next_fallback_sensors_static( train_state_t *train ) {
+  track_node_t* cur_node = &(train->track_graph[train->prev_sensor_id]);
+  int expected_sensor_num = train->next_sensor_id;
+  int saw_expected_sensor = 0;
+  assert( 1, cur_node && cur_node->type == NODE_SENSOR );
+  int branch_ind;
+  int fallback_idx = 0;
+  int i;
+  //int cur_node_id;
+  for( i = 0; i < NUM_FALLBACK; ++i ) {
+    train->fallback_sensors[i] = -1;
+  }
+  declare_ring_queue( track_node_t*, node_id, 10 );
+  node_id_push_back( cur_node->edge[DIR_AHEAD].dest );
+
+  while( !node_id_empty( ) ) {
+    cur_node = node_id_pop_front( );
+    //assert( 1, node_id_top_front( ) != cur_node_id );
+    if( cur_node->type == NODE_SENSOR ) {
+      if( cur_node->num == expected_sensor_num ) {
+        saw_expected_sensor = 1;
+        node_id_push_back( cur_node->edge[DIR_AHEAD].dest );
+      } else {
+        train->fallback_sensors[fallback_idx++] = cur_node->num;
+      }
+    }
+    else if( cur_node->type == NODE_BRANCH ) {
+      if( saw_expected_sensor ) {
+        branch_ind = cur_node->num;
+        if( branch_ind > 152 ) {
+          branch_ind -= 134;
+        }
+        node_id_push_back( cur_node->edge[train->switch_states[branch_ind]].dest );
+        //assert( 1, node_id_top_back( ) == (cur_node->edge[train->switch_states[branch_ind]].dest)->num );
+      } else {
+        node_id_push_back( cur_node->edge[DIR_STRAIGHT].dest );
+        //assert( 1, node_id_top_back( ) == (cur_node->edge[DIR_STRAIGHT].dest)->num );
+        node_id_push_back( cur_node->edge[DIR_CURVED].dest );
+        //assert( 1, node_id_top_back( ) == (cur_node->edge[DIR_CURVED].dest)->num );
+      }
+    } else if( cur_node->type == NODE_EXIT ) {
+      continue;
+    } else { /* any other node */
+      node_id_push_back( cur_node->edge[DIR_AHEAD].dest );
+      //assert( 1, node_id_top_back( ) == (cur_node->edge[DIR_AHEAD].dest)->num );
+    }
+  }
 }
 
 //int predict_next_sensor_dynamic(  );

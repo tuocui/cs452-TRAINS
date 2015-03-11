@@ -30,17 +30,32 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   int cur_idx;
   int expected_train_idx = NONE;
   int initializing_train_idx = NONE;
+  int fallback_idx = NONE;
+  int i;
   for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
     assertm( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
     if( trains[cur_idx].next_sensor_id == sensor_num ) {
-      expected_train_idx = cur_idx;
+      return cur_idx;
     }
-    if( trains[cur_idx].state == INITIALIZING )
+    if( trains[cur_idx].state == INITIALIZING ) {
       initializing_train_idx = cur_idx;
+    }
+    for( i = 0; i < NUM_FALLBACK; ++i ) {
+      if( trains[cur_idx].fallback_sensors[i] == -1 ) {
+        break;
+      }
+      if( trains[cur_idx].fallback_sensors[i] == sensor_num ) {
+        fallback_idx = cur_idx;
+        break;
+      }
+    }
   }
   /* if can't find matching train, assign the initializing train */ 
-  if( expected_train_idx == NONE && initializing_train_idx != NONE ) {
-    expected_train_idx = initializing_train_idx;
+  if( initializing_train_idx != NONE ) {
+    return initializing_train_idx;
+  }
+  if( fallback_idx != NONE ) {
+    return fallback_idx;
   }
   Printf( COM2, "\0337\033[9A\033[2K\rreturning expected train: %d    \0338", expected_train_idx );
   return expected_train_idx;

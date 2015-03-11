@@ -99,6 +99,7 @@ void sensor_worker( ) {
     trains = sensor_args.trains;
     sensor_num = sensor_args.sensor_num;
     
+    // TODO: Change this function to also include fallback sensors
     expected_train_idx = get_expected_train_idx( trains, sensor_num );
     train_state_t *train = expected_train_idx == NONE ? NULL : &( trains[expected_train_idx] ); 
     //assert( 1, train );
@@ -117,12 +118,17 @@ void sensor_worker( ) {
       Printf( COM2, "\0337\033[4A\033[2K\rActual distance to sensor N/A: N/A   \0338" );
       Printf( COM2, "\0337\033[5A\033[2K\rDistance difference: N/A   \0338" );
     } else {
-      update_velocity( train, cur_time, train->time_at_last_landmark, train->dist_to_next_sensor );
+      // Do not update velocity if we have picked up the the train from a fallback sensor
+      if( train->next_sensor_id == sensor_num ) {
+        update_velocity( train, cur_time, train->time_at_last_landmark, train->dist_to_next_sensor );
+        sensor_id_to_name( train->next_sensor_id, sensor_name );
+        Printf( COM2, "\0337\033[3A\033[2K\rExpected distance to sensor %c%c%c: %d    \0338", sensor_name[0], sensor_name[1], sensor_name[2], train->mm_past_landmark / 10 );
+        Printf( COM2, "\0337\033[4A\033[2K\rActual distance to sensor %c%c%c: %d    \0338", sensor_name[0], sensor_name[1], sensor_name[2], train->dist_to_next_sensor );
+        Printf( COM2, "\0337\033[5A\033[2K\rDistance difference: %d    \0338", ( train->mm_past_landmark / 10 ) - train->dist_to_next_sensor );
+      } else {
+        Printf( COM2, "\0337\033[11A\033[2K\rWOAH NELLY, ALMOST LOST THE TRAIN: %d\0338", cur_time );
+      }
       train->vel_at_last_landmark = train->cur_vel;
-      sensor_id_to_name( train->next_sensor_id, sensor_name );
-      Printf( COM2, "\0337\033[3A\033[2K\rExpected distance to sensor %c%c%c: %d    \0338", sensor_name[0], sensor_name[1], sensor_name[2], train->mm_past_landmark / 10 );
-      Printf( COM2, "\0337\033[4A\033[2K\rActual distance to sensor %c%c%c: %d    \0338", sensor_name[0], sensor_name[1], sensor_name[2], train->dist_to_next_sensor );
-      Printf( COM2, "\0337\033[5A\033[2K\rDistance difference: %d    \0338", ( train->mm_past_landmark / 10 ) - train->dist_to_next_sensor );
     }
     //assert( 2, train->next_sensor_id == sensor_num );
     rail_msg.to_server_content.train_state = train;
@@ -131,6 +137,7 @@ void sensor_worker( ) {
     train->prev_sensor_id = sensor_num;
     train->mm_past_landmark = 0;
     predict_next_sensor_static( train );
+    predict_next_fallback_sensors_static( train );
     sensor_id_to_name( train->next_sensor_id, sensor_name );
     Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );
     // if no reverse, 
@@ -289,8 +296,6 @@ void rail_server( ) {
   }
   rail_cmds_t* recved_cmds; 
 
-
-  //TODO: add secretary/courier
 
   int update_trains_tid = Create( 13, &update_trains );
   update_train_args_t update_train_args;

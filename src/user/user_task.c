@@ -712,18 +712,15 @@ void dijkstra_test( ) {
 
   //TESTING stop prediction
   init_rail_cmds( &cmds );
-  src_id = 20;
-  dest_id = 53;
+  src_id = 30;
+  dest_id = 15;
+  int next_sensor_id = 2;
+  int i;
   train.prev_sensor_id = src_id;
-  train.dest_id = dest_id;
-  train.speeds[train.cur_speed].stopping_distance = 0;
-  
-  while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
-    init_rail_cmds( &cmds );
-    get_next_command( &train, &cmds );
-    train.speeds[train.cur_speed].stopping_distance += 100;
-
-    debug( "stop commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d \
+  train.dest_id= dest_id;
+  train.next_sensor_id = next_sensor_id;
+  get_next_command( &train, &cmds );
+  debug( "Reverse commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d \
                       \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d \
                       \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d \
                       \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
@@ -735,13 +732,25 @@ void dijkstra_test( ) {
   //=================================================================================
   
   //TESTING static prediction
-  //train.switch_states[14] = SW_STRAIGHT;
-  //predict_next_sensor_static( &train );
-  //debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+  Printf( COM2, "\n\nAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHSW8: %d\r\n", SW8 );
+  train.switch_states[SW8] = SW_STRAIGHT;
+  predict_next_sensor_static( &train );
+  Printf( COM2,  "static next sensor prediction: %d, dist_to_next_sensor: %d\r\n", train.next_sensor_id, train.dist_to_next_sensor );
 
-  //train.switch_states[14] = SW_CURVED;
-  //predict_next_sensor_static( &train );
-  //debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+  train.switch_states[SW8] = SW_CURVED;
+  predict_next_sensor_static( &train );
+  Printf( COM2, "static next sensor prediction: %d, dist_to_next_sensor: %d\r\n", train.next_sensor_id, train.dist_to_next_sensor );
+
+  Printf( COM2, "Before prediction\r\n" );
+  train.prev_sensor_id = src_id;
+  train.next_sensor_id = next_sensor_id;
+  predict_next_fallback_sensors_static( &train );
+  for( i = 0; i < 5; ++i ) {
+    if( train.fallback_sensors[i] == -1 ) {
+      break;
+    }
+    Printf( COM2, "fallback_sensor[%d]: %d\r\n", i, train.fallback_sensors[i] );
+  }
 }
 
 void first_user_task( ){
