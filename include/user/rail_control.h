@@ -23,7 +23,6 @@
 #define TR_SPD_12 12 
 #define TR_SPD_13 13 
 #define TR_SPD_14 14 
-#define TR_RV     15
 
 #define SW_STRAIGHT 0 
 #define SW_CURVED   1 
@@ -54,6 +53,8 @@
 
 #define SW_TIME     250 // in ms
 
+//FIXME: do dynamic mapping for a2
+#define RUNNING_TRAIN_NUM 58
 #define TRAIN_58 0
 
 #define TR_STOP         0
@@ -84,6 +85,10 @@ typedef struct _rail_cmds_ {
   int switch_id2;
   int switch_action2;
   int switch_delay2;
+  int switch_id3;
+  int switch_action3;
+  int switch_delay3;
+
 } rail_cmds_t;
 
 typedef struct _speed_info_ {
@@ -112,6 +117,11 @@ typedef struct _train_state_ {
     NOT_INITIALIZED,
   } state;
 
+  int rv_expected_sensors_idx;
+  int rv_original_expected_sensor;
+  int rv_expected_sensors[10];
+  int rv_expected_branches[5];
+
   int train_id;
   int prev_sensor_id;
   int next_sensor_id;
@@ -137,7 +147,6 @@ typedef struct _train_state_ {
 } train_state_t;
 
 void init_rail_cmds( rail_cmds_t* cmds );
-
 
 void get_next_command( train_state_t* train, rail_cmds_t* cmds );
 

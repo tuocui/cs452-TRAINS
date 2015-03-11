@@ -68,7 +68,8 @@ typedef enum {
 
 /* track and trains */
 #define NUM_SWITCHES        22
-#define TRACK_MAX 144
+//#define TRACK_MAX           140
+#define TRACK_MAX           144
 #define NODE_MAX TRACK_MAX
 
 #endif

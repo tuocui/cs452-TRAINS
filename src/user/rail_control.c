@@ -40,9 +40,11 @@
 
 inline void init_rail_cmds( rail_cmds_t* cmds ) {
   cmds->sw_count = cmds->train_id = cmds->train_action = cmds->train_delay = \
-  cmds->switch_id0= cmds->switch_action0= cmds->switch_delay0= \
-  cmds->switch_id1= cmds->switch_action1= cmds->switch_delay1= \
-  cmds->switch_id2= cmds->switch_action2= cmds->switch_delay2= NONE;
+  cmds->switch_id0 = cmds->switch_action0= cmds->switch_delay0= \
+  cmds->switch_id1 = cmds->switch_action1= cmds->switch_delay1= \
+  cmds->switch_id2 = cmds->switch_action2= cmds->switch_delay2= \
+  cmds->switch_id3 = cmds->switch_action3 = cmds->switch_delay3 = NONE;
+
 }
 
 //TODO: call static search after switch comes back 
@@ -69,9 +71,25 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
  *      do not do anything, can assert on: recalculate a result, should be the same as the one calculated at step 2
  */
 
-void predict_next_sensor_dynamic( train_state_t *train_state ) {
-
-}
+// predict one sensor at a time, this function is called when the train is in reversing or stopping state
+// prbly need another function for switches tracking
+//void predict_next_sensor_dynamic( train_state_t* train_state, rail_cmds_t* rail_cmds ) {
+//  //assert( 1, train_state
+//  ///* reversing case */
+//  //if( train_state->state == REVERSING ) {
+//  //  train_state->rv_original_expected_sensor = train_state->next_sensor_id; 
+//  //  int stop_dist = get_cur_stopping_distance( train_state );
+//  //}
+//
+//  ///* stopping case */
+//  //else if( train_state->cur_speed == TR_STOP ) {
+//
+//  //}
+//  //else {
+//  //  assertm( 1, false, "calling predict_next_sensor_dynamic in unnecessary condition" );
+//  //}
+//
+//}
 
 void predict_next_sensor_static( train_state_t *train_state ) {
   track_node_t* cur_node = &(train_state->track_graph[train_state->prev_sensor_id]);
@@ -178,6 +196,9 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   int safe_branch_dist = train->speeds[speed_idx].safe_branch_distance; 
   debug( "safe_branch_dist: %d", safe_branch_dist );
 
+  //DEBUG
+  Printf( COM2, "get_next_command with: train_id: %d, src_id: %d, dest_id: %d, speed_idx: %d, train_velocity: %d, stop_dist: %d, safe_branch_dist: %d\n\r", train_id, src_id, dest_id, speed_idx, train_velocity, stop_dist, safe_branch_dist );
+
   assert( 1, track_graph && cmds && src_id >= 0 && src_id < TRACK_MAX && dest_id >= 0 && dest_id < TRACK_MAX );
   /* currently we only run dijkstra on sensor hit, so src_id should be  a sensor */
   assert( 1, track_graph[src_id].type == NODE_SENSOR );
@@ -199,24 +220,29 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   int switch_count = 0;
   int action;
 
+
   print_shortest_path( track_graph, all_path, all_step, src_id, dest_id, dest_path);
   debug( "steps_to_dest: %d", steps_to_dest );
   for( i = 0; i < steps_to_dest; ++i ) {
     cur_node_id = dest_path[i];
     /* if the node is the end of the route */
-    //FIXME: stop should be issued nodes ahead 
     if( i == steps_to_dest - 1 ) {
-      debug( "END OF THE ROUTE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
+      debug( "END OF ROUTE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       /* get dist between sensor and dest */  
-      int sensor2dest_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
+      int sensor2dest_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id] + train->mm_past_dest; 
       /* if we are the last sensor or the dest and second sensor is too close */
+      debug( "prev_sensor_id: %d, src_id: %d, second_sensor_id: %d, stop_dist: %d, sensor2dest_dist: %d",
+              prev_sensor_id, src_id, second_sensor_id, stop_dist, sensor2dest_dist );
       if( prev_sensor_id == src_id || 
          ( prev_sensor_id == second_sensor_id && stop_dist > sensor2dest_dist )) {
-        int src2dest_dist = all_dist[cur_node_id];
+        debug( "setting stop command" );
+        int src2dest_dist = all_dist[cur_node_id] + train->mm_past_dest;
         
         cmds->train_id = train_id;
         cmds->train_action = TR_STOP;
         cmds->train_delay = (( src2dest_dist - stop_dist ) > 0 ) ? ( src2dest_dist - stop_dist ) * 10000 / train_velocity : 0;
+
+        debug( "( %d - %d ) * 10000 / %d ", src2dest_dist, stop_dist, train_velocity );
       }
     }
     /* update prev_sensor iff cur_sensor is the sensor immediately after src */
@@ -229,13 +255,13 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
      * we should only handle one reverse at a time 
      */
     else if(( i - 1 ) >= 0 && 
-        ( track_graph[cur_node_id].reverse == &track_graph[dest_path[i-1]] && cmds->train_action != TR_RV )) {
+        ( track_graph[cur_node_id].reverse == &track_graph[dest_path[i-1]] && cmds->train_action != TR_REVERSE )) {
       assert( 1, cmds->train_action == NONE );
       debug( "REVERSE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       assert( 1, i - 1 >= 0 && i < steps_to_dest );
 
       cmds->train_id = train_id;
-      cmds->train_action = TR_RV;
+      cmds->train_action = TR_REVERSE;
       cmds->train_delay = 0;
 
       /* deal with reverse on branch */
@@ -267,12 +293,11 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
       int src2branch_dist = all_dist[cur_node_id];
       int branch_delay_time = (( src2branch_dist - safe_branch_dist ) * 10000 / train_velocity - SW_TIME/10 ) > 0 ? \
                         ( src2branch_dist - safe_branch_dist ) * 10000 / train_velocity - SW_TIME/10  : 0;
-      debug( "%d - %d * 1000 / %d - %d", src2branch_dist, safe_branch_dist, train_velocity, SW_TIME );
+      debug( "( %d - %d ) * 1000 / %d - %d", src2branch_dist, safe_branch_dist, train_velocity, SW_TIME );
 
       /* issue switch commands */
       if(( prev_sensor_id == src_id && sensor2branch_dist >= safe_branch_dist) ||
-         ( prev_sensor_id == second_sensor_id && 
-                              sensor2branch_dist < safe_branch_dist )) {
+         ( prev_sensor_id == second_sensor_id && sensor2branch_dist < safe_branch_dist )) {
         //FIXME: this is faling, should handle 4 branchees
         assert( 1, switch_count < 3 );
         assertm( 1, track_graph[cur_node_id].num > 0 || 
@@ -303,8 +328,12 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         
         ++switch_count;
       }
-      else 
-        debug( "UNHANDLED: %d, %s", cur_node_id, track_graph[cur_node_id].name );
+      else {
+        debug( "branch to be handled at next sensor hit" );   
+      }
+    } 
+    else {
+      debug( "DON'T CARE NODE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
     }
   }
 }
@@ -413,13 +442,14 @@ min_heap_node_t * extract_min( min_heap_t * min_heap ) {
   if( min_heap->size > 0 )
     make_min_heap( min_heap, 0 );
 
-  assert( 1, last->dist < INT_MAX );
+  assertm( 1, last->dist < INT_MAX, "if this fails, make sure you set 140 nodes to trackB and 144 to trackA" );
   //TODO: remove below testing code
   if( last->dist >= INT_MAX ) {
     debug( "extracted: id: %d, dist: %d", last->id, last->dist );
     print_min_heap( min_heap );
     FOREVER;
   }
+
   return last;  
 }
 
@@ -459,12 +489,12 @@ inline bool heap_find( min_heap_t * min_heap, int id ) {
 
 inline void print_min_heap( min_heap_t * min_heap ) {
   assert( 1, min_heap );
-  bwprintf( COM2, "size: %d\n\r", min_heap->size );
+  Printf( COM2, "size: %d\n\r", min_heap->size );
   int idx;
   for( idx = 0; idx < min_heap->size; ++idx ) {
-    bwprintf( COM2, "id: %d, dist: %d", min_heap->nodes[idx].id, min_heap->nodes[idx].dist );
+    Printf( COM2, "id: %d, dist: %d", min_heap->nodes[idx].id, min_heap->nodes[idx].dist );
   }
-  bwprintf( COM2, "\n\r" );
+  Printf( COM2, "\n\r" );
 }
 
 void dijkstra( struct _track_node_* track_graph, int src_id, int* path, int* dist, int* step ) {
@@ -603,11 +633,23 @@ void print_shortest_path( track_node_t* track_graph, int* all_path, int* all_ste
 
   steps = all_step[dest_id];
   int i;
+#if( DEBUG == 0 )
+  Printf( COM2, "SHORTEST PATH: " ); 
+  Printf( COM2, "%d steps from %s to %s:\t%s", steps, track_graph[src_id].name,
+      track_graph[dest_id].name, track_graph[src_id].name );
+  for( i = 0; i < steps; ++i ) {
+    Printf( COM2, "->%s", track_graph[dest_path[i]].name );
+  }
+  Printf( COM2, "\r\n" );
+#else 
+  bwprintf( COM2, "SHORTEST PATH: " ); 
   bwprintf( COM2, "%d steps from %s to %s:\t%s", steps, track_graph[src_id].name,
       track_graph[dest_id].name, track_graph[src_id].name );
   for( i = 0; i < steps; ++i ) {
     bwprintf( COM2, "->%s", track_graph[dest_path[i]].name );
   }
   bwprintf( COM2, "\r\n" );
+
+#endif 
 }
 
