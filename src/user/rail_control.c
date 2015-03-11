@@ -249,15 +249,19 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         
         cmds->train_id = train_id;
         cmds->train_action = TR_STOP;
-        cmds->train_delay = (( src2dest_dist - stop_dist ) > 0 ) ? ( src2dest_dist - stop_dist ) * 10000 / train_velocity : 0;
-
+        cmds->train_delay = (( src2dest_dist - stop_dist ) > 0 ) ? (( src2dest_dist - stop_dist ) * 10000 ) / train_velocity : 0;
         debug( "( %d - %d ) * 10000 / %d ", src2dest_dist, stop_dist, train_velocity );
+
+        /* clear train destination */
+        //DEBUG
+        //train->dest_id = NONE;
+        //Printf( COM2, "CLEARING TRAIN DESTINATION: %d\n\r", train->dest_id );
       }
     }
     /* check reverse before branch, but handle reverse on branch separately, 
      * we should only handle one reverse at a time 
      */
-    else if(( i - 1 ) >= 0 && 
+    if(( i - 1 ) >= 0 && 
         ( track_graph[cur_node_id].reverse == &track_graph[dest_path[i-1]] && cmds->train_action != TR_REVERSE )) {
       assert( 1, cmds->train_action == NONE );
       debug( "REVERSE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
@@ -277,16 +281,13 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         assert( 1, track_graph[dest_path[i-1]].type == NODE_MERGE );
         int src2reverse_dist = all_dist[cur_node_id];
         cmds->train_delay = (( src2reverse_dist - stop_dist ) > 0 ) ? \
-          ( src2reverse_dist - stop_dist ) * 10000 / train_velocity : 0;
-        /* needs to rerun this node for branching */
-        --i;
+          (( src2reverse_dist - stop_dist ) * 10000 ) / train_velocity : 0;
       }
       
     }
-    /* finally, branching case */
-    else if( track_graph[cur_node_id].type == NODE_BRANCH && i + 1 < steps_to_dest ) {
+    /* finally, branching case, and if we actually specify a destination after the branch node */
+    if( track_graph[cur_node_id].type == NODE_BRANCH && i + 1 < steps_to_dest ) {
       debug( "BRANCH: %d, %s", cur_node_id, track_graph[cur_node_id].name );
-      assert( 1, switch_count < 3 );
       action = -1;
 
       #define set_switch( _cmds, _switch_count, _switch_id, _action, _delay ) \
@@ -297,40 +298,42 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
       /* get dist between sensor and branch*/  
       int sensor2branch_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
       int src2branch_dist = all_dist[cur_node_id];
-      int branch_delay_time = (( src2branch_dist - safe_branch_dist ) * 10000 / train_velocity - SW_TIME/10 ) > 0 ? \
-                        ( src2branch_dist - safe_branch_dist ) * 10000 / train_velocity - SW_TIME/10  : 0;
+      int branch_delay_time = ((( src2branch_dist - safe_branch_dist ) * 10000 ) / train_velocity - SW_TIME/10 ) > 0 ? \
+                        (( src2branch_dist - safe_branch_dist ) * 10000 ) / train_velocity - SW_TIME/10  : 0;
       debug( "( %d - %d ) * 1000 / %d - %d", src2branch_dist, safe_branch_dist, train_velocity, SW_TIME );
 
       /* issue switch commands */
       if(( prev_sensor_id == src_id && sensor2branch_dist >= safe_branch_dist) ||
          ( prev_sensor_id == second_sensor_id && sensor2branch_dist < safe_branch_dist )) {
         //FIXME: this is faling, should handle 4 branchees
-        assert( 1, switch_count < 3 );
+        assert( 1, switch_count < 4 );
         assertm( 1, track_graph[cur_node_id].num > 0 || 
                    track_graph[cur_node_id].num < 19 || 
                    track_graph[cur_node_id].num > 152 || 
                    track_graph[cur_node_id].num < 157, 
                    "num: %d", track_graph[cur_node_id].num );
         assert( 1, i + 1 < steps_to_dest );
-        assert( 1, (( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest == 
-                    &track_graph[dest_path[i+1]] ) || 
-                    ( track_graph[cur_node_id].edge[DIR_CURVED].dest == 
-                      &track_graph[dest_path[i+1]] )));
+        assert( 1, (( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest == &track_graph[dest_path[i+1]] ) || 
+                    ( track_graph[cur_node_id].edge[DIR_CURVED].dest == &track_graph[dest_path[i+1]] )));
 
-        action = ( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest == 
-                   &track_graph[dest_path[i+1]] ) ? SW_STRAIGHT : SW_CURVED;
+        action = ( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest == &track_graph[dest_path[i+1]] ) ? SW_STRAIGHT : SW_CURVED;
 
+        int switch_id = track_graph[cur_node_id].num;
+        CONVERT_SWITCH_ID( switch_id );
         if( switch_count == 0 ){
-          set_switch( cmds, 0, track_graph[cur_node_id].num, action, branch_delay_time );
+          set_switch( cmds, 0, switch_id, action, branch_delay_time );
         }
         else if( switch_count == 1 ) {
-          set_switch( cmds, 1, track_graph[cur_node_id].num, action, branch_delay_time );
+          set_switch( cmds, 1, switch_id, action, branch_delay_time );
         }
         else if( switch_count == 2 ) {
-          set_switch( cmds, 2, track_graph[cur_node_id].num, action, branch_delay_time );
+          set_switch( cmds, 2, switch_id, action, branch_delay_time );
+        }
+        else if( switch_count == 3 ) {
+          set_switch( cmds, 3, switch_id, action, branch_delay_time );
         }
         else
-          assert( 1, false );
+          assertm( 1, false, "too many branches than we can handle, increase switch numbers" );
         
         ++switch_count;
       }
@@ -564,7 +567,7 @@ void dijkstra( struct _track_node_* track_graph, int src_id, int* path, int* dis
     update_backward( ) {
       track_nbr_id = track_node->reverse - track_graph;
       assert( 1, track_nbr_id >= 0 );
-      test_dist = dist[track_id];
+      test_dist = dist[track_id] + 1000000;//dist[track_id] // FIXME: this is so that we do not have reverse case
       assertm( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
       test_step = step[track_id] + 1;
       update_info( );

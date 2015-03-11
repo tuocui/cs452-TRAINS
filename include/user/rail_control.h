@@ -65,6 +65,11 @@
 
 #define NUM_FALLBACK 5
 
+#define CONVERT_SWITCH_ID( _switch_num ) \
+  if( _switch_num > 18 ) { \
+    switch_id -= 134; \
+  }
+
 struct _track_node_;
 
 typedef struct _rail_cmds_ {
