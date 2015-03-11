@@ -18,6 +18,8 @@
   if( level <= AST_LEVEL && !( cond )) { \
     bwprintf( COM2, "assertm failed (%s:%d):\t"fmt"\n\r", __FILE__, \
         __LINE__, ## __VA_ARGS__ ); \
+  } \
+  if( AST_LEVEL >= 10 ) { \
     FOREVER; \
   } else { ; }
 
@@ -25,6 +27,8 @@
   if( level <= AST_LEVEL && !( cond )) { \
     bwprintf(COM2,"Assert failed (%s:%d):\t\n\r\n\r",__FILE__, \
         __LINE__); \
+  } \
+  if( AST_LEVEL >= 10 ) { \
     FOREVER; \
   } else { ; }                                                  
 

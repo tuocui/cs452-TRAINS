@@ -23,9 +23,9 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-#define A4 1
+//#define A4 1
 //#define RING_TEST
-//#define RAIL_TEST
+#define RAIL_TEST
 
 
 struct Server {
@@ -652,13 +652,13 @@ void dijkstra_test( ) {
   }
 
 
-  for( i = 0; i < NODE_MAX; ++i ) {
-    int all_dst_path[all_step[i]];
-    print_shortest_path( track_graph, all_path, all_step, src_id, i, all_dst_path );
-  }
+  //for( i = 0; i < NODE_MAX; ++i ) {
+  //  int all_dst_path[all_step[i]];
+  //  print_shortest_path( track_graph, all_path, all_step, src_id, i, all_dst_path );
+  //}
   // =================================================================================
-  Printf( COM2, "AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH\n\r" );
-  
+  //Printf( COM2, "AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH\n\r" );
+  //
   int switch_states[SW_MAX];
   init_switches( switch_states );
 
@@ -670,6 +670,7 @@ void dijkstra_test( ) {
   train.cur_speed = 12;
   train.speeds[train.cur_speed].safe_branch_distance += 0;
  
+  // =================================================================================
   //TESTING switch commands
   //src_id = 2;
   //dest_id = 14;
@@ -707,27 +708,27 @@ void dijkstra_test( ) {
   //=================================================================================
 
   //TESTING stop prediction
-  init_rail_cmds( &cmds );
-  src_id = 20;
-  dest_id = 53;
-  train.prev_sensor_id = src_id;
-  train.dest_id = dest_id;
-  train.speeds[train.cur_speed].stopping_distance = 0;
-  
-  while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
-    init_rail_cmds( &cmds );
-    get_next_command( &train, &cmds );
-    train.speeds[train.cur_speed].stopping_distance += 100;
+  //init_rail_cmds( &cmds );
+  //src_id = 20;
+  //dest_id = 53;
+  //train.prev_sensor_id = src_id;
+  //train.dest_id = dest_id;
+  //train.speeds[train.cur_speed].stopping_distance = 0;
+  //
+  //while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
+  //  init_rail_cmds( &cmds );
+  //  get_next_command( &train, &cmds );
+  //  train.speeds[train.cur_speed].stopping_distance += 100;
 
-    debug( "stop commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d \
-                      \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d \
-                      \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d \
-                      \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
-                          cmds.train_id, cmds.train_action, cmds.train_delay,
-                          cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
-                          cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
-                          cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
-  }
+  //  debug( "stop commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d 
+  //                    \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
+  //                    \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
+  //                    \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
+  //                        cmds.train_id, cmds.train_action, cmds.train_delay,
+  //                        cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
+  //                        cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
+  //                        cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  //}
   //=================================================================================
   
   //TESTING static prediction
@@ -738,6 +739,31 @@ void dijkstra_test( ) {
   //train.switch_states[14] = SW_CURVED;
   //predict_next_sensor_static( &train );
   //debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+  
+  //=================================================================================
+  
+  //TESTING dynamic prediction
+  train.cur_speed = 8;
+  train.switch_states[14] = SW_STRAIGHT;
+  train.speeds[train.cur_speed].stopping_distance = 0;
+  //train.state = REVERSING;
+
+  while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
+  debug( "AHHHHHHHHHHHHHHHHHHHHHHHHHHH: %d", train.speeds[train.cur_speed].stopping_distance );
+    src_id = 5;
+    dest_id = 53;
+    train.prev_sensor_id = src_id;
+    train.next_sensor_id = dest_id;
+    train.speeds[train.cur_speed].stopping_distance += 100;
+    train.state = REVERSING;
+    assert( 1, train.track_graph[train.prev_sensor_id].type == NODE_SENSOR );
+    
+
+    predict_next_sensor_dynamic( &train );
+    debug( "dynamic next sensor prediction: new previous sensor: %d, next_sensor: %d, dist_to_next_sensor: %d", train.prev_sensor_id, train.next_sensor_id, train.dist_to_next_sensor );
+  }
+
+  //=================================================================================
 }
 
 void first_user_task( ){

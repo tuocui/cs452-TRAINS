@@ -387,7 +387,7 @@ void rail_server( ) {
             train_cmd_args.dest = (receive_msg.to_server_content.rail_cmds)->train_dest;
             train_cmd_args.mm_past_dest = (receive_msg.to_server_content.rail_cmds)->train_mm_past_dest;
             ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
-            //FIXME: if the train_exe_worker_tid is not ready, should not Reply
+            //FIXME: if the train_exe_worker_tid is not ready, should not Reply, or add a secretary
             assertm( 1, ret_val == 0, "ret_val: %d", ret_val );
             break;
           default:
