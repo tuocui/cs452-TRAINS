@@ -14,14 +14,8 @@
 
 //TODO: TONY, give the magic 100000 and 200000 names 
 inline int safe_distance_to_branch( train_state_t *train ) {
-  int vel = (train->speeds[train->cur_speed]).straight_vel;
+  int vel = train->cur_vel;
   return ( vel * SW_TIME ) / 100000 + SWITCH_BUFFER + train->length;
-}
-
-// stopping distance + buffer + length of train
-// return distance in mm
-inline int safe_distance_to_stop( train_state_t *train ) {
-  return (train->speeds[train->cur_speed]).stopping_distance + STOP_BUFFER + train->length;
 }
 
 inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
@@ -199,6 +193,12 @@ int get_cur_stopping_distance( train_state_t *train ) {
   return (train->speeds[train->cur_speed]).stopping_distance;
 }
 
+// stopping distance + buffer + length of train
+// return distance in mm
+inline int safe_distance_to_stop( train_state_t *train ) {
+  return get_cur_stopping_distance( train ) + STOP_BUFFER + train->length;
+}
+
 // returns in ms
 // TODO: Double check that this is correct (95% sure)
 int get_cur_stopping_time( train_state_t *train ) {
@@ -237,10 +237,10 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
   trains[TRAIN_58].length = 210;
   trains[TRAIN_58].pickup_len = 50;
   trains[TRAIN_58].train_id = 58;
-  trains[TRAIN_58].prev_sensor_id = 0;
-  trains[TRAIN_58].next_sensor_id = 0;
-  trains[TRAIN_58].dest_id = 0;
-  trains[TRAIN_58].dist_to_next_sensor = 0;
+  trains[TRAIN_58].prev_sensor_id = NONE;
+  trains[TRAIN_58].next_sensor_id = NONE;
+  trains[TRAIN_58].dest_id = NONE;
+  trains[TRAIN_58].dist_to_next_sensor = NONE;
   trains[TRAIN_58].time_at_last_landmark = 0;
   trains[TRAIN_58].mm_past_landmark = 0;
   trains[TRAIN_58].cur_speed = 0;

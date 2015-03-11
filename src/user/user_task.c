@@ -629,8 +629,8 @@ void dijkstra_test( ) {
   
   track_node_t track_graph[TRACK_MAX];
   init_tracka( track_graph );
-  int src_id;
-  int dest_id;
+  //int src_id;
+  //int dest_id;
 
   // TESTING dijkstra
   //int all_path[NODE_MAX];
@@ -711,11 +711,11 @@ void dijkstra_test( ) {
   //=================================================================================
 
   //TESTING stop prediction
-  init_rail_cmds( &cmds );
+  /*init_rail_cmds( &cmds );
   src_id = 30;
   dest_id = 15;
   int next_sensor_id = 2;
-  int i;
+  //int i;
   train.prev_sensor_id = src_id;
   train.dest_id= dest_id;
   train.next_sensor_id = next_sensor_id;
@@ -732,7 +732,7 @@ void dijkstra_test( ) {
   //=================================================================================
   
   //TESTING static prediction
-  Printf( COM2, "\n\nAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHSW8: %d\r\n", SW8 );
+  //Printf( COM2, "\n\nAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHSW8: %d\r\n", SW8 );
   train.switch_states[SW8] = SW_STRAIGHT;
   predict_next_sensor_static( &train );
   Printf( COM2,  "static next sensor prediction: %d, dist_to_next_sensor: %d\r\n", train.next_sensor_id, train.dist_to_next_sensor );
@@ -750,7 +750,7 @@ void dijkstra_test( ) {
       break;
     }
     Printf( COM2, "fallback_sensor[%d]: %d\r\n", i, train.fallback_sensors[i] );
-  }
+  }*/
 }
 
 void first_user_task( ){

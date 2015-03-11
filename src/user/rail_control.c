@@ -5,6 +5,7 @@
 #include "global.h"
 #include "io.h" 
 #include "ring_buf.h"
+#include "rail_helper.h"
 
 /* get_next_command calls graph search to get the shortest path,
  * for now, if the path only has length of one, the we issue stop command.
@@ -190,10 +191,10 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   int dest_id = train->dest_id;
   int speed_idx = train->cur_speed;
   assertm( 1, ( speed_idx >= 8 && speed_idx <= 14 ) || ( speed_idx >= 23 || speed_idx <= 29 ), "cur_speed: %d", speed_idx );
-  int train_velocity = train->speeds[speed_idx].straight_vel; 
+  int train_velocity = train->cur_vel; 
   //int stop_time = train->speeds[speed_idx].stopping_time;
-  int stop_dist = train->speeds[speed_idx].stopping_distance;
-  int safe_branch_dist = train->speeds[speed_idx].safe_branch_distance; 
+  int stop_dist = get_cur_stopping_distance( train );
+  int safe_branch_dist = safe_distance_to_branch( train ); 
   debug( "safe_branch_dist: %d", safe_branch_dist );
 
   //DEBUG
@@ -225,6 +226,14 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   debug( "steps_to_dest: %d", steps_to_dest );
   for( i = 0; i < steps_to_dest; ++i ) {
     cur_node_id = dest_path[i];
+
+    /* update prev_sensor iff cur_sensor is the sensor immediately after src */
+    if( track_graph[cur_node_id].type == NODE_SENSOR && second_sensor_id == -1 ) {
+      debug( "NODE SENSOR: %d, %s", cur_node_id, track_graph[cur_node_id].name );
+      second_sensor_id = cur_node_id;
+      prev_sensor_id = second_sensor_id;
+    } 
+
     /* if the node is the end of the route */
     if( i == steps_to_dest - 1 ) {
       debug( "END OF ROUTE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
@@ -245,12 +254,6 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         debug( "( %d - %d ) * 10000 / %d ", src2dest_dist, stop_dist, train_velocity );
       }
     }
-    /* update prev_sensor iff cur_sensor is the sensor immediately after src */
-    else if( track_graph[cur_node_id].type == NODE_SENSOR && second_sensor_id == -1 ) {
-      debug( "NODE SENSOR: %d, %s", cur_node_id, track_graph[cur_node_id].name );
-      second_sensor_id = cur_node_id;
-      prev_sensor_id = second_sensor_id;
-    } 
     /* check reverse before branch, but handle reverse on branch separately, 
      * we should only handle one reverse at a time 
      */
@@ -259,14 +262,17 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
       assert( 1, cmds->train_action == NONE );
       debug( "REVERSE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       assert( 1, i - 1 >= 0 && i < steps_to_dest );
+      int sensor2reverse_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id];
 
-      cmds->train_id = train_id;
-      cmds->train_action = TR_REVERSE;
-      cmds->train_delay = 0;
+      /* issue reverse command only if the train is standing at the reverse sensor */
+      if( &(track_graph[dest_path[i-1]]) - track_graph == src_id ) {
+        cmds->train_id = train_id;
+        cmds->train_action = TR_REVERSE;
+        cmds->train_delay = 0;//all_dist[cur_node_id] - all_dist[src_id];
+      }
 
       /* deal with reverse on branch */
-      int sensor2reverse_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id];
-      if( track_graph[cur_node_id].type == NODE_BRANCH && ( prev_sensor_id == src_id || 
+      else if( track_graph[cur_node_id].type == NODE_BRANCH && ( prev_sensor_id == src_id || 
             ( prev_sensor_id  == second_sensor_id && stop_dist > sensor2reverse_dist ))) {
         assert( 1, track_graph[dest_path[i-1]].type == NODE_MERGE );
         int src2reverse_dist = all_dist[cur_node_id];
