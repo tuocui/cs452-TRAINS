@@ -31,9 +31,8 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   int expected_train_idx = NONE;
   int initializing_train_idx = NONE;
   for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
-    assertm( 1, trains[cur_idx].next_sensor_id != NONE, "failure here indicates incorrect prediction functions" );
+    assertm( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
     if( trains[cur_idx].next_sensor_id == sensor_num ) {
-      assert( 1, expected_train_idx == NONE );
       expected_train_idx = cur_idx;
     }
     if( trains[cur_idx].state == INITIALIZING )
@@ -43,6 +42,7 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   if( expected_train_idx == NONE && initializing_train_idx != NONE ) {
     expected_train_idx = initializing_train_idx;
   }
+  Printf( COM2, "\0337\033[9A\033[2K\rreturning expected train: %d    \0338", expected_train_idx );
   return expected_train_idx;
 }
 // returns in ms
@@ -200,6 +200,7 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
     trains[i].switch_states = switch_states;
     trains[i].prev_sensor_id= NONE;
     trains[i].next_sensor_id= NONE;
+    trains[i].dest_id = NONE;
     trains[i].mm_past_landmark = 0;
     trains[i].cur_speed = 0;
     for( j = 0; j < NUM_SPEEDS; ++j ) {
@@ -300,8 +301,8 @@ void init_switches( int *switch_states ) {
   switch_states[SW18] = SW_CURVED;
   switch_states[SW153] = SW_STRAIGHT;
   switch_states[SW154] = SW_CURVED;
-  switch_states[SW155] = SW_STRAIGHT;
-  switch_states[SW156] = SW_CURVED;
+  switch_states[SW155] = SW_CURVED;
+  switch_states[SW156] = SW_STRAIGHT;
 }
 
 void update_velocity( train_state_t *train, int cur_time, int prev_time, int dist ) {

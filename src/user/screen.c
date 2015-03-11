@@ -33,6 +33,12 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 't' && cmd2 == 'r' ) {
     return MOVE_CMD;  
   }
+  if ( cmd1 == 't' && cmd2 == 'i' ) {
+    return INIT_CMD;  
+  }
+  if ( cmd1 == 't' && cmd2 == 'd' ) {
+    return DEST_CMD;  
+  }
   if ( cmd1 == 'r' && cmd2 == 'v' ) {
     return REV_CMD;  
   }
@@ -109,6 +115,23 @@ int handle_rev( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg, int
   return 0;
 }
 
+int handle_init( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+  //short prev_speed;
+  if ( train <= 0 ){
+    output_invalid( );
+    return -1;
+  }
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_INIT;
+  ((rail_msg->to_server_content).rail_cmds)->train_speed = -1;
+  ((rail_msg->to_server_content).rail_cmds)->train_delay = 0;
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  Printf( COM2, "\0337\033[1A\033[2K\rTrain %d initializing\0338", train );
+  return 0;
+}
+
 // NEED TO SEND
 int handle_switch( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
   int buf_ind = 3;
@@ -147,6 +170,27 @@ int handle_switch( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  
   return 0;
 }
 
+int handle_dest( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+  short dest = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+  short mm_past_dest = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_DEST;
+  ((rail_msg->to_server_content).rail_cmds)->train_speed = -1;
+  ((rail_msg->to_server_content).rail_cmds)->train_delay = 0;
+  ((rail_msg->to_server_content).rail_cmds)->train_dest = dest;
+  ((rail_msg->to_server_content).rail_cmds)->train_mm_past_dest = mm_past_dest;
+  
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  Printf( COM2, "\0337\033[1A\033[2K\rTrain %d is destined for %dmm past %d\0338", train, mm_past_dest, dest );
+  return 0;
+}
+
 int handle_go( ) {
   track_go( );
   Putstr( COM2, "\0337\033[1A\033[2K\rTrack ON\0338", 21 );
@@ -175,6 +219,12 @@ int process_buffer( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg,
     break;
   case SWITCH_CMD:
     handle_switch( cmd_buffer, rail_msg, rail_server_tid );
+    break;
+  case INIT_CMD:
+    handle_init( cmd_buffer, rail_msg, rail_server_tid );
+    break;
+  case DEST_CMD:
+    handle_dest( cmd_buffer, rail_msg, rail_server_tid );
     break;
   case GO_CMD:
     handle_go( );
@@ -229,6 +279,8 @@ void parse_user_input( ) {
       rail_cmds.train_action = -1;
       rail_cmds.train_delay = 0;
       rail_cmds.train_speed = 0;
+      rail_cmds.train_dest = -1;
+      rail_cmds.train_mm_past_dest = 0;
       rail_cmds.switch_id0 = 0;
       rail_cmds.switch_action0 = -1;
       rail_cmds.switch_delay0 = 0;

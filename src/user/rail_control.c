@@ -95,18 +95,31 @@ void predict_next_sensor_static( train_state_t *train_state ) {
   assert( 1, cur_node && cur_node->type == NODE_SENSOR );
   int next_sensor_id = -1; // might be an Exit node
   int ret_node_dist = cur_node->edge[DIR_AHEAD].dist;
+  int branch_ind;
   cur_node = cur_node->edge[DIR_AHEAD].dest;
 
   while( next_sensor_id < 0 ) {
-    if( cur_node->type == NODE_SENSOR || cur_node->type == NODE_EXIT ) {
-      next_sensor_id = cur_node - train_state->track_graph; 
+    //Printf( COM2, "cur_node->type: %d, cur_node->num: %d\r\n", cur_node->type, cur_node->num );
+    if( cur_node->type == NODE_SENSOR ) {
+      //Printf( COM2, "sensor node\r\n" );
+      next_sensor_id = cur_node->num; 
       assert( 1, next_sensor_id >= 0 );
     }
     else if( cur_node->type == NODE_BRANCH ) {
-      ret_node_dist += cur_node->edge[train_state->switch_states[cur_node->num]].dist;
-      cur_node = cur_node->edge[train_state->switch_states[cur_node->num]].dest;
+     // Printf( COM2, "branch node\r\n" );
+      branch_ind = cur_node->num;
+      if( branch_ind > 152 ) {
+        branch_ind -= 134;
+      }
+      //Printf( COM2, "branch_ind: %d, branch_state: %d\r\n", branch_ind, train_state->switch_states[branch_ind] );
+      ret_node_dist += cur_node->edge[train_state->switch_states[branch_ind]].dist;
+      cur_node = cur_node->edge[train_state->switch_states[branch_ind]].dest;
+    } else if( cur_node->type == NODE_EXIT ) {
+      //Printf( COM2, "exit node\r\n" );
+      break;
     }
     else { /* any other node */
+      //Printf( COM2, "other node\r\n" );
       ret_node_dist += cur_node->edge[DIR_AHEAD].dist;
       cur_node = cur_node->edge[DIR_AHEAD].dest;
     }
@@ -133,6 +146,9 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   int safe_branch_dist = train->speeds[speed_idx].safe_branch_distance; 
   debug( "safe_branch_dist: %d", safe_branch_dist );
 
+  //DEBUG
+  Printf( COM2, "get_next_command with: train_id: %d, src_id: %d, dest_id: %d, speed_idx: %d, train_velocity: %d, stop_dist: %d, safe_branch_dist: %d\n\r", train_id, src_id, dest_id, speed_idx, train_velocity, stop_dist, safe_branch_dist );
+
   assert( 1, track_graph && cmds && src_id >= 0 && src_id < TRACK_MAX && dest_id >= 0 && dest_id < TRACK_MAX );
   /* currently we only run dijkstra on sensor hit, so src_id should be  a sensor */
   assert( 1, track_graph[src_id].type == NODE_SENSOR );
@@ -154,6 +170,7 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   int switch_count = 0;
   int action;
 
+
   print_shortest_path( track_graph, all_path, all_step, src_id, dest_id, dest_path);
   debug( "steps_to_dest: %d", steps_to_dest );
   for( i = 0; i < steps_to_dest; ++i ) {
@@ -162,14 +179,14 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
     if( i == steps_to_dest - 1 ) {
       debug( "END OF ROUTE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       /* get dist between sensor and dest */  
-      int sensor2dest_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
+      int sensor2dest_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id] + train->mm_past_dest; 
       /* if we are the last sensor or the dest and second sensor is too close */
       debug( "prev_sensor_id: %d, src_id: %d, second_sensor_id: %d, stop_dist: %d, sensor2dest_dist: %d",
               prev_sensor_id, src_id, second_sensor_id, stop_dist, sensor2dest_dist );
       if( prev_sensor_id == src_id || 
          ( prev_sensor_id == second_sensor_id && stop_dist > sensor2dest_dist )) {
         debug( "setting stop command" );
-        int src2dest_dist = all_dist[cur_node_id];
+        int src2dest_dist = all_dist[cur_node_id] + train->mm_past_dest;
         
         cmds->train_id = train_id;
         cmds->train_action = TR_STOP;

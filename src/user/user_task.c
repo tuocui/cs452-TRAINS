@@ -628,7 +628,7 @@ void dijkstra_test( ) {
   //debug( "address diff %d", (node_3 - track_graph) );
   
   track_node_t track_graph[TRACK_MAX];
-  init_trackb( track_graph );
+  init_tracka( track_graph );
   int src_id;
   int dest_id;
 

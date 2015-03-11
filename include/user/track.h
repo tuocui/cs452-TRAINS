@@ -33,6 +33,8 @@ int set_switch( short switch_num, short c_s, int *switch_states );
 
 int set_switch_old( short switch_num, short c_s );
 
+void sensor_id_to_name( int sensor_id, char *rtn );
+
 int kill_switch( );
 
 void track_sensor_task( );
