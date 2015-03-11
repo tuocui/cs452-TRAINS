@@ -62,6 +62,8 @@
 #define TR_INIT         3
 #define TR_DEST         4
 
+#define NUM_FALLBACK 5
+
 struct _track_node_;
 
 typedef struct _rail_cmds_ {
@@ -130,6 +132,7 @@ typedef struct _train_state_ {
   int cur_vel;
   int speed_change_time;
   int is_forward;
+  int fallback_sensors[NUM_FALLBACK];
   speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
 } train_state_t;
 
@@ -182,6 +185,8 @@ void print_shortest_path( struct _track_node_ * track_graph, int* all_path, int*
 void decrease_dist( min_heap_t * min_heap, int id, int dist );
 
 void predict_next_sensor_static( train_state_t *train_state );
+
+void predict_next_fallback_sensors_static( train_state_t *train );
 
 void predict_next_sensor_dynamic( train_state_t *train_state );
 

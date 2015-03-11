@@ -25,9 +25,9 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-#define A4 1
+//#define A4 1
 //#define RING_TEST
-//#define RAIL_TEST
+#define RAIL_TEST
 
 
 //TODO remove testing struct
@@ -698,10 +698,13 @@ void dijkstra_test( ) {
 
   //TESTING reverse commands
   init_rail_cmds( &cmds );
-  src_id = 53;
+  src_id = 30;
   dest_id = 15;
+  int next_sensor_id = 2;
+  int i;
   train.prev_sensor_id = src_id;
   train.dest_id= dest_id;
+  train.next_sensor_id = next_sensor_id;
   get_next_command( &train, &cmds );
   debug( "Reverse commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d \
                       \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d \
@@ -722,6 +725,17 @@ void dijkstra_test( ) {
   train.switch_states[SW8] = SW_CURVED;
   predict_next_sensor_static( &train );
   Printf( COM2, "static next sensor prediction: %d, dist_to_next_sensor: %d\r\n", train.next_sensor_id, train.dist_to_next_sensor );
+
+  Printf( COM2, "Before prediction\r\n" );
+  train.prev_sensor_id = src_id;
+  train.next_sensor_id = next_sensor_id;
+  predict_next_fallback_sensors_static( &train );
+  for( i = 0; i < 5; ++i ) {
+    if( train.fallback_sensors[i] == -1 ) {
+      break;
+    }
+    Printf( COM2, "fallback_sensor[%d]: %d\r\n", i, train.fallback_sensors[i] );
+  }
 }
 
 void first_user_task( ){
