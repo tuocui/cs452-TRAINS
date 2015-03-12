@@ -311,7 +311,7 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         
         cmds->train_id = train_id;
         cmds->train_action = TR_STOP;
-        cmds->train_delay = (( src2dest_dist - stop_dist ) > 0 ) ? (( src2dest_dist - stop_dist - get_len_train_ahead( train ) ) * 10000 ) / train_velocity : 0;
+        cmds->train_delay = (( src2dest_dist - stop_dist - get_len_train_ahead( train )) > 0 ) ? (( src2dest_dist - stop_dist - get_len_train_ahead( train ) ) * 10000 ) / train_velocity : 0;
         debug( "( %d - %d ) * 10000 / %d ", src2dest_dist, stop_dist, train_velocity );
 
         /* clear train destination */
@@ -342,8 +342,11 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
             ( prev_sensor_id  == second_sensor_id && stop_dist > sensor2reverse_dist ))) {
         assert( 1, track_graph[dest_path[i-1]].type == NODE_MERGE );
         int src2reverse_dist = all_dist[cur_node_id];
+
+        cmds->train_id = train_id;
+        cmds->train_action = TR_REVERSE;
         cmds->train_delay = (( src2reverse_dist - stop_dist ) > 0 ) ? \
-          (( src2reverse_dist - stop_dist ) * 10000 ) / train_velocity : 0;
+          (( src2reverse_dist ) * 10000 ) / train_velocity : 0;// FIXME: should be src2reverse_dist - stop_dist
       }
       
     }
@@ -629,7 +632,7 @@ void dijkstra( struct _track_node_* track_graph, int src_id, int* path, int* dis
     update_backward( ) {
       track_nbr_id = track_node->reverse - track_graph;
       assert( 1, track_nbr_id >= 0 );
-      test_dist = dist[track_id] + 1000000;//dist[track_id] // FIXME: this is so that we do not have reverse case
+      test_dist = dist[track_id];// + 1000000;//dist[track_id] // FIXME: this is so that we do not have reverse case
       assertm( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
       test_step = step[track_id] + 1;
       update_info( );
