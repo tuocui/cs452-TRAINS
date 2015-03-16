@@ -311,7 +311,8 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
         
         cmds->train_id = train_id;
         cmds->train_action = TR_STOP;
-        cmds->train_delay = (( src2dest_dist - stop_dist ) > 0 ) ? (( src2dest_dist - stop_dist - get_len_train_ahead( train ) ) * 10000 ) / train_velocity : 0;
+        int train_len_ahead = get_len_train_ahead( train );
+        cmds->train_delay = (( src2dest_dist - stop_dist - train_len_ahead ) > 0 ) ? (( src2dest_dist - stop_dist - train_len_ahead ) * 10000 ) / train_velocity : 0;
         debug( "( %d - %d ) * 10000 / %d ", src2dest_dist, stop_dist, train_velocity );
 
         /* clear train destination */
