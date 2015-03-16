@@ -4,8 +4,10 @@
 /* THIS FILE IS GENERATED CODE -- DO NOT EDIT */
 
 // The track initialization functions expect an array of this size.
-struct track_node;
+struct _track_node_;
 
-void init_trackb(struct track_node *track);
+void init_trackb( struct _track_node_ *track);
+
+void init_tracka( struct _track_node_ *track);
 
 #endif

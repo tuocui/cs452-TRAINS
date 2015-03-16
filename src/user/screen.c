@@ -4,6 +4,9 @@
 #include "track.h"
 #include "screen.h"
 #include "clock_server.h"
+#include "rail_server.h"
+#include "rail_control.h"
+#include "nameserver.h"
 
 int output_invalid( ) {
   Putstr( COM2, "\0337\033[1A\033[2K\rInvalid command\0338", 28 );
@@ -29,6 +32,21 @@ int get_cmd( char *cmd_buffer ) {
   }
   if ( cmd1 == 't' && cmd2 == 'r' ) {
     return MOVE_CMD;  
+  }
+  if ( cmd1 == 't' && cmd2 == 'i' ) {
+    return INIT_CMD;  
+  }
+  if ( cmd1 == 'a' && cmd2 == 'c' ) {
+    return ACCEL_CMD;  
+  }
+  if ( cmd1 == 'd' && cmd2 == 'c' ) {
+    return DECEL_CMD;  
+  }
+  if ( cmd1 == 'c' && cmd2 == 'd' ) {
+    return CH_DIR_CMD;  
+  }
+  if ( cmd1 == 't' && cmd2 == 'd' ) {
+    return DEST_CMD;  
   }
   if ( cmd1 == 'r' && cmd2 == 'v' ) {
     return REV_CMD;  
@@ -64,14 +82,41 @@ short parse_curve_straight( char *cmd_buffer, int *buf_ind_ptr ) {
   return -1;
 }
 
-int handle_move( char *cmd_buffer, short *train_speeds ) {
+short parse_sensor_name( char *cmd_buffer, int *buf_ind_ptr ) {
+  short sensor_num = 0;
+  char module_c = cmd_buffer[(*buf_ind_ptr)++];
+  char first_num = cmd_buffer[(*buf_ind_ptr)++];
+  char second_num = cmd_buffer[(*buf_ind_ptr)];
+  sensor_num += ( module_c - 'A' ) * 16;
+  if( second_num == ' ' || second_num == 0 ) {
+    sensor_num += (first_num - '1');
+  } else {
+    if( first_num != '0' ) {
+      sensor_num += (first_num - '0') * 10;
+    }
+    sensor_num += (second_num - '1');
+    ++(*buf_ind_ptr);
+  }
+  return sensor_num;
+}
+
+int handle_move( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg, int rail_server_tid ) {
   int buf_ind = 3;
   short train = parse_short( cmd_buffer, &buf_ind );
   ++buf_ind;
   short speed = parse_short( cmd_buffer, &buf_ind );
 
   if ( train > 0 && speed >= 0 ){
-    train_speeds[train] = set_train_speed( train, speed);
+    ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+    if( speed == 0 ) {
+      ((rail_msg->to_server_content).rail_cmds)->train_action = TR_STOP;
+    } else {
+      ((rail_msg->to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
+    }
+    ((rail_msg->to_server_content).rail_cmds)->train_speed = speed;
+    ((rail_msg->to_server_content).rail_cmds)->train_delay = 0;
+
+    Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
     Printf( COM2, "\0337\033[1A\033[2K\rTrain %d set to %d\0338", train, speed );
   } else {
     output_invalid( );
@@ -80,29 +125,48 @@ int handle_move( char *cmd_buffer, short *train_speeds ) {
   return 0;
 }
 
-int handle_rev( char *cmd_buffer, short *train_speeds ) {
+int handle_rev( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg, int rail_server_tid ) {
   int buf_ind = 3;
   short train = parse_short( cmd_buffer, &buf_ind );
-  short prev_speed;
+  //short prev_speed;
   if ( train <= 0 ){
     output_invalid( );
     return -1;
   }
-  prev_speed = train_speeds[train];
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_REVERSE;
+  ((rail_msg->to_server_content).rail_cmds)->train_speed = -1;
+  ((rail_msg->to_server_content).rail_cmds)->train_delay = 0;
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
   Printf( COM2, "\0337\033[1A\033[2K\rTrain %d reversed\0338", train );
-  set_train_speed( train, 0 );
-  Delay( 350 );
-  set_train_speed( train, 15 );
-  set_train_speed( train, prev_speed );
   return 0;
 }
 
-int handle_switch( char *cmd_buffer ) {
+int handle_init( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+  //short prev_speed;
+  if ( train <= 0 ){
+    output_invalid( );
+    return -1;
+  }
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_INIT;
+  ((rail_msg->to_server_content).rail_cmds)->train_speed = -1;
+  ((rail_msg->to_server_content).rail_cmds)->train_delay = 0;
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  Printf( COM2, "\0337\033[1A\033[2K\rTrain %d initializing\0338", train );
+  return 0;
+}
+
+// NEED TO SEND
+int handle_switch( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
   int buf_ind = 3;
   short switch_num = parse_short( cmd_buffer, &buf_ind );
   ++buf_ind;
   short c_s = parse_curve_straight( cmd_buffer, &buf_ind );
   char c_s_c;
+  int state = -1;
   if ( switch_num <= 0 ||
        c_s <= 0 ||
        ( switch_num > 18 && !( switch_num >= 153 && switch_num <= 156 ) ) ) {
@@ -112,16 +176,115 @@ int handle_switch( char *cmd_buffer ) {
   switch( c_s ) {
   case STRAIGHT:
     c_s_c = 'S';
+    state = SW_STRAIGHT;
     break;
   case CURVED:
     c_s_c = 'C';
+    state = SW_CURVED;
     break;
   default:
     c_s_c = '/';
+    return -1;
     break;
   }
+
+  ((rail_msg->to_server_content).rail_cmds)->switch_id0 = switch_num;
+  ((rail_msg->to_server_content).rail_cmds)->switch_action0 = state;
+  ((rail_msg->to_server_content).rail_cmds)->switch_delay0 = 0;
+  ((rail_msg->to_server_content).rail_cmds)->sw_count = 1;
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
   Printf( COM2, "\0337\033[1A\033[2K\rSwitch %d set to %c\0338", switch_num, c_s_c );
-  set_switch( switch_num, c_s );
+  return 0;
+}
+
+int handle_dest( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+  short dest = parse_sensor_name( cmd_buffer, &buf_ind );
+  ++buf_ind;
+  short mm_past_dest = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+  char out_buf[3];
+
+  if ( train <= 0 ){
+    output_invalid( );
+    return -1;
+  }
+  if( dest < -1 || dest >= 80 ) {
+    output_invalid( );
+    return -1;
+  }
+
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_DEST;
+  ((rail_msg->to_server_content).rail_cmds)->train_speed = -1;
+  ((rail_msg->to_server_content).rail_cmds)->train_delay = 0;
+  ((rail_msg->to_server_content).rail_cmds)->train_dest = dest;
+  ((rail_msg->to_server_content).rail_cmds)->train_mm_past_dest = mm_past_dest;
+  
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  sensor_id_to_name( dest, out_buf );
+  if( dest == -1 ) {
+    Printf( COM2, "\0337\033[1A\033[2K\rTrain %d is no longer destined for anything. =(\0338", train );
+  } else {
+    Printf( COM2, "\0337\033[1A\033[2K\rTrain %d is destined for %dmm past %c%c%c\0338", train, mm_past_dest, out_buf[0], out_buf[1], out_buf[2] );
+  }
+  return 0;
+}
+
+int handle_accel( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+  short accel_rate = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+
+  if ( train <= 0 ){
+    output_invalid( );
+    return -1;
+  }
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_ACCEL;
+  ((rail_msg->to_server_content).rail_cmds)->train_accel = accel_rate;
+  
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  Printf( COM2, "\0337\033[1A\033[2K\rTrain %d is acceleration rate set for %d.\0338", train, accel_rate );
+  return 0;
+}
+
+int handle_decel( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+  short decel_rate = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+
+  if ( train <= 0 ){
+    output_invalid( );
+    return -1;
+  }
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_DECEL;
+  ((rail_msg->to_server_content).rail_cmds)->train_decel = decel_rate;
+  
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  Printf( COM2, "\0337\033[1A\033[2K\rTrain %d is deceleration rate set for %d.\0338", train, decel_rate );
+  return 0;
+}
+
+int handle_ch_dir( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+
+  if ( train <= 0 ){
+    output_invalid( );
+    return -1;
+  }
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_CH_DIR;
+  
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
   return 0;
 }
 
@@ -137,18 +300,37 @@ int handle_kill( ) {
   return 0;
 }
 
-int process_buffer( char *cmd_buffer, short *train_speeds ) {
+int handle_quit( ) {
+  return QUIT_CMD;
+}
+
+int process_buffer( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg, int rail_server_tid ) {
   int cmd = get_cmd( cmd_buffer );
 
   switch( cmd ) {
   case MOVE_CMD:
-    handle_move( cmd_buffer, train_speeds );
+    handle_move( cmd_buffer, train_speeds, rail_msg, rail_server_tid );
     break;
   case REV_CMD:
-    handle_rev( cmd_buffer, train_speeds );
+    handle_rev( cmd_buffer, train_speeds, rail_msg, rail_server_tid );
     break;
   case SWITCH_CMD:
-    handle_switch( cmd_buffer );
+    handle_switch( cmd_buffer, rail_msg, rail_server_tid );
+    break;
+  case INIT_CMD:
+    handle_init( cmd_buffer, rail_msg, rail_server_tid );
+    break;
+  case DEST_CMD:
+    handle_dest( cmd_buffer, rail_msg, rail_server_tid );
+    break;
+  case ACCEL_CMD:
+    handle_accel( cmd_buffer, rail_msg, rail_server_tid );
+    break;
+  case DECEL_CMD:
+    handle_decel( cmd_buffer, rail_msg, rail_server_tid );
+    break;
+  case CH_DIR_CMD:
+    handle_ch_dir( cmd_buffer, rail_msg, rail_server_tid );
     break;
   case GO_CMD:
     handle_go( );
@@ -157,7 +339,7 @@ int process_buffer( char *cmd_buffer, short *train_speeds ) {
     handle_kill( );
     break;
   case QUIT_CMD:
-    return QUIT_CMD;
+    return handle_quit( rail_msg, rail_server_tid );
     break;
   default:
     output_invalid( );
@@ -176,6 +358,12 @@ void parse_user_input( ) {
   for( i = 0; i < NUM_TRAINS; ++i ) {
     train_speeds[i] = 0;
   }
+  rail_cmds_t rail_cmds;
+  rail_msg_t rail_msg;
+  rail_msg.request_type = USER_INPUT;
+  rail_msg.to_server_content.rail_cmds = &rail_cmds;
+  rail_msg.from_server_content.nullptr = NULL;
+  int rail_server_tid = WhoIs( (char*) RAIL_SERVER );
 
   FOREVER {
     c = (char)Getc( COM2 );
@@ -192,12 +380,23 @@ void parse_user_input( ) {
       cmd_buffer[cmd_ind] = 0;
       cmd_ind = 0;
       Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
-      status = process_buffer( cmd_buffer, train_speeds );
+      status = process_buffer( cmd_buffer, train_speeds, &rail_msg, rail_server_tid );
+      rail_cmds.train_id = 0;
+      rail_cmds.train_action = -1;
+      rail_cmds.train_delay = 0;
+      rail_cmds.train_speed = 0;
+      rail_cmds.train_dest = -1;
+      rail_cmds.train_mm_past_dest = 0;
+      rail_cmds.train_accel = 100;
+      rail_cmds.train_accel = 120;
+      rail_cmds.switch_id0 = 0;
+      rail_cmds.switch_action0 = -1;
+      rail_cmds.switch_delay0 = 0;
       if( status == QUIT_CMD ) {
         Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
         for( i = 25; i < NUM_TRAINS; ++i ) {
           train_speeds[i] = 0;
-          set_train_speed( i, 0 );
+          set_train_speed_old( i, 0 );
         }
         Delay( 500 );
         Kill_the_system( 0xdeadbeef );

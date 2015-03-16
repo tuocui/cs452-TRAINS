@@ -14,21 +14,20 @@ typedef enum {
 #define DIR_STRAIGHT 0
 #define DIR_CURVED 1
 
-struct track_node;
+struct _track_node_;
 
-typedef struct track_edge {
-  struct track_edge *reverse;
-  struct track_node *src, *dest;
+typedef struct _track_edge_ {
+  struct _track_edge_ *reverse;
+  struct _track_node_ *src, *dest;
   int dist;             /* in millimetres */
 } track_edge_t;
 
-typedef struct track_node {
+typedef struct _track_node_ {
   const char *name;
   node_type_t type;
   int num;              /* sensor or switch number */
-  struct track_node *reverse;  /* same location, but opposite direction */
-  struct track_edge edge[2];
+  struct _track_node_ *reverse;  /* same location, but opposite direction */
+  struct _track_edge_ edge[2];
 } track_node_t;
 
-#endif
-
+#endif 

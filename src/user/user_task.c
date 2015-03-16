@@ -10,30 +10,32 @@
 #include "track.h"
 #include "screen.h"
 #include "util.h"
+
 #include "rail_control.h"
 #include "track_node.h"
 #include "track_data_new.h"
+#include "rail_server.h"
 #include "calibration.h"
+#include "rail_helper.h"
 
 #define CYCLES 1000
-
-// TODO: Split this into user task and test task files
 
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-//#define A4 1
+#define A4 1
 //#define RING_TEST
-#define RAIL_TEST
+//#define RAIL_TEST
 
 
-//TODO remove testing struct
 struct Server {
   char arr[4];
 };
 
 void idle_task( ) {
-  debug( "IN IDLE TASK" );
+  // TODO: Figure out a way so that we can do things in this idle task.
+  // PROBLEM: How to make sure that we can sync without blocking.
+  // IDEA: Constantly reply to rail server.
   FOREVER {
   }
   Exit( );
@@ -370,22 +372,58 @@ void a4_test_task4( ) {
   
   Exit( );
 }
+
+void a4_test_task5( ) {
+  setspeed( COM1, LOW_SPEED );
+  wait_cycles(1000);
+  enable_two_stop_bits( COM1 );
+  setfifo( COM1, OFF );
+  setfifo( COM2, ON );
+  int nameserver_tid = Create( 3, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
+  debug( "Idle tid: %d", idle_id );
+  int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
+  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
+  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
+  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
+  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  int clock_server_tid = Create( 3, &clock_server ); // 43
+  debug( "Clock Server tid: %d", clock_server_tid );
+  Printf( COM2, "\033[2J" );
+  initialize_track( );
+  int track_sensor_task_tid = Create( 4, &track_sensor_task );
+  debug( "Track Sensor task tid: %d", track_sensor_task_tid );
+  int rail_server_tid = Create( 3, &rail_server ); // 43
+  debug( "Rail Server tid: %d", rail_server_tid );
+  int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
+  debug( "User input task tid: %d", parse_user_input_tid );
+  int clock_user_tid = Create( 10, &clock_user_task ); // 46
+  debug( "Clock user task tid: %d", clock_user_tid );
+  int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
+  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
+  
+  Exit( );
+}
 #endif /* A4 */
 
 void ring_buf_test( ) {
   declare_ring_queue(int, test, 2 );
   debug( "buf_count: %d", test_count( ) );
   int idx;
-  idx = test_push_front( 1 );
+  idx = test_push_back( 1 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
-  idx = test_push_front( 2 );
+  idx = test_push_back( 2 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
-  idx = test_push_front( 3 );
+  idx = test_push_back( 3 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
   
-  idx = test_push_front( 4 );
+  idx = test_push_back( 4 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
   int elm;
@@ -413,30 +451,30 @@ void ring_buf_test( ) {
   elm = test_pop_front( );
   debug( "buf_count: %d, elm: %d", test_count( ), elm );
 
-  idx = test_push_front( 12 );
+  idx = test_push_back( 12 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
-  idx = test_push_front( 13 );
+  idx = test_push_back( 13 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
   
-  idx = test_push_front( 14 );
+  idx = test_push_back( 14 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
-  idx = test_push_front( 15 );
+  idx = test_push_back( 15 );
   debug( "buf_count: %d, idx: %d", test_count( ), idx );
 
   declare_ring_queue( char, com2_buf, 3 );
   debug( "buf_count: %d", com2_buf_count( ) );
-  idx = com2_buf_push_front( 'a' );
+  idx = com2_buf_push_back( 'a' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  idx = com2_buf_push_front( 'b' );
+  idx = com2_buf_push_back( 'b' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
   
-  idx = com2_buf_push_front( 'c' );
+  idx = com2_buf_push_back( 'c' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  idx = com2_buf_push_front( 'd' );
+  idx = com2_buf_push_back( 'd' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   char c = com2_buf_pop_back( );
@@ -445,25 +483,25 @@ void ring_buf_test( ) {
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  idx = com2_buf_push_front( 'e' );
+  idx = com2_buf_push_back( 'e' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
   
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  idx = com2_buf_push_front( 'f' );
+  idx = com2_buf_push_back( 'f' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  idx = com2_buf_push_front( 'g' );
+  idx = com2_buf_push_back( 'g' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  idx = com2_buf_push_front( 'h' );
+  idx = com2_buf_push_back( 'h' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
-  idx = com2_buf_push_front( 'i' );
+  idx = com2_buf_push_back( 'i' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
   
   c = com2_buf_pop_back( );
@@ -475,7 +513,7 @@ void ring_buf_test( ) {
   c = com2_buf_pop_back( );
   debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
 
-  idx = com2_buf_push_front( 'j' );
+  idx = com2_buf_push_back( 'j' );
   debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   c = com2_buf_pop_back( );
@@ -490,13 +528,13 @@ void ring_buf_test( ) {
   test_struct_t st3; st3.a = 3;
 
   declare_ring_queue( test_struct_t *, st_buf, 3 );
-  idx = st_buf_push_front( &st1 );
+  idx = st_buf_push_back( &st1 );
   debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
 
-  idx = st_buf_push_front( &st2 );
+  idx = st_buf_push_back( &st2 );
   debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
 
-  idx = st_buf_push_front( &st3 );
+  idx = st_buf_push_back( &st3 );
   debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
 
   test_struct_t * st0;
@@ -517,11 +555,32 @@ void ring_buf_test( ) {
 
 void dijkstra_test( ) {
   debug( "dijkstra_test" );
+  setspeed( COM1, LOW_SPEED );
+  wait_cycles(1000);
+  enable_two_stop_bits( COM1 );
+  setfifo( COM1, OFF );
+  setfifo( COM2, ON );
+  int nameserver_tid = Create( 3, &nameserver_main );
+  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
+  debug( "Idle tid: %d", idle_id );
+  int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
+  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
+  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
+  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
+  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  int clock_server_tid = Create( 3, &clock_server ); // 43
+  debug( "Clock Server tid: %d", clock_server_tid );
+
   /* initialize the heap */
-  min_heap_t min_heap;
-  int node_id2idx[NODE_MAX];
-  min_heap_node_t nodes[NODE_MAX];
-  init_min_heap( &min_heap, 0, node_id2idx, nodes );
+
+  //min_heap_t min_heap;
+  //int node_id2idx[NODE_MAX];
+  //min_heap_node_t nodes[NODE_MAX];
+  //init_min_heap( &min_heap, 0, node_id2idx, nodes );
 
   ///* test heap_empty */
   //assert(2, heap_empty( &min_heap ));
@@ -569,38 +628,201 @@ void dijkstra_test( ) {
   //debug( "address diff %d", (node_3 - track_graph) );
   
   track_node_t track_graph[TRACK_MAX];
-  init_trackb( track_graph );
+  init_tracka( track_graph );
+  int src_id;
+  int dest_id;
 
+  // TESTING dijkstra
   int all_path[NODE_MAX];
   int all_dist[NODE_MAX];
   int all_step[NODE_MAX];
 
-  int src_id = 52;
-  int dst_id = 71;
+  src_id = 2;
+  dest_id = 14;
 
   dijkstra( track_graph, src_id, all_path, all_dist, all_step );
 
-  debug( "steps: %d", all_step[dst_id] );
-  //int dst_path[all_step[dst_id]];
+  debug( "steps: %d", all_step[dest_id] );
   
   debug( "dijkstra results: " );
   int i;
   for( i = 0; i < NODE_MAX; ++i ) {
-    bwprintf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
+    Printf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
         i, all_dist[i], all_path[i], all_step[i] );
   }
 
-  //int dst_path[NODE_MAX];
-  //int *steps;
 
-  //print_shortest_path( track_graph, all_path, all_step, src_id, dst_id, dst_path );
+  //for( i = 0; i < NODE_MAX; ++i ) {
+  //  int all_dst_path[all_step[i]];
+  //  print_shortest_path( track_graph, all_path, all_step, src_id, i, all_dst_path );
+  //}
+  // =================================================================================
+  //Printf( COM2, "AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH\n\r" );
+  //
+  int switch_states[SW_MAX];
+  init_switches( switch_states );
 
-  for( i = 0; i < NODE_MAX; ++i ) {
-    int all_dst_path[all_step[i]];
-    print_shortest_path( track_graph, all_path, all_step, src_id, i, all_dst_path );
+  rail_cmds_t cmds;
+  init_rail_cmds( &cmds );
+  
+  train_state_t train;
+  init_trains( &train, track_graph, switch_states );
+  train.cur_speed = 12;
+  train.speeds[train.cur_speed].safe_branch_distance += 0;
+ 
+  // =================================================================================
+  //TESTING switch commands
+  //src_id = 2;
+  //dest_id = 14;
+  //train.prev_sensor_id = src_id;
+  //train.dest_id = dest_id;
+  //while( train.speeds[train.cur_speed].safe_branch_distance < 500 ) {
+  //  init_rail_cmds( &cmds );
+  //  //get_next_command( &train, &cmds );
+  //  train.speeds[train.cur_speed].safe_branch_distance += 50;
+
+  //debug( "Commandes: \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
+  //                   \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
+  //                   \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
+  //                      cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
+  //                      cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
+  //                      cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  //}
+  //=================================================================================
+
+  //TESTING reverse commands
+  //init_rail_cmds( &cmds );
+  //src_id = 15;
+  //dest_id = 0;
+  //train.prev_sensor_id = src_id;
+  //train.dest_id= dest_id;
+  //get_next_command( &train, &cmds );
+  //debug( "Reverse commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d 
+  //                    \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
+  //                    \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
+  //                    \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
+  //                        cmds.train_id, cmds.train_action, cmds.train_delay,
+  //                        cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
+  //                        cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
+  //                        cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  //=================================================================================
+
+  //TESTING stop prediction
+  //init_rail_cmds( &cmds );
+  //src_id = 20;
+  //dest_id = 53;
+  //train.prev_sensor_id = src_id;
+  //train.dest_id = dest_id;
+  //train.speeds[train.cur_speed].stopping_distance = 0;
+  //
+  //while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
+  //  init_rail_cmds( &cmds );
+  //  get_next_command( &train, &cmds );
+  //  train.speeds[train.cur_speed].stopping_distance += 100;
+
+  //  debug( "stop commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d 
+  //                    \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
+  //                    \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
+  //                    \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
+  //                        cmds.train_id, cmds.train_action, cmds.train_delay,
+  //                        cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
+  //                        cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
+  //                        cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  //}
+  //=================================================================================
+  
+  //TESTING static prediction
+  //train.switch_states[14] = SW_STRAIGHT;
+  //predict_next_sensor_static( &train );
+  //debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+
+  //train.switch_states[14] = SW_CURVED;
+  //predict_next_sensor_static( &train );
+  //debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+  
+  //=================================================================================
+  
+  //TESTING dynamic prediction
+  train.cur_speed = 8;
+  train.switch_states[14] = SW_STRAIGHT;
+  train.speeds[train.cur_speed].stopping_distance = 0;
+  //train.state = REVERSING;
+
+  src_id = 7;
+  int next_id = 6;
+  dest_id = 53;
+  /*while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
+  debug( "AHHHHHHHHHHHHHHHHHHHHHHHHHHH: %d", train.speeds[train.cur_speed].stopping_distance );
+    train.prev_sensor_id = src_id;
+    train.next_sensor_id = dest_id;
+    train.speeds[train.cur_speed].stopping_distance += 100;
+    train.state = REVERSING;
+    assert( 1, train.track_graph[train.prev_sensor_id].type == NODE_SENSOR );
+    
+
+    predict_next_sensor_dynamic( &train );
+    debug( "dynamic next sensor prediction: new previous sensor: %d, next_sensor: %d, dist_to_next_sensor: %d", train.prev_sensor_id, train.next_sensor_id, train.dist_to_next_sensor );
+  }*/
+  train.prev_sensor_id = src_id;
+  train.next_sensor_id = next_id;
+  predict_next_fallback_sensors_static( &train );
+  for( i = 0; i < 5 && train.fallback_sensors[i] != -1; ++i ) {
+    Printf( COM2, "Fallback sensor: %d\r\n", train.fallback_sensors[i] );
+  }
+  Delay( 100 );
+
+  char input[9];
+  int sensor_num;
+  int other_num;
+  input[3] = ' ';
+  input[4] = '5';
+  input[5] = '2';
+  input[6] = '9';
+  input[7] = '9';
+  input[8] = 0;
+  for( i = 0; i < 80; ++i ) {
+    int idx = 0;
+    sensor_id_to_name( i, input );
+    sensor_num = parse_sensor_name( input, &idx );
+    idx++;
+    other_num = parse_short( input, &idx );
+    if( !(i == sensor_num && other_num == 5299) ) {
+      Printf( COM2, "FUUUUUCCCCKKKKKK" );
+    }
+    Printf( COM2, "i: %d, actual input: %s, sensor_num: %d, other_num: %d\r\n", i, input, sensor_num, other_num );
+    Delay( 1 );
   }
 
+  for( i = 0; i < 80; ++i ) {
+    int idx = 0;
+    input[3] = ' ';
+    input[4] = '5';
+    input[5] = '2';
+    input[6] = '9';
+    input[7] = '9';
+    input[8] = 0;
+    sensor_id_to_name( i, input );
+    if( input[1] == '0' ) {
+      input[1] = input[2];
+      input[2] = input[3];
+      input[3] = input[4];
+      input[4] = input[5];
+      input[5] = input[6];
+      input[6] = input[7];
+      input[7] = input[8];
+    }
+    sensor_num = parse_sensor_name( input, &idx );
+    idx++;
+    other_num = parse_short( input, &idx );
+    if( !(i == sensor_num && other_num == 5299) ) {
+      Printf( COM2, "FUUUUUCCCCKKKKKK" );
+    }
+    Printf( COM2, "i: %d, actual input: %s, sensor_num: %d, other_num: %d\r\n", i, input, sensor_num, other_num );
+    Delay( 1 );
+  }
+  Delay( 100 );
 
+  //=================================================================================
 }
 
 void first_user_task( ){
@@ -644,7 +866,7 @@ void first_user_task( ){
 #endif /* A3 */
 
 #ifdef A4
-  a4_test_task3( );
+  a4_test_task5( );
   
 #endif /* A4 */
 

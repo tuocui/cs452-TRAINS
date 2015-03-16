@@ -40,13 +40,15 @@ typedef enum {
 #define HWI 100
 
 /* server jobs */
-#define SERVER_MAX        6
+#define SERVER_MAX        8 
 #define RPS_SERVER        0
 #define CLOCK_SERVER      1
 #define COM1_OUT_SERVER   2
 #define COM1_IN_SERVER    3
 #define COM2_OUT_SERVER   4 
 #define COM2_IN_SERVER    5
+#define RAIL_SERVER       6
+#define SENSOR_PROCESSING_TASK 7
 
 
 /* timer */
@@ -64,8 +66,10 @@ typedef enum {
 #define COM2_OUT_IND        3
 #define COM2_IN_IND         4
 
-
 /* track and trains */
-#define TRACK_MAX 140
-#define NODE_MAX TRACK_MAX 
+#define NUM_SWITCHES        22
+//#define TRACK_MAX           140
+#define TRACK_MAX           144
+#define NODE_MAX TRACK_MAX
+
 #endif

@@ -51,7 +51,7 @@ inline int empty( ring_queue_t * queue );
 \
   /* return the idx of the inserted value on success, an errno otherwise */ \
   inline int __attribute__((always_inline)) \
-  NAME##_push_front( TYPE val ) { \
+  NAME##_push_back( TYPE val ) { \
     return push_front( sizeof( TYPE ), &NAME##_queue, (void *)(&val) ); \
   } \
 \
@@ -62,13 +62,13 @@ inline int empty( ring_queue_t * queue );
   } \
 \
   inline TYPE __attribute__((always_inline)) \
-  NAME##_pop_back( ) { \
+  NAME##_pop_front( ) { \
     return *((TYPE *)pop_back( sizeof( TYPE ), &NAME##_queue )); \
   } \
 \
   /* return the value of the front element, an errno otherwise */ \
   inline TYPE __attribute__((always_inline)) \
-  NAME##_pop_front( ) { \
+  NAME##_pop_back( ) { \
     return *((TYPE *)pop_front( sizeof( TYPE ), &NAME##_queue )); \
   } \
 \
@@ -78,12 +78,12 @@ inline int empty( ring_queue_t * queue );
   } \
 \
   inline TYPE __attribute__((always_inline)) __attribute__((const)) \
-  NAME##_top_front( ) { \
+  NAME##_top_back( ) { \
     return *((TYPE *)top_front( sizeof( TYPE ), &NAME##_queue )); \
   } \
 \
   inline TYPE __attribute__((always_inline)) __attribute__((const)) \
-  NAME##_top_back( ) { \
+  NAME##_top_front( ) { \
     return *((TYPE *)top_back( sizeof( TYPE ), &NAME##_queue )); \
   }
 

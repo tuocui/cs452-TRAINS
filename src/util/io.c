@@ -133,17 +133,14 @@ void com2_out_notifier( ) {
   int i = 0;
 
   FOREVER {
-    debug( "Before await" );
     errno = AwaitEvent( COM2_OUT_IND );
     assertm( 1, errno >= 0, "ERROR: interrupt eventid is incorrect" );
-    debug( "Notifier finished awaiting" );
 
     errno = Send( com2_out_server_tid, (char*)&msg, msg_size, (char *)&rpl, msg_size );
     assert( 1, errno >= 0 );
     for( i = 0; i < rpl.msg_len; ++i ) {
       *((int *)( UART2_BASE + UART_DATA_OFFSET )) = (rpl.msg_val)[i];
     }
-    debug( "after putc on UART2 ");
   }
 }
 
