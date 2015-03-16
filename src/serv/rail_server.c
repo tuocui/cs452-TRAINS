@@ -445,6 +445,17 @@ void rail_server( ) {
             train_cmd_args.delay_time = recved_cmds->train_delay;
             ret_val = Reply( train_exe_worker_tid, (char*)&train_cmd_args, sizeof( train_cmd_args ));
             assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+            //Printf( COM2, "commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d 
+            //         \n\rswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
+            //         \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
+            //         \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d 
+            //         \n\rswitch_id3: %d, switch_action3: %d, switch_delay3: %d", 
+            //            recved_cmds->train_id,   recved_cmds->train_action,   recved_cmds->train_delay,
+            //            recved_cmds->switch_id0, recved_cmds->switch_action0, recved_cmds->switch_delay0, 
+            //            recved_cmds->switch_id1, recved_cmds->switch_action1, recved_cmds->switch_delay1, 
+            //            recved_cmds->switch_id2, recved_cmds->switch_action2, recved_cmds->switch_delay2,
+            //            recved_cmds->switch_id3, recved_cmds->switch_action3, recved_cmds->switch_delay3 );
+ 
 
             break;
           default:
