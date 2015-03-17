@@ -364,8 +364,8 @@ void get_next_command( train_state_t* train, rail_cmds_t* cmds ) {
       /* get dist between sensor and branch*/  
       int sensor2branch_dist = all_dist[cur_node_id] - all_dist[prev_sensor_id]; 
       int src2branch_dist = all_dist[cur_node_id];
-      int branch_delay_time = 0;//((( src2branch_dist - safe_branch_dist ) * 10000 ) / train_velocity - SW_TIME/10 ) > 0 ?
-                        //(( src2branch_dist - safe_branch_dist ) * 10000 ) / train_velocity - SW_TIME/10  : 0;
+      int branch_delay_time = ((( src2branch_dist - safe_branch_dist ) * 10000 ) / train_velocity - SW_TIME/10 ) > 0 ?
+                        (( src2branch_dist - safe_branch_dist ) * 10000 ) / train_velocity - SW_TIME/10  : 0;
       debug( "( %d - %d ) * 1000 / %d - %d", src2branch_dist, safe_branch_dist, train_velocity, SW_TIME );
 
       /* issue switch commands */

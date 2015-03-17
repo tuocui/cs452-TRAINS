@@ -5,7 +5,16 @@
 
 #define NUM_SPEEDS 30
 
-#define TR_MAX 1
+#define TR_MAX 4
+
+#define TRAIN_58_NUM 58
+#define TRAIN_45_NUM 45
+#define TRAIN_24_NUM 24
+#define TRAIN_12_NUM 12
+#define TRAIN_58_IDX 0
+#define TRAIN_45_IDX 1
+#define TRAIN_24_IDX 2
+#define TRAIN_12_IDX 3
 
 #define NONE      -1
 #define TR_STOP   0
@@ -52,10 +61,6 @@
 #define SW156  22 
 
 #define SW_TIME     100 // in ms
-
-//FIXME: do dynamic mapping for a2
-#define RUNNING_TRAIN_NUM 58
-#define TRAIN_58 0
 
 #define TR_STOP         0
 #define TR_REVERSE      1

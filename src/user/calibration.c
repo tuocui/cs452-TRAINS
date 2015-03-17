@@ -618,8 +618,8 @@ void calibrate_accel_time( ) {
                   t2 = Time( ) - t0;
                   if( t0 ) {
                     set_train_speed_old( TRAIN_NUM, i );
-                    v0 = trains[TRAIN_58].speeds[i].straight_vel;
-                    v1 = trains[TRAIN_58].speeds[j].straight_vel;
+                    v0 = trains[TRAIN_58_IDX].speeds[i].straight_vel;
+                    v1 = trains[TRAIN_58_IDX].speeds[j].straight_vel;
                     t1 = (( (2*dt) - ( (2*t2*v1) / 10000 ) ) * 10000) / (v0 - v1);
 
                     Printf( COM2, "%d\r\n", t2);
@@ -655,7 +655,7 @@ void calibrate_accel_time( ) {
 
 /* 
   Things to calibrate:
-  - delay time to stop // FINISH
+  - delay time to stop // FINISH OFF
   - update_costs( graph, velocity ) with time // MED-PRI - TONY
   - Calculate reverse costs - SUN (LOW PRI - TONY)
   - Assert ring buffer - LOW PRI - TONY
