@@ -156,28 +156,26 @@ int get_cur_velocity( train_state_t *train, int cur_time ) {
 // node is index
 // returns time in ms
 // dist = distance from previous landmark it passed to the node
-int time_to_node( train_state_t *train, int dist_to_node, track_node_t *track ) {
-  int cur_time = Time( ) * 10;
+int time_to_node( train_state_t *train, int dist_to_node, int cur_time ) {
+  cur_time *= 10;
   int speed_change_time = train->speed_change_time * 10;
 
   int accel_time = get_accel_time( train->cur_speed, train->prev_speed, train );
   int speed_finish_time = speed_change_time + accel_time;
   // Finished accel/decel before cur_time?
-  int mm_past = get_mm_past_last_landmark( train, cur_time );
+  int mm_past = train->mm_past_landmark / 10;
   dist_to_node -= mm_past;
   if( speed_finish_time < cur_time ) {
-    return time_to_dist_constant_vel( dist_to_node, train->speeds[train->cur_speed].straight_vel );
+    return time_to_dist_constant_vel( dist_to_node, train->cur_vel );
   } else { // still changing velocity? fuck TODO: Figure this shit out
-    int cur_velocity = ( (train->speeds[train->cur_speed].straight_vel + 
-                          train->speeds[train->prev_speed].straight_vel) * 100 ) / 
-                          ( ( speed_finish_time * 100 ) / cur_time );
+    int cur_velocity = train->cur_vel;
     int dist_to_const_vel = ( ( speed_finish_time - cur_time ) * cur_velocity ) / 10000 + 
                             ( ( speed_finish_time - cur_time ) * ( train->speeds[train->cur_speed].straight_vel - cur_velocity ) ) / 20000;
     // Will finish acceleration after we hit the node
     if( dist_to_const_vel > dist_to_node ) {
-      return ( 200000 * dist_to_node ) / (cur_velocity + train->speeds[train->cur_speed].straight_vel );
+      return ( ( 200000 * dist_to_node ) / (cur_velocity + train->speeds[train->cur_speed].straight_vel ) );
     } else { // will finish acceleration before we hit the node
-      return speed_finish_time + time_to_dist_constant_vel( dist_to_node - dist_to_const_vel, train->speeds[train->cur_speed].straight_vel );
+      return ( speed_finish_time - cur_time ) + time_to_dist_constant_vel( dist_to_node - dist_to_const_vel, train->speeds[train->cur_speed].straight_vel );
     }
   }
 }
@@ -497,47 +495,47 @@ void init_12( train_state_t *train ) {
   train->state = NOT_INITIALIZED;
   train->decel_rate = 119;
   train->accel_rate = 90;
-  (train->speeds[14]).straight_vel = 100579; // 14 HIGH
-  (train->speeds[14]).curved_vel = 100586;
+  (train->speeds[14]).straight_vel = 83579; // 14 HIGH
+  (train->speeds[14]).curved_vel = 83586;
   (train->speeds[14]).stopping_distance = 4158;
-  (train->speeds[13]).straight_vel = 100092; // 13 HIGH
-  (train->speeds[13]).curved_vel = 100083;
+  (train->speeds[13]).straight_vel = 79092; // 13 HIGH
+  (train->speeds[13]).curved_vel = 79083;
   (train->speeds[13]).stopping_distance = 1875;
-  (train->speeds[12]).straight_vel = 96798; // 12 HIGH
-  (train->speeds[12]).curved_vel = 96517;
+  (train->speeds[12]).straight_vel = 73798; // 12 HIGH
+  (train->speeds[12]).curved_vel = 73517;
   (train->speeds[12]).stopping_distance = 1602;
-  (train->speeds[11]).straight_vel = 82440; // 11 HIGH
-  (train->speeds[11]).curved_vel = 82749;
+  (train->speeds[11]).straight_vel = 63440; // 11 HIGH
+  (train->speeds[11]).curved_vel = 63749;
   (train->speeds[11]).stopping_distance = 1278;
-  (train->speeds[10]).straight_vel = 66814; // 10 HIGH
-  (train->speeds[10]).curved_vel = 67627;
+  (train->speeds[10]).straight_vel = 51814; // 10 HIGH
+  (train->speeds[10]).curved_vel = 51627;
   (train->speeds[10]).stopping_distance = 920;
-  (train->speeds[9]).straight_vel = 56004; // 9 HIGH
-  (train->speeds[9]).curved_vel = 54860;
+  (train->speeds[9]).straight_vel = 46004; // 9 HIGH
+  (train->speeds[9]).curved_vel = 46860;
   (train->speeds[9]).stopping_distance = 666;
-  (train->speeds[8]).straight_vel = 44133; // 8 HIGH
-  (train->speeds[8]).curved_vel = 44370;
+  (train->speeds[8]).straight_vel = 36633; // 8 HIGH
+  (train->speeds[8]).curved_vel = 36670;
   (train->speeds[8]).stopping_distance = 461;
-  (train->speeds[23]).straight_vel = 36907; // 8 LOW
-  (train->speeds[23]).curved_vel = 38127;
+  (train->speeds[23]).straight_vel = 34907; // 8 LOW
+  (train->speeds[23]).curved_vel = 34127;
   (train->speeds[23]).stopping_distance = 346;
-  (train->speeds[24]).straight_vel = 28765; // 9 LOW
-  (train->speeds[24]).curved_vel = 28770;
+  (train->speeds[24]).straight_vel = 44765; // 9 LOW
+  (train->speeds[24]).curved_vel = 44770;
   (train->speeds[24]).stopping_distance = 565;
-  (train->speeds[25]).straight_vel = 62219; // 10 LOW
-  (train->speeds[25]).curved_vel = 62030;
+  (train->speeds[25]).straight_vel = 49219; // 10 LOW
+  (train->speeds[25]).curved_vel = 49030;
   (train->speeds[25]).stopping_distance = 812;
-  (train->speeds[26]).straight_vel = 74021; // 11 LOW
-  (train->speeds[26]).curved_vel = 74043;
+  (train->speeds[26]).straight_vel = 61021; // 11 LOW
+  (train->speeds[26]).curved_vel = 61043;
   (train->speeds[26]).stopping_distance = 1060;
-  (train->speeds[27]).straight_vel = 90551; // 12 LOW
-  (train->speeds[27]).curved_vel = 90540;
+  (train->speeds[27]).straight_vel = 71551; // 12 LOW
+  (train->speeds[27]).curved_vel = 71540;
   (train->speeds[27]).stopping_distance = 1264;
-  (train->speeds[28]).straight_vel = 98030; // 13 LOW
-  (train->speeds[28]).curved_vel = 98056;
+  (train->speeds[28]).straight_vel = 77030; // 13 LOW
+  (train->speeds[28]).curved_vel = 77056;
   (train->speeds[28]).stopping_distance = 1816;
-  (train->speeds[29]).straight_vel = 102344; // 14 LOW
-  (train->speeds[29]).curved_vel = 102635;
+  (train->speeds[29]).straight_vel = 83344; // 14 LOW
+  (train->speeds[29]).curved_vel = 83635;
   (train->speeds[29]).stopping_distance = 4158;
 }
 

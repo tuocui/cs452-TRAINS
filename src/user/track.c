@@ -97,8 +97,8 @@ int update_switch_output( short switch_num, char state ) {
     return 0;
   }
 
-  int line_num = 9 + ( switch_ind / 4 );
-  int col_num = 20 + ( ( switch_ind % 4 ) * 11 );
+  int line_num = 7 + ( switch_ind / 5 );
+  int col_num = 20 + ( ( switch_ind % 5 ) * 11 );
   Printf( COM2, "\0337\033[%d;%dH sw%d: %c\0338", line_num, col_num, switch_num, state);
   return 0;
 }

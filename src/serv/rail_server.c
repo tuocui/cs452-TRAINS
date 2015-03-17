@@ -130,6 +130,7 @@ void sensor_worker( ) {
       Printf( COM2, "\0337\033[3A\033[2K\rExpected distance to sensor N/A: N/A   \0338" );
       Printf( COM2, "\0337\033[4A\033[2K\rActual distance to sensor N/A: N/A   \0338" );
       Printf( COM2, "\0337\033[5A\033[2K\rDistance difference: N/A   \0338" );
+      Printf( COM2, "\0337\033[9A\033[2K\rTime difference: N/A   \0338" );
     } else {
       // Do not update velocity if we have picked up the the train from a fallback sensor
       if( train->next_sensor_id == sensor_num ) {
@@ -138,6 +139,7 @@ void sensor_worker( ) {
         Printf( COM2, "\0337\033[3A\033[2K\rExpected distance to sensor %c%c%c: %d    \0338", sensor_name[0], sensor_name[1], sensor_name[2], train->mm_past_landmark / 10 );
         Printf( COM2, "\0337\033[4A\033[2K\rActual distance to sensor %c%c%c: %d    \0338", sensor_name[0], sensor_name[1], sensor_name[2], train->dist_to_next_sensor );
         Printf( COM2, "\0337\033[5A\033[2K\rDistance difference: %d    \0338", ( train->mm_past_landmark / 10 ) - train->dist_to_next_sensor );
+        Printf( COM2, "\0337\033[9A\033[2K\rTime difference: %d    \0338", train->time_to_next_sensor );
       } else {
         Printf( COM2, "\0337\033[16;30HWOAH NELLY, ALMOST LOST THE TRAIN at time: %d\0338", cur_time );
       }
@@ -295,6 +297,7 @@ void update_trains( ) {
   int cur_time;
   Printf( COM2, "\0337\033[6A\033[2K\rmm past last sensor: N/A\0338" );
   Printf( COM2, "\0337\033[8A\033[2K\rCurrent velocity: N/A\0338" );
+  Printf( COM2, "\0337\033[10A\033[2K\rTime to next sensor: N/A\0338" );
   FOREVER {
     cur_time = Delay( 1 );
     for( i = 0; i < TR_MAX; ++i ) {
@@ -303,9 +306,11 @@ void update_trains( ) {
         trains[i].mm_past_landmark = get_mm_past_last_landmark( &(trains[i]), cur_time );
         trains[i].time_since_last_pos_update = cur_time;
         trains[i].vel_at_last_pos_update = trains[i].cur_vel;
+        trains[i].time_to_next_sensor = time_to_node( &(trains[i]), trains[i].dist_to_next_sensor, cur_time );
         if( cur_time % 10 == 0 ) {
           Printf( COM2, "\0337\033[18;22H%d    \0338", trains[i].mm_past_landmark / 10 );
           Printf( COM2, "\0337\033[16;19H%d    \0338", trains[i].cur_vel );
+          Printf( COM2, "\0337\033[14;22H%d    \0338", trains[i].time_to_next_sensor );
         }
       }
     }

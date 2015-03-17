@@ -182,7 +182,7 @@ void predict_next_sensor_static( train_state_t *train_state ) {
 void predict_next_fallback_sensors_static( train_state_t *train ) {
   track_node_t* cur_node = &(train->track_graph[train->prev_sensor_id]);
   int expected_sensor_num = train->next_sensor_id;
-  if( (cur_node->reverse)->num == expected_sensor_num ) {
+  if( train->state == REVERSING ) {
     cur_node = cur_node->edge[DIR_AHEAD].dest;
     int branch_ind;
     while( cur_node->type != NODE_SENSOR ) {

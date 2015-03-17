@@ -150,6 +150,7 @@ typedef struct _train_state_ {
   int vel_at_last_pos_update;
   int vel_at_last_landmark;
   int mm_past_landmark;
+  int time_to_next_sensor;
   int length;
   int pickup_len;
   int decel_rate;       // mm/s^2
