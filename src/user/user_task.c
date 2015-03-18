@@ -743,13 +743,16 @@ void dijkstra_test( ) {
   //=================================================================================
   
   //TESTING dynamic prediction
-  train.cur_speed = 8;
+  train.cur_speed = 23;
+  train.prev_speed = 0;
+  train.cur_vel = 10000;
+  train.speed_change_time = 0;
   train.switch_states[14] = SW_STRAIGHT;
   train.speeds[train.cur_speed].stopping_distance = 0;
   //train.state = REVERSING;
 
-  src_id = 7;
-  int next_id = 6;
+  src_id = 26;
+  int next_id = 7;
   dest_id = 53;
   /*while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
   debug( "AHHHHHHHHHHHHHHHHHHHHHHHHHHH: %d", train.speeds[train.cur_speed].stopping_distance );
@@ -763,14 +766,21 @@ void dijkstra_test( ) {
     predict_next_sensor_dynamic( &train );
     debug( "dynamic next sensor prediction: new previous sensor: %d, next_sensor: %d, dist_to_next_sensor: %d", train.prev_sensor_id, train.next_sensor_id, train.dist_to_next_sensor );
   }*/
+  int cur_time = Time( );
   train.prev_sensor_id = src_id;
   train.next_sensor_id = next_id;
   predict_next_fallback_sensors_static( &train );
+  for( i = 0; i < NUM_FALLBACK && train.fallback_sensors[i] != -1; ++i ) {
+    train.time_to_fallback_sensor[i] = time_to_node( &train, train.fallback_dist[i], cur_time ) + ( cur_time * 10 );
+  }
+  Printf( COM2, "cur_time: %d\r\n", cur_time );
   for( i = 0; i < 5 && train.fallback_sensors[i] != -1; ++i ) {
     Printf( COM2, "Fallback sensor: %d\r\n", train.fallback_sensors[i] );
+    Printf( COM2, "Fallback sensor dist: %d\r\n", train.fallback_dist[i] );
+    Printf( COM2, "Fallback sensor time: %d\r\n", train.time_to_fallback_sensor[i] );
   }
   Delay( 100 );
-
+/*
   char input[9];
   int sensor_num;
   int other_num;
@@ -821,7 +831,7 @@ void dijkstra_test( ) {
     Delay( 1 );
   }
   Delay( 100 );
-
+*/
   //=================================================================================
 }
 

@@ -84,6 +84,7 @@ void sensor_worker( ) {
   int cur_time;
   int expected_train_idx;
   char sensor_name[4];
+  int i;
   train_state_t *trains;
   sensor_args_t sensor_args;
   ret_val = Receive( &rail_server_tid, (char *)&rail_msg, 0 );
@@ -158,7 +159,10 @@ void sensor_worker( ) {
       predict_next_sensor_static( train );
     }
     predict_next_fallback_sensors_static( train );
-    train->time_to_next_sensor_abs = time_to_node( train, train->dist_to_next_sensor, cur_time ) + cur_time;
+    train->time_to_next_sensor_abs = time_to_node( train, train->dist_to_next_sensor, cur_time ) + ( cur_time * 10 );
+    for( i = 0; i < NUM_FALLBACK && (train->fallback_sensors)[i] != -1; ++i ) {
+      (train->time_to_fallback_sensor)[i] = time_to_node( train, (train->fallback_dist)[i], cur_time ) + ( cur_time * 10 );
+    }
     sensor_id_to_name( train->next_sensor_id, sensor_name );
     Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );
     // if no reverse, 

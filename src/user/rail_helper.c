@@ -28,6 +28,7 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   int fallback_idx = NONE;
   int i;
   int lowest_expected_time = INT_MAX;
+  int lowest_fallback_time = INT_MAX;
   for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
     //assertm( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
     if( trains[cur_idx].next_sensor_id == sensor_num ) {
@@ -43,11 +44,15 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
       if( trains[cur_idx].fallback_sensors[i] == -1 ) {
         break;
       }
-      if( trains[cur_idx].fallback_sensors[i] == sensor_num ) {
+      if( trains[cur_idx].fallback_sensors[i] == sensor_num && trains[cur_idx].time_to_fallback_sensor[i] < lowest_fallback_time ) {
         fallback_idx = cur_idx;
+        lowest_fallback_time = trains[cur_idx].time_to_fallback_sensor[i];
         break;
       }
     }
+  }
+  if( expected_train_idx > 0 ) {
+    return expected_train_idx;
   }
   /* if can't find matching train, assign the initializing train */ 
   if( initializing_train_idx != NONE ) {

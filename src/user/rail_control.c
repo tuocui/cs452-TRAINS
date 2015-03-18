@@ -134,6 +134,9 @@ void predict_next_sensor_dynamic( train_state_t* train_state ) {
     debug( "5" );
     train_state->next_sensor_id = train_state->track_graph[train_state->prev_sensor_id].reverse - train_state->track_graph;
     train_state->dist_to_next_sensor = (stop_dist * 2) - train_state->pickup_len > 0 ? (stop_dist * 2) - train_state->pickup_len : 0;
+  } else if( next_sensor_id != NONE ) {
+    train_state->next_sensor_id = next_sensor_id;
+    train_state->dist_to_next_sensor = next_sensor_dist;
   }
 
 }
@@ -203,22 +206,29 @@ void predict_next_fallback_sensors_static( train_state_t *train ) {
   int branch_ind;
   int fallback_idx = 0;
   int i;
+  int dist;
   //int cur_node_id;
   for( i = 0; i < NUM_FALLBACK; ++i ) {
     train->fallback_sensors[i] = -1;
+    train->fallback_dist[i] = -1;
   }
   declare_ring_queue( track_node_t*, node_id, 10 );
+  declare_ring_queue( int, node_dist, 10 );
   node_id_push_back( cur_node->edge[DIR_AHEAD].dest );
+  node_dist_push_back( cur_node->edge[DIR_AHEAD].dist );
 
   while( !node_id_empty( ) ) {
     cur_node = node_id_pop_front( );
+    dist = node_dist_pop_front( );
     //assert( 1, node_id_top_front( ) != cur_node_id );
     if( cur_node->type == NODE_SENSOR ) {
       if( cur_node->num == expected_sensor_num ) {
         saw_expected_sensor = 1;
         node_id_push_back( cur_node->edge[DIR_AHEAD].dest );
+        node_dist_push_back( dist + cur_node->edge[DIR_AHEAD].dist );
       } else {
-        train->fallback_sensors[fallback_idx++] = cur_node->num;
+        train->fallback_sensors[fallback_idx] = cur_node->num;
+        train->fallback_dist[fallback_idx++] = dist;
       }
     }
     else if( cur_node->type == NODE_BRANCH ) {
@@ -228,17 +238,21 @@ void predict_next_fallback_sensors_static( train_state_t *train ) {
           branch_ind -= 134;
         }
         node_id_push_back( cur_node->edge[train->switch_states[branch_ind]].dest );
+        node_dist_push_back( dist + cur_node->edge[train->switch_states[branch_ind]].dist );
         //assert( 1, node_id_top_back( ) == (cur_node->edge[train->switch_states[branch_ind]].dest)->num );
       } else {
         node_id_push_back( cur_node->edge[DIR_STRAIGHT].dest );
+        node_dist_push_back( dist + cur_node->edge[DIR_STRAIGHT].dist );
         //assert( 1, node_id_top_back( ) == (cur_node->edge[DIR_STRAIGHT].dest)->num );
         node_id_push_back( cur_node->edge[DIR_CURVED].dest );
+        node_dist_push_back( dist + cur_node->edge[DIR_STRAIGHT].dist );
         //assert( 1, node_id_top_back( ) == (cur_node->edge[DIR_CURVED].dest)->num );
       }
     } else if( cur_node->type == NODE_EXIT ) {
       continue;
     } else { /* any other node */
       node_id_push_back( cur_node->edge[DIR_AHEAD].dest );
+      node_dist_push_back( dist + cur_node->edge[DIR_AHEAD].dist );
       //assert( 1, node_id_top_back( ) == (cur_node->edge[DIR_AHEAD].dest)->num );
     }
   }

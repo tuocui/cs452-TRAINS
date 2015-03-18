@@ -162,6 +162,7 @@ typedef struct _train_state_ {
   int speed_change_time;
   int is_forward;
   int fallback_sensors[NUM_FALLBACK];
+  int fallback_dist[NUM_FALLBACK];
   int time_to_fallback_sensor[NUM_FALLBACK];
   speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
 } train_state_t;
