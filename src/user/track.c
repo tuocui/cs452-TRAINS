@@ -218,6 +218,7 @@ void track_sensor_task( ) {
   RegisterAs( (char *) SENSOR_PROCESSING_TASK );
   int courier_tid;
   char sensor_name[3];
+  char sensor_hits[NUM_SENSOR_BYTES * 8];
   FOREVER {
     Putstr( COM1, &request_sensor, 1 );
     module_num = 0;
@@ -225,28 +226,29 @@ void track_sensor_task( ) {
     for( i = 0; i < NUM_SENSOR_BYTES; ++i ) {
       c = (char) Getc( COM1 );
       sensor_num = 0;
-      if ( c > 0 ) {
-        if ( module_num % 2 == 1 ) {
-          sensor_num += 8;
-        }
-        for( j = 0; j < 8 ; ++j ) {
-          // Yay for bitwise operations
-          if ( ( c >> ( 7 - j ) ) & 0x1 ) {
-            recent_sensor = ( ( module_num / 2 ) * 16 ) + sensor_num;
-            if ( recent_sensor == most_recent_sensor ) {
-              ++sensor_num;
-              continue;
-            }
-            recent_sensor_triggered = 1;
-            recent_sensors[recent_sensors_ind] = recent_sensor;
-            ++num_sensors_triggered;
-            most_recent_sensor = recent_sensor;
-            recent_sensors_ind = ( recent_sensors_ind + 1 ) % NUM_RECENT_SENSORS;
-            Receive( &courier_tid, &module_num_c, 0 );
-            Reply( courier_tid, (char *)&recent_sensor, sizeof(recent_sensor) );
+      if ( module_num % 2 == 1 ) {
+        sensor_num += 8;
+      }
+      for( j = 0; j < 8 ; ++j ) {
+        // Yay for bitwise operations
+        recent_sensor = ( ( module_num / 2 ) * 16 ) + sensor_num;
+        if ( ( c >> ( 7 - j ) ) & 0x1 ) {
+          if ( sensor_hits[recent_sensor] == 1 ) {
+            ++sensor_num;
+            continue;
           }
-          ++sensor_num;
+          recent_sensor_triggered = 1;
+          recent_sensors[recent_sensors_ind] = recent_sensor;
+          ++num_sensors_triggered;
+          most_recent_sensor = recent_sensor;
+          recent_sensors_ind = ( recent_sensors_ind + 1 ) % NUM_RECENT_SENSORS;
+          sensor_hits[recent_sensor] = 1;
+          Receive( &courier_tid, &module_num_c, 0 );
+          Reply( courier_tid, (char *)&recent_sensor, sizeof(recent_sensor) );
+        } else {
+          sensor_hits[recent_sensor] = 0;
         }
+        ++sensor_num;
       }
       ++module_num;
     }

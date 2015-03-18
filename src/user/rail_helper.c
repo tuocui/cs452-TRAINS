@@ -20,16 +20,21 @@ inline int safe_distance_to_branch( train_state_t *train ) {
 
 inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   //FIXME TODO: handle expected sensor hit list for stopping
-  /* loop thorugh the trains to find the expected train for this sensor hit */ 
+  /* loop thorugh the trains to find the expected train for this sensor hit */
+  // TODO: Look through the times to hit the next expected sensor and assign this one to the lowest.
   int cur_idx;
   int expected_train_idx = NONE;
   int initializing_train_idx = NONE;
   int fallback_idx = NONE;
   int i;
+  int lowest_expected_time = INT_MAX;
   for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
     //assertm( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
     if( trains[cur_idx].next_sensor_id == sensor_num ) {
-      return cur_idx;
+      if( trains[cur_idx].time_to_next_sensor_abs < lowest_expected_time ) {
+        expected_train_idx = cur_idx;
+        lowest_expected_time = trains[cur_idx].time_to_next_sensor_abs;
+      }
     }
     if( trains[cur_idx].state == INITIALIZING ) {
       initializing_train_idx = cur_idx;

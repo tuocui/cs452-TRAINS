@@ -104,6 +104,7 @@ void sensor_worker( ) {
     if( train == NULL ) {
       continue;
     }
+    Printf( COM2, "TRAIN %d FOUND\r\n", train->train_id );
     if( train->state == INITIALIZING ) {
       set_train_speed( train, 0 );
       switch( train->train_id ) {
@@ -157,6 +158,7 @@ void sensor_worker( ) {
       predict_next_sensor_static( train );
     }
     predict_next_fallback_sensors_static( train );
+    train->time_to_next_sensor_abs = time_to_node( train, train->dist_to_next_sensor, cur_time ) + cur_time;
     sensor_id_to_name( train->next_sensor_id, sensor_name );
     Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );
     // if no reverse, 
