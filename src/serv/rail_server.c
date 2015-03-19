@@ -105,7 +105,6 @@ void sensor_worker( ) {
     if( train == NULL ) {
       continue;
     }
-    Printf( COM2, "TRAIN %d FOUND\r\n", train->train_id );
     if( train->state == INITIALIZING ) {
       set_train_speed( train, 0 );
       switch( train->train_id ) {
@@ -333,7 +332,7 @@ void rail_server( ) {
   
   /* track state initialization */
   track_node_t track_graph[TRACK_MAX];
-  init_tracka( (track_node_t*)track_graph );
+  init_trackb( (track_node_t*)track_graph );
   int switch_states[SW_MAX];
   rail_msg_t receive_msg;
 
