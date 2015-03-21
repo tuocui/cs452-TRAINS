@@ -208,6 +208,7 @@ void handle_reply( global_context_t *gc ) {
   char *reply_r, *reply_s;
 
   /* get replyer's arg: target tid */
+  /* tic_check can return -1 or -2 to the user */
   target_tid = get_message_tid( gc->cur_task->sp, 56 );
   
   int tid_check = check_tid( gc, target_tid );

@@ -109,10 +109,10 @@ void com1_out_notifier( ) {
   int errno;
 
   FOREVER {
-    debug( "Before await" );
+    debug( 3, "Before await" );
     errno = AwaitEvent( COM1_OUT_IND );
     assertm( 1, errno >= 0, "ERROR: interrupt eventid is incorrect" );
-    debug( "Notifier finished awaiting" );
+    debug( 3, "Notifier finished awaiting" );
 
     errno = Send( com1_out_server_tid, (char*)&msg, sizeof( msg ), &rpl, 1 );
     assert( 1, errno >= 0 );
@@ -200,7 +200,7 @@ void com1_out_server( ) {
   int i;
   int notifier_tid = Create( 2, &com1_out_notifier );
   int ret_val;
-  debug( "com1_out - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
+  debug( 3, "com1_out - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
     ret_val = Receive( &client_tid, (char *)&msg, sizeof( msg ));
     assert( 1, ret_val >= 0 );
@@ -253,7 +253,7 @@ void com2_out_server( ) {
   int notifier_tid = Create( 2, &com2_out_notifier );
   int ret_val;
   char c_rpl = 'a';
-  debug( "com2_out - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
+  debug( 3, "com2_out - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
     ret_val = Receive( &client_tid, (char *)&msg, msg_size );
     assert( 1, ret_val >= 0 );
@@ -302,7 +302,7 @@ void com1_in_server( ) {
   int notifier_tid = Create( 1, &com1_in_notifier );
   int ret_val;
   int client_ready_tid = 0;
-  debug( "com1_in - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
+  debug( 3, "com1_in - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
     ret_val = Receive( &client_tid, (char *)&msg, sizeof( msg ));
     assert( 1, ret_val >= 0 );
@@ -312,7 +312,7 @@ void com1_in_server( ) {
       assert( 1, ret_val >= 0 );
       // Add char to buffer
       com1_in_buf[com1_in_cur_ind] = msg.msg_val[0];
-      debug( "received char from uart: char:%x\r\n", com1_in_buf[com1_in_cur_ind] );
+      debug( 3, "received char from uart: char:%x\r\n", com1_in_buf[com1_in_cur_ind] );
       com1_in_cur_ind = ( com1_in_cur_ind + 1 ) % OUT_BUF_SIZE;
       break;
     case COM_IN_GET:
@@ -352,7 +352,7 @@ void com2_in_server( ) {
   int c_buf_size;
   int i;
   int ret_val;
-  debug( "com2_in - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
+  debug( 3, "com2_in - notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   FOREVER {
     ret_val = Receive( &client_tid, (char *)&msg, msg_size );
     assert( 1, ret_val >= 0 );
@@ -364,7 +364,7 @@ void com2_in_server( ) {
       c_buf_size = msg.msg_len;
       for( i = 0; i < c_buf_size; ++i ) {
         com2_in_buf[com2_in_cur_ind] = msg.msg_val[i];
-        debug( "received char from uart: char:%x\r\n", com2_in_buf[com2_in_cur_ind] );
+        debug( 3, "received char from uart: char:%x\r\n", com2_in_buf[com2_in_cur_ind] );
         com2_in_cur_ind = ( com2_in_cur_ind + 1 ) % OUT_BUF_SIZE;
       }
       break;

@@ -19,7 +19,7 @@
 void rail_graph_worker( ) {
   //DEBUG
   int rail_server_tid = MyParentTid( );
-  assert( 1, rail_server_tid > 0 );
+  assertu( 1, rail_server_tid > 0 );
   int ret_val;
 
   /* content to send to the server, first msg has NULL cmds */
@@ -36,21 +36,19 @@ void rail_graph_worker( ) {
   init_rail_cmds( &rail_cmds );
 
   FOREVER {
-    //DEBUG
     ret_val = Send( rail_server_tid, (char*)&rail_msg, sizeof( rail_msg ), (char*)&train_state, sizeof( train_state ));
-    assertm( 1, ret_val >= 0, "retval: %d", ret_val );
-    assert( 1, train_state );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+    assertu( 1, train_state );
 
     init_rail_cmds( &rail_cmds );
-    get_next_command( train_state, &rail_cmds );
-  //DEBUG
-    //TODO: anything else?
+    debugu( 0, "before get next command" );
+    request_next_command( train_state, &rail_cmds );
   }
 }
 
 void sensor_data_courier( ) {
   int rail_server_tid = MyParentTid( );
-  assert( 1, rail_server_tid > 0 );
+  assertu( 1, rail_server_tid > 0 );
   
   /* content to send to the server */
   sensor_data_t sensor_data;
@@ -65,10 +63,10 @@ void sensor_data_courier( ) {
   int sensor_task_id = WhoIs( (char *) SENSOR_PROCESSING_TASK );
   FOREVER {
     ret_val =Send( sensor_task_id, (char *)&sensor_num, 0, (char *)&sensor_num, sizeof(sensor_num) );
-    assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     (rail_msg.to_server_content.sensor_data)->sensor_num = sensor_num;
     ret_val = Send( rail_server_tid, (char*)&rail_msg, sizeof( rail_msg ), (char *)&rail_msg, 0);
-    assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   }
   Exit( );
 }
@@ -88,19 +86,19 @@ void sensor_worker( ) {
   train_state_t *trains;
   sensor_args_t sensor_args;
   ret_val = Receive( &rail_server_tid, (char *)&rail_msg, 0 );
-  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   ret_val = Reply( rail_server_tid, (char *)&rail_msg, 0 );
-  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   FOREVER {
     ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&sensor_args, sizeof(sensor_args) );
-    assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     trains = sensor_args.trains;
     sensor_num = sensor_args.sensor_num;
     
     // TODO: Change this function to also include fallback sensors
     expected_train_idx = get_expected_train_idx( trains, sensor_num );
     train_state_t *train = expected_train_idx == NONE ? NULL : &( trains[expected_train_idx] ); 
-    //assert( 1, train );
+    //assertu( 1, train );
     cur_time = Time( );
     if( train == NULL ) {
       continue;
@@ -146,10 +144,11 @@ void sensor_worker( ) {
       }
       train->vel_at_last_landmark = train->cur_vel;
     }
-    //assert( 2, train->next_sensor_id == sensor_num );
+    //assertu( 2, train->next_sensor_id == sensor_num );
     rail_msg.to_server_content.train_state = train;
     // updates next_sensor_id and dist_to_next_sensor
     train->time_at_last_landmark = cur_time;
+    debugu( 4, "updating prev_sensor_id to: %d", sensor_num );
     train->prev_sensor_id = sensor_num;
     train->mm_past_landmark = 0;
     if( train->state == REVERSING ) {
@@ -180,14 +179,14 @@ void train_exe_worker( ) {
   char sensor_name[4];
   train_cmd_args_t train_cmd_args;
   ret_val = Receive( &rail_server_tid, (char *)&train, sizeof( train ) );
-  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   ret_val = Reply( rail_server_tid, (char *)&rail_msg, 0 );
-  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
 
   FOREVER {
     ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&train_cmd_args, sizeof(train_cmd_args) );
     rail_msg.general_val = NONE;
-    assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     if( train_cmd_args.delay_time > 0 ) {
       Delay( train_cmd_args.delay_time );
     }
@@ -199,6 +198,7 @@ void train_exe_worker( ) {
       break;
     case TR_REVERSE:
       {
+        debugu( 1, "train_exe_worker received reverse request, reversing now ... " );
         train->state = REVERSING;
         int prev_speed = train->cur_speed;
         int stopping_time = get_cur_stopping_time( train ) / 10;
@@ -226,11 +226,12 @@ void train_exe_worker( ) {
       break;
     case TR_DEST:
       {
+        train->prev_dest_id = train->dest_id;
         train->dest_id = train_cmd_args.dest;
         train->mm_past_dest = train_cmd_args.mm_past_dest;
         char dest[3];
         sensor_id_to_name( train->dest_id, dest );
-        if( train->dest_id == -1 ) {
+        if( train->dest_id == NONE ) {
           Printf( COM2, "\0337\033[15;%dHCurrent destination: N/A\0338", get_train_idx( train->train_id ) * 37 );
         } else {
           Printf( COM2, "\0337\033[15;%dHCurrent destination: %c%c%c\0338", get_train_idx( train->train_id ) * 37, dest[0], dest[1], dest[2] );
@@ -246,9 +247,9 @@ void train_exe_worker( ) {
     case TR_CH_DIR:
       train->is_forward ^= 1;
       if( train->is_forward ) {
-        Printf( COM2, "\0337\033[1A\033[2K\rTrain %d now facing forwards\0338", train->train_id );
+        //Printf( COM2, "\0337\033[1A\033[2K\rTrain %d now facing forwards\0338", train->train_id );
       } else {
-        Printf( COM2, "\0337\033[1A\033[2K\rTrain %d now facing backwards\0338", train->train_id );
+        //Printf( COM2, "\0337\033[1A\033[2K\rTrain %d now facing backwards\0338", train->train_id );
       }
       break;
     default:
@@ -271,16 +272,17 @@ void switch_exe_worker( ) {
   track_node_t *graph;
   switch_cmd_args_t switch_cmd_args;
   ret_val = Receive( &rail_server_tid, (char *)&switch_num, sizeof( switch_num ) );
-  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   ret_val = Reply( rail_server_tid, (char *)&rail_msg, 0 );
-  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
 
   FOREVER {
     ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&switch_cmd_args, sizeof(switch_cmd_args) );
-    assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+    debugu( 4, "SWITCH_EXE_WORKER AFTER SEND: %d received request to change to: %d ", switch_num, switch_cmd_args.state );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     if( switch_cmd_args.delay_time > 0 ) {
       ret_val = Delay( switch_cmd_args.delay_time );
-      assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+      assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     }
     state = switch_cmd_args.state;
     switch_states = switch_cmd_args.switch_states;
@@ -313,9 +315,9 @@ void update_trains( ) {
   rail_msg.from_server_content.nullptr = NULL;
   update_train_args_t update_train_args;
   ret_val = Receive( &rail_server_tid, (char *)&update_train_args, sizeof( update_train_args ) );
-  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   ret_val = Reply( rail_server_tid, (char *)&trains, 0 );
-  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   trains = update_train_args.trains;
   FOREVER {
     cur_time = Delay( 1 );
@@ -398,6 +400,7 @@ void rail_server( ) {
   
   /* track state initialization */
   track_node_t track_graph[TRACK_MAX];
+  //init_tracka( (track_node_t*)track_graph );
   init_trackb( (track_node_t*)track_graph );
   int switch_states[SW_MAX];
   rail_msg_t receive_msg;
@@ -414,7 +417,7 @@ void rail_server( ) {
   int i;
   for( i = 0; i < TR_MAX; ++i ) {
     rail_graph_worker_tids[i] = Create( 10, &rail_graph_worker );
-    assert( 1, rail_graph_worker_tids[i] > 0 );
+    assertu( 1, rail_graph_worker_tids[i] > 0 );
   }
   rail_cmds_t* recved_cmds; 
 
@@ -423,7 +426,7 @@ void rail_server( ) {
   update_train_args_t update_train_args;
   update_train_args.trains = trains;
   ret_val = Send( update_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
-  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
 
   int print_trains_tid = Create( 13, &print_trains );
   ret_val = Send( print_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
@@ -433,16 +436,16 @@ void rail_server( ) {
   int worker_tid;
   /* Sensor worker declarations */
   int sensor_courier_tid = Create( 2, &sensor_data_courier );
-  assert( 1, sensor_courier_tid > 0 );
+  assertu( 1, sensor_courier_tid > 0 );
 
   declare_ring_queue( int, sensor_workers, SENSOR_WORKER_MAX );
   int sensor_worker_tids[SENSOR_WORKER_MAX];
   char sensor_name[4];
   for( i = 0; i < SENSOR_WORKER_MAX; ++i ) {
     sensor_worker_tids[i] = Create( 10, &sensor_worker );
-    assert( 1, sensor_worker_tids[i] > 0 );
+    assertu( 1, sensor_worker_tids[i] > 0 );
     ret_val = Send( sensor_worker_tids[i], (char *)&client_tid, 0, (char *)&client_tid, 0 );
-    assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   }
   sensor_args_t sensor_args;
   sensor_args.trains = trains;
@@ -452,10 +455,10 @@ void rail_server( ) {
   int train_exe_worker_tid = NONE;
   for( i = 0; i < TR_MAX; ++i ) {
     train_exe_worker_tids[i] = Create( 10, &train_exe_worker );
-    assert( 1, train_exe_worker_tids[i] > 0 );
+    assertu( 1, train_exe_worker_tids[i] > 0 );
     train_state_t *train = &(trains[i]);
     ret_val = Send( train_exe_worker_tids[i], (char *)&train, sizeof( train ), (char *)&client_tid, 0 );
-    assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   }
   train_cmd_args_t train_cmd_args;
 
@@ -465,13 +468,13 @@ void rail_server( ) {
   int switch_num;
   for( i = 1; i < SW_MAX; ++i ) {
     switch_exe_worker_tids[i] = Create( 10, &switch_exe_worker );
-    assert( 1, switch_exe_worker_tids[i] > 0 );
+    assertu( 1, switch_exe_worker_tids[i] > 0 );
     switch_num = i;
     if( switch_num > 18 ) {
       switch_num += 134;
     }
     ret_val = Send( switch_exe_worker_tids[i], (char *)&switch_num, sizeof( switch_num ), (char *)&client_tid, 0 );
-    assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   }
   switch_cmd_args_t switch_cmd_args;
   switch_cmd_args.switch_states = switch_states;
@@ -479,30 +482,29 @@ void rail_server( ) {
 
   FOREVER { 
     ret_val = Receive( &client_tid, (char *)&receive_msg, sizeof( rail_msg_t ));
-    assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     switch( receive_msg.request_type ) {
       case SENSOR_DATA:
         {
         //DEBUG
           /* retrieve data, find sensor number and corresponding train, set ready */
           ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
-          assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+          assertum( 1, ret_val >= 0, "retval: %d", ret_val );
           if( !sensor_workers_empty( ) ) {
             int sensor_num = (receive_msg.to_server_content.sensor_data)->sensor_num;
             worker_tid = sensor_workers_pop_front( );
             sensor_args.sensor_num = sensor_num;
             ret_val = Reply( worker_tid, (char *)&sensor_args, sizeof(sensor_args) );
-            assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+            assertum( 1, ret_val >= 0, "retval: %d", ret_val );
           }
         }
         break;
       case COLLISION_CMDS:
         // just fall through to user input, same diff
       case USER_INPUT:
-        //DEBUG
         ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
-        assertm( 1, ret_val >= 0, "retval: %d", ret_val );
-        if( (receive_msg.to_server_content.rail_cmds)->train_id ) {
+        assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+        if( (receive_msg.to_server_content.rail_cmds)->train_id != NONE ) {
           // TODO: Make a mapping between train number and idx
           switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
           case TRAIN_58_NUM:
@@ -531,20 +533,21 @@ void rail_server( ) {
             train_cmd_args.decel_rate = (receive_msg.to_server_content.rail_cmds)->train_decel;
             ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
             //FIXME: if the train_exe_worker_tid is not ready, should not Reply, or add a secretary
-            assertm( 1, ret_val == 0, "ret_val: %d", ret_val );
+            assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
           }
-        } else if ( (receive_msg.to_server_content.rail_cmds)->switch_id0 ) {
-          int switch_id = (receive_msg.to_server_content.rail_cmds)->switch_id0;
-          CONVERT_SWITCH_ID( switch_id );
+        } else if ( receive_msg.to_server_content.rail_cmds->switch_idx != NONE ) {
+          assertum( 1, receive_msg.to_server_content.rail_cmds->switch_idx == 0, 
+              "user packed %d sw_cmds, should it?", receive_msg.to_server_content.rail_cmds->switch_idx + 1 );
+          int switch_id = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_id;
           int switch_exe_worker_tid = switch_exe_worker_tids[switch_id];
-          switch_cmd_args.state = (receive_msg.to_server_content.rail_cmds)->switch_action0;
+          switch_cmd_args.state = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action;
           switch_cmd_args.delay_time = 0;
           ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-          assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+          assertum( 1, ret_val >= 0, "retval: %d", ret_val );
         }
         break;
       case RAIL_CMDS:
-        //DEBUG:
+        debugu( 1, "get RAIL_CMDS" );
         /* get and send train cmds */
         recved_cmds = receive_msg.to_server_content.rail_cmds;
         switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
@@ -564,43 +567,25 @@ void rail_server( ) {
           train_exe_worker_tid = -1;
           break;
         }
-        if( train_exe_worker_tid > 0 ) {
+        if( train_exe_worker_tid != NONE ) {
+          debugu( 1, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
           train_cmd_args.cmd = recved_cmds->train_action;
           train_cmd_args.speed_num = recved_cmds->train_speed;
           train_cmd_args.delay_time = recved_cmds->train_delay;
           ret_val = Reply( train_exe_worker_tid, (char*)&train_cmd_args, sizeof( train_cmd_args ));
-          assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+          assertum( 1, ret_val >= 0, "retval: %d", ret_val );
         }
-        //FIXME: make this into a function or macro
         /* get and send switch cmds */
-        if( recved_cmds->switch_id0 != NONE ) {
-          switch_exe_worker_tid = switch_exe_worker_tids[recved_cmds->switch_id0];
-          switch_cmd_args.state = recved_cmds->switch_action0;
-          switch_cmd_args.delay_time = recved_cmds->switch_delay0;
+        int i;
+        for( i = 0; i <= recved_cmds->switch_idx; ++i ) {
+          debugu( 4, "before reply to switch_exe_worker: switch_idx: %d, i: %d", recved_cmds->switch_idx, i );
+          switch_exe_worker_tid = switch_exe_worker_tids[recved_cmds->switch_cmds[i].switch_id];
+          switch_cmd_args.state = recved_cmds->switch_cmds[i].switch_action;
+          switch_cmd_args.delay_time = recved_cmds->switch_cmds[i].switch_delay;
           ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
-          assertm( 1, ret_val >= 0, "retval: %d, switch_tid: %d, switch_id: %d", ret_val, 
-              switch_exe_worker_tid, recved_cmds->switch_id0 );
-        }
-        if( recved_cmds->switch_id1 != NONE ) {
-          switch_exe_worker_tid = switch_exe_worker_tids[recved_cmds->switch_id1];
-          switch_cmd_args.state = recved_cmds->switch_action1;
-          switch_cmd_args.delay_time = recved_cmds->switch_delay1;
-          ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
-          assertm( 1, ret_val >= 0, "retval: %d", ret_val );
-        }
-        if( recved_cmds->switch_id2 != NONE ) {
-          switch_exe_worker_tid = switch_exe_worker_tids[recved_cmds->switch_id2];
-          switch_cmd_args.state = recved_cmds->switch_action2;
-          switch_cmd_args.delay_time = recved_cmds->switch_delay2;
-          ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
-          assertm( 1, ret_val >= 0, "retval: %d", ret_val );
-        }
-        if( recved_cmds->switch_id3 != NONE ) {
-          switch_exe_worker_tid = switch_exe_worker_tids[recved_cmds->switch_id3];
-          switch_cmd_args.state = recved_cmds->switch_action3;
-          switch_cmd_args.delay_time = recved_cmds->switch_delay3;
-          ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
-          assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+          debugu( 4, "after reply to switch_exe_worker" );
+          assertum( 1, ret_val >= 0, "retval: %d, switch_worker_tid: %d, switch_id: %d", ret_val, 
+              switch_exe_worker_tid, recved_cmds->switch_cmds[i].switch_id );
         }
         break;
       case TRAIN_EXE_READY:
@@ -626,7 +611,7 @@ void rail_server( ) {
             }
             predict_next_fallback_sensors_static( &(trains[i]) );
             sensor_id_to_name( trains[i].next_sensor_id, sensor_name );
-            Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );
+            //Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );
           }
         }
         break;
@@ -641,14 +626,14 @@ void rail_server( ) {
             if( trains[i].dest_id != NONE && trains[i].state != REVERSING ) {
               train_state_t * train_to_send = &(trains[i]);
               ret_val = Reply( rail_graph_worker_tids[i], (char*)&( train_to_send ), sizeof( train_to_send ));
-              assertm( 1, ret_val == 0, "ret_val: %d, tid: %d", ret_val, rail_graph_worker_tids[i] );
+              assertum( 1, ret_val == 0, "ret_val: %d, tid: %d", ret_val, rail_graph_worker_tids[i] );
             }
           }
         }
         //TODO: run dynamic graph search
         break;
       default:
-        assertm( 1, false, "ERROR: unrecognized request: %d", receive_msg.request_type );
+        assertum( 1, false, "ERROR: unrecognized request: %d", receive_msg.request_type );
         break;
     }
   }

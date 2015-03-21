@@ -40,6 +40,8 @@ void init_trains( struct _train_state_ *trains, struct _track_node_* track_graph
 
 int get_cur_velocity( struct _train_state_ *train, int cur_time );
 
+int get_delay_time_to_stop( struct _train_state_ *train, int dist );
+
 int get_cur_stopping_distance( struct _train_state_ *train );
 
 int get_cur_stopping_time( struct _train_state_ *train );
@@ -48,7 +50,9 @@ inline int get_expected_train_idx( struct _train_state_* trains, int sensor_num 
 
 inline int safe_distance_to_stop( struct _train_state_ *train );
 
-int get_len_train_ahead( struct _train_state_ *train );
+inline int get_len_train_ahead( struct _train_state_ *train );
+
+inline int get_len_train_behind( struct _train_state_ *train );
 
 void init_58( struct _train_state_ *train );
 

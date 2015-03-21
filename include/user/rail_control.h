@@ -72,6 +72,8 @@
 #define TR_CH_DIR       7
 
 #define NUM_FALLBACK 5
+#define SENSOR_STACK_MAX 10 
+#define SW_CMD_MAX   4
 
 #define CONVERT_SWITCH_ID( _switch_num ) \
   if( _switch_num > 18 ) { \
@@ -80,30 +82,25 @@
 
 struct _track_node_;
 
+typedef struct _switch_cmd_ {
+  int switch_id;
+  int switch_action;
+  int switch_delay;
+} switch_cmd_t;
+
 typedef struct _rail_cmds_ {
   int train_id;
   int train_action;
   int train_delay;
+
   int train_speed;
   int train_dest;
   int train_mm_past_dest;
   int train_accel;
   int train_decel;
   
-  int sw_count;
-  int switch_id0;
-  int switch_action0;
-  int switch_delay0;
-  int switch_id1;
-  int switch_action1;
-  int switch_delay1;
-  int switch_id2;
-  int switch_action2;
-  int switch_delay2;
-  int switch_id3;
-  int switch_action3;
-  int switch_delay3;
-
+  int switch_idx;
+  switch_cmd_t switch_cmds[SW_CMD_MAX];
 } rail_cmds_t;
 
 typedef struct _speed_info_ {
@@ -133,17 +130,26 @@ typedef struct _train_state_ {
     HANDLING_COLLISION,
   } state;
 
-  int rv_expected_sensors_idx;
-  int rv_original_expected_sensor;
-  int rv_expected_sensors[10];
+  /* used as a queue */
+  int dest_path[NODE_MAX];
+  int dest_path_cur_idx;
+  int all_dist[NODE_MAX];
+  int dest_total_steps;
+
+  /* used as a stack */
+  int rv_sensor_stack[SENSOR_STACK_MAX];
+  int rv_sensor_stack_idx;
+
   int rv_expected_branches[5];
 
+  bool fallback_sensor_hit;
   int train_id;
   int prev_sensor_id;
   int next_sensor_id;
   int time_to_next_sensor_abs; // time_to_next_sensor + cur_time
   int time_to_next_sensor;
   int dest_id;
+  int prev_dest_id;
   int front_len;
   int back_len;
   int mm_past_dest;
@@ -161,7 +167,7 @@ typedef struct _train_state_ {
   int prev_speed;
   int cur_vel;
   int speed_change_time;
-  int is_forward;
+  bool is_forward;
   int fallback_sensors[NUM_FALLBACK];
   int fallback_dist[NUM_FALLBACK];
   int time_to_fallback_sensor[NUM_FALLBACK];
@@ -170,8 +176,9 @@ typedef struct _train_state_ {
 
 void init_rail_cmds( rail_cmds_t* cmds );
 
-void get_next_command( train_state_t* train, rail_cmds_t* cmds );
+void request_next_command( train_state_t* train, rail_cmds_t* cmds );
 
+inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds );
 /* note: this is not a complete min heap library, it does not support inserting
  * any number to the heap. This heap is modified to better suit the needs of dijkstra's
  * algorithm. On initialization, the heap's all elements are assigned to INT_MAX, since
@@ -211,9 +218,13 @@ inline void print_min_heap( min_heap_t * min_heap );
 
 void dijkstra( struct _track_node_* track_graph, int src_id, int* all_path, int* all_dist, int* all_step );
 
-void get_shortest_path( int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
+void extract_shortest_path( int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
+
+inline void get_shortest_path( train_state_t *train );
 
 void print_shortest_path( struct _track_node_ * track_graph, int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
+
+void print_cmds( struct _rail_cmds_ * cmds );
 
 void decrease_dist( min_heap_t * min_heap, int id, int dist );
 
@@ -222,5 +233,9 @@ void predict_next_sensor_static( train_state_t *train_state );
 void predict_next_fallback_sensors_static( train_state_t *train );
 
 void predict_next_sensor_dynamic( train_state_t *train_state );
+
+inline void pack_train_cmd( rail_cmds_t *cmds, int train_id, int ACTION, int delay );
+
+inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int delay );
 
 #endif

@@ -3,7 +3,7 @@
 #include "tools.h"
 
 inline int push_front( int type, ring_queue_t * queue, void * val ) {
-  debug( "m_free: %d", queue->m_free ); 
+  debug( 4, "m_free: %d", queue->m_free ); 
   if( queue->m_free == 0 ) { 
     assertm( 1, queue->m_head == queue->m_tail, "X" );
     return BUF_OVERFLOW; 
@@ -67,9 +67,9 @@ inline void * pop_front( int type, ring_queue_t * queue ) {
       return NULL; 
     } 
     else { 
-      debug( "m_head: %d", queue->m_head );
+      debug( 4, "m_head: %d", queue->m_head );
       queue->m_head = ( queue->m_head - 1 + queue->m_size ) % queue->m_size;
-      debug( "m_head: %d", queue->m_head );
+      debug( 4, "m_head: %d", queue->m_head );
 
       void * ret_val;
       if( type == TYPE_INT )

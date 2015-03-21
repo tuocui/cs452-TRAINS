@@ -49,13 +49,13 @@ void gen_user_task( ){
   int msglen = sizeof(server_r);
   msg = (char*)&server_r;
   for( ; i < 5; ++i ){
-    debug( "In gen_user_task, iter: %d", i );
+    debug( 2,  "In gen_user_task, iter: %d", i );
     Pass( );
   }
-  debug("tid: %x, msg: %x, msglen: %d", &tid, &server_r, msglen);
+  debug( 2, "tid: %x, msg: %x, msglen: %d", &tid, &server_r, msglen);
   int rtn = Receive( &tid, (char *) &server_r, msglen );
-  debug("rtn: %d", rtn);
-  //debug("server_r.a: %c, server_r.b: %c", server_r.a, server_r.b);
+  debug( 2, "rtn: %d", rtn);
+  //debug( 2, "server_r.a: %c, server_r.b: %c", server_r.a, server_r.b);
   Exit( );
 }
 
@@ -66,16 +66,16 @@ void user_receive_task( ){
   int cycles = CYCLES;
   int rtn;
 
-  //debug( "tid: %x, msg: %x, msglen: %d", &sender_tid, &server_r,  sizeof(server_r));
+  //debug( 2,  "tid: %x, msg: %x, msglen: %d", &sender_tid, &server_r,  sizeof(server_r));
 
   int msglen = sizeof(server_r);
 
   while(--cycles >= 0){
     rtn = Receive( &sender_tid, (char *) &server_r, msglen );
-    debug("rtn: %d", rtn);
-    //debug("server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
+    debug( 2, "rtn: %d", rtn);
+    //debug( 2, "server_r.a: %d, server_r.b: %d", server_r.a, server_r.b);
     rtn = Reply( sender_tid, (char*)&server_reply, sizeof(server_reply) );
-    debug("Reply's rtn: %d", rtn );
+    debug( 2, "Reply's rtn: %d", rtn );
   }
   Exit( );
 }
@@ -86,7 +86,7 @@ void user_send_task( ){
   struct Server server_reply;
   //int my_tid = MyTid( );
   //int receiver_tid = 34;
-  debug( "In Send" );
+  debug( 2,  "In Send" );
   int receiver_tid = Create( 1, &user_receive_task );
   int cycles;
   int rtn;
@@ -94,7 +94,7 @@ void user_send_task( ){
 
   while(--cycles >= 0){
     rtn = Send( receiver_tid, (char *) &server_s,  sizeof(server_s), (char *) &server_reply, sizeof(server_reply));
-    debug( "Send's rtn: %d", rtn );
+    debug( 2,  "Send's rtn: %d", rtn );
   }
 
   Exit( );
@@ -108,10 +108,10 @@ void a1_user_task( ){
   my_tid = MyTid( );
   parent_tid = MyParentTid( );
   bwprintf( COM2, "My TID: %d, Parent TID: %d\n\r", my_tid, parent_tid );
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(my_tid), TID_GEN(my_tid));
+  debug( 2,  "TID_IDX: %d, TID_GEN: %d", TID_IDX(my_tid), TID_GEN(my_tid));
   Pass( );
   bwprintf( COM2, "My TID: %d, Parent TID: %d\n\r", my_tid, parent_tid );
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(my_tid), TID_GEN(my_tid));
+  debug( 2,  "TID_IDX: %d, TID_GEN: %d", TID_IDX(my_tid), TID_GEN(my_tid));
   Exit( );
 }
 #endif /* A1 */
@@ -129,7 +129,7 @@ void a2_test_task( ) {
   bwprintf( COM2, "average duration in ticks:: %d\n\r", (start_tick - end_tick) );
   //TODO: timer ends here, to make it more accurate, put it inside kernel
   //int sender_tid2 = Create( 1, &user_send_task );
-  //debug( "Receiver tid: %d, sender1 tid: %d, sender2 tid: %d", receiver_tid, sender_tid1, sender_tid2 );
+  //debug( 2,  "Receiver tid: %d, sender1 tid: %d, sender2 tid: %d", receiver_tid, sender_tid1, sender_tid2 );
   Exit( );
 }
 
@@ -137,19 +137,19 @@ void a2_user_task( ) {
   bwsetfifo( COM2, OFF );
   // Create nameserver
   int nameserver_tid = Create( 1, &nameserver_main );
-  debug( "Nameserver tid: %d", nameserver_tid );
+  debug( 2,  "Nameserver tid: %d", nameserver_tid );
   int rps_server_tid = Create( 2, &rps_server );
-  debug( "RPS Server tid: %d", rps_server_tid );
+  debug( 2,  "RPS Server tid: %d", rps_server_tid );
   int rps_client1_tid = Create( 10, &rps_client1 );
-  debug( "RPS client1 tid: %d", rps_client1_tid );
+  debug( 2,  "RPS client1 tid: %d", rps_client1_tid );
   int rps_client2_tid = Create( 10, &rps_client1 );
-  debug( "RPS client2 tid: %d", rps_client2_tid );
+  debug( 2,  "RPS client2 tid: %d", rps_client2_tid );
   int rps_client3_tid = Create( 10, &rps_client1 );
-  debug( "RPS client3 tid: %d", rps_client3_tid );
+  debug( 2,  "RPS client3 tid: %d", rps_client3_tid );
   int rps_client4_tid = Create( 10, &rps_client1 );
-  debug( "RPS client4 tid: %d", rps_client4_tid );
+  debug( 2,  "RPS client4 tid: %d", rps_client4_tid );
   int rps_client5_tid = Create( 10, &rps_client1 );
-  debug( "RPS client5 tid: %d", rps_client5_tid );
+  debug( 2,  "RPS client5 tid: %d", rps_client5_tid );
   // Create RPS server
   // Create RPS clients
   Exit( );
@@ -170,7 +170,7 @@ void clock_client( ) {
   Send( parent_id, (char *)&msg, msg_len, (char *)&rpl, rpl_len );
   int delay_time = rpl.delay_time;
   int num_delays = rpl.num_delays;
-  debug( "got back from first user task: %d, %d", delay_time, num_delays );
+  debug( 2,  "got back from first user task: %d, %d", delay_time, num_delays );
   int i = 0;
   int errno;
   int total_ticks;
@@ -185,15 +185,15 @@ void clock_client( ) {
 
 void a3_test_task( ) {
   start_clock( 5080 );
-  debug( "hwi test" );
+  debug( 2,  "hwi test" );
   unsigned int i = 0, j = 0, ae_rtn;
   while( i < 3000 && j < 3000 ) {
     ae_rtn = AwaitEvent( TIMER3_INT_IND );
     ++i;
     ++j;
-    debug( "j: %d, i: %d, rtn: %d", j, i, ae_rtn );
+    debug( 2,  "j: %d, i: %d, rtn: %d", j, i, ae_rtn );
   }
-  debug( "After loop: j: %d, i: %d", j, i );
+  debug( 2,  "After loop: j: %d, i: %d", j, i );
 }
 
 void a3_user_task( ) {
@@ -201,15 +201,15 @@ void a3_user_task( ) {
   //
   // Create nameserver
   int nameserver_tid = Create( 2, &nameserver_main );
-  debug( "Nameserver tid: %d", nameserver_tid );
+  debug( 2,  "Nameserver tid: %d", nameserver_tid );
 
   // Create idle
   int idle_id = Create( PRIORITY_MAX, &idle_task );
-  debug( "Idle tid: %d", idle_id );
+  debug( 2,  "Idle tid: %d", idle_id );
 
   // Create clock server
   int clock_server_tid = Create( 2, &clock_server );
-  debug( "Clock Server tid: %d", clock_server_tid );
+  debug( 2,  "Clock Server tid: %d", clock_server_tid );
 
   // Create Clients
   int client_tid;
@@ -220,9 +220,9 @@ void a3_user_task( ) {
 
 #define CLOCK_CLIENT_WAIT( _priority, _delay_time, _num_delays) {         \
   int clock_client_tid##_priority = Create( _priority, &clock_client );   \
-  debug( "Clock Client##priority tid: %d", clock_client_tid##_priority ); \
+  debug( 2,  "Clock Client##priority tid: %d", clock_client_tid##_priority ); \
   Receive( &client_tid, (char *)&msg, msg_len );                          \
-  debug( "Received from: %d, %d, %d", msg, client_tid,                    \
+  debug( 2,  "Received from: %d, %d, %d", msg, client_tid,                    \
       clock_client_tid##_priority );                                      \
   if( client_tid == msg && client_tid == clock_client_tid##_priority ) {  \
     rpl.delay_time = _delay_time;                                         \
@@ -249,29 +249,29 @@ void a4_test_task( ) {
   setfifo( COM1, OFF );
   setfifo( COM2, ON );
   int nameserver_tid = Create( 3, &nameserver_main );
-  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  debug( 2,  "Nameserver tid: %d", nameserver_tid ); // 33
   int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
-  debug( "Idle tid: %d", idle_id );
+  debug( 2,  "Idle tid: %d", idle_id );
   int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
-  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  debug( 2,  "COM2_Out Server tid: %d", com2_out_server_tid );
   int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
-  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  debug( 2,  "COM2_In Server tid: %d", com2_in_server_tid );
   int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
-  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  debug( 2,  "COM1_Out Server tid: %d", com1_out_server_tid );
   int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
-  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  debug( 2,  "COM1_In Server tid: %d", com1_in_server_tid );
   int clock_server_tid = Create( 3, &clock_server ); // 43
-  debug( "Clock Server tid: %d", clock_server_tid );
+  debug( 2,  "Clock Server tid: %d", clock_server_tid );
   int clock_user_tid = Create( 10, &clock_user_task );
-  debug( "Clock user task tid: %d", clock_user_tid );
+  debug( 2,  "Clock user task tid: %d", clock_user_tid );
   Printf( COM2, "\033[2J" );
   initialize_track( );
   int track_sensor_task_tid = Create( 6, &track_sensor_task );
-  debug( "Track Sensor task tid: %d", track_sensor_task_tid );
+  debug( 2,  "Track Sensor task tid: %d", track_sensor_task_tid );
   int parse_user_input_tid = Create( 6, &parse_user_input );
-  debug( "User input task tid: %d", parse_user_input_tid );
+  debug( 2,  "User input task tid: %d", parse_user_input_tid );
   int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
-  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
+  debug( 2,  "idle_percent_task tid: %d", idle_percent_task_tid );
   Exit( );
 }
 
@@ -282,27 +282,27 @@ void a4_test_task2( ) {
   setfifo( COM1, OFF );
   setfifo( COM2, ON );
   int nameserver_tid = Create( 3, &nameserver_main );
-  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  debug( 2,  "Nameserver tid: %d", nameserver_tid ); // 33
   int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
-  debug( "Idle tid: %d", idle_id );
+  debug( 2,  "Idle tid: %d", idle_id );
   int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
-  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  debug( 2,  "COM2_Out Server tid: %d", com2_out_server_tid );
   int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
-  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  debug( 2,  "COM2_In Server tid: %d", com2_in_server_tid );
   int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
-  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  debug( 2,  "COM1_Out Server tid: %d", com1_out_server_tid );
   int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
-  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  debug( 2,  "COM1_In Server tid: %d", com1_in_server_tid );
   int clock_server_tid = Create( 3, &clock_server ); // 43
-  debug( "Clock Server tid: %d", clock_server_tid );
+  debug( 2,  "Clock Server tid: %d", clock_server_tid );
   Printf( COM2, "\033[2J" );
   initialize_track( );
   int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
-  debug( "User input task tid: %d", parse_user_input_tid );
+  debug( 2,  "User input task tid: %d", parse_user_input_tid );
   int calibrate_train_velocity_tid = Create( 6, &calibrate_train_velocity ); // 46
-  debug( "calibrate_train_velocity tid: %d", calibrate_train_velocity_tid );
+  debug( 2,  "calibrate_train_velocity tid: %d", calibrate_train_velocity_tid );
   int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
-  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
+  debug( 2,  "idle_percent_task tid: %d", idle_percent_task_tid );
   
   Exit( );
 }
@@ -314,27 +314,27 @@ void a4_test_task3( ) {
   setfifo( COM1, OFF );
   setfifo( COM2, ON );
   int nameserver_tid = Create( 3, &nameserver_main );
-  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  debug( 2,  "Nameserver tid: %d", nameserver_tid ); // 33
   int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
-  debug( "Idle tid: %d", idle_id );
+  debug( 2,  "Idle tid: %d", idle_id );
   int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
-  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  debug( 2,  "COM2_Out Server tid: %d", com2_out_server_tid );
   int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
-  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  debug( 2,  "COM2_In Server tid: %d", com2_in_server_tid );
   int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
-  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  debug( 2,  "COM1_Out Server tid: %d", com1_out_server_tid );
   int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
-  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  debug( 2,  "COM1_In Server tid: %d", com1_in_server_tid );
   int clock_server_tid = Create( 3, &clock_server ); // 43
-  debug( "Clock Server tid: %d", clock_server_tid );
+  debug( 2,  "Clock Server tid: %d", clock_server_tid );
   Printf( COM2, "\033[2J" );
   initialize_track( );
   int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
-  debug( "User input task tid: %d", parse_user_input_tid );
+  debug( 2,  "User input task tid: %d", parse_user_input_tid );
   int calibrate_stopping_distance_tid = Create( 6, &calibrate_stopping_distance ); // 46
-  debug( "calibrate_stopping_distance_tid: %d", calibrate_stopping_distance_tid );
+  debug( 2,  "calibrate_stopping_distance_tid: %d", calibrate_stopping_distance_tid );
   int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
-  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
+  debug( 2,  "idle_percent_task tid: %d", idle_percent_task_tid );
   
   Exit( );
 }
@@ -346,29 +346,29 @@ void a4_test_task4( ) {
   setfifo( COM1, OFF );
   setfifo( COM2, ON );
   int nameserver_tid = Create( 3, &nameserver_main );
-  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  debug( 2,  "Nameserver tid: %d", nameserver_tid ); // 33
   int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
-  debug( "Idle tid: %d", idle_id );
+  debug( 2,  "Idle tid: %d", idle_id );
   int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
-  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  debug( 2,  "COM2_Out Server tid: %d", com2_out_server_tid );
   int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
-  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  debug( 2,  "COM2_In Server tid: %d", com2_in_server_tid );
   int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
-  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  debug( 2,  "COM1_Out Server tid: %d", com1_out_server_tid );
   int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
-  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  debug( 2,  "COM1_In Server tid: %d", com1_in_server_tid );
   int clock_server_tid = Create( 3, &clock_server ); // 43
-  debug( "Clock Server tid: %d", clock_server_tid );
+  debug( 2,  "Clock Server tid: %d", clock_server_tid );
   Printf( COM2, "\033[2J" );
   initialize_track( );
   int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
-  debug( "User input task tid: %d", parse_user_input_tid );
+  debug( 2,  "User input task tid: %d", parse_user_input_tid );
   int clock_user_tid = Create( 10, &clock_user_task ); // 46
-  debug( "Clock user task tid: %d", clock_user_tid );
+  debug( 2,  "Clock user task tid: %d", clock_user_tid );
   int calibrate_accel_time_tid = Create( 6, &calibrate_accel_time ); // 47
-  debug( "calibrate_accel_time_tid: %d", calibrate_accel_time_tid );
+  debug( 2,  "calibrate_accel_time_tid: %d", calibrate_accel_time_tid );
   int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
-  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
+  debug( 2,  "idle_percent_task tid: %d", idle_percent_task_tid );
   
   Exit( );
 }
@@ -380,31 +380,31 @@ void a4_test_task5( ) {
   setfifo( COM1, OFF );
   setfifo( COM2, ON );
   int nameserver_tid = Create( 3, &nameserver_main );
-  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  debug( 2,  "Nameserver tid: %d", nameserver_tid ); // 33
   int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
-  debug( "Idle tid: %d", idle_id );
+  debug( 2,  "Idle tid: %d", idle_id );
   int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
-  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  debug( 2,  "COM2_Out Server tid: %d", com2_out_server_tid );
   int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
-  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  debug( 2,  "COM2_In Server tid: %d", com2_in_server_tid );
   int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
-  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  debug( 2,  "COM1_Out Server tid: %d", com1_out_server_tid );
   int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
-  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  debug( 2,  "COM1_In Server tid: %d", com1_in_server_tid );
   int clock_server_tid = Create( 3, &clock_server ); // 43
-  debug( "Clock Server tid: %d", clock_server_tid );
+  debug( 2,  "Clock Server tid: %d", clock_server_tid );
   Printf( COM2, "\033[2J" );
   initialize_track( );
   int track_sensor_task_tid = Create( 4, &track_sensor_task );
-  debug( "Track Sensor task tid: %d", track_sensor_task_tid );
+  debug( 2,  "Track Sensor task tid: %d", track_sensor_task_tid );
   int rail_server_tid = Create( 3, &rail_server ); // 43
-  debug( "Rail Server tid: %d", rail_server_tid );
+  debug( 2,  "Rail Server tid: %d", rail_server_tid );
   int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
-  debug( "User input task tid: %d", parse_user_input_tid );
+  debug( 2,  "User input task tid: %d", parse_user_input_tid );
   int clock_user_tid = Create( 10, &clock_user_task ); // 46
-  debug( "Clock user task tid: %d", clock_user_tid );
+  debug( 2,  "Clock user task tid: %d", clock_user_tid );
   int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );
-  debug( "idle_percent_task tid: %d", idle_percent_task_tid );
+  debug( 2,  "idle_percent_task tid: %d", idle_percent_task_tid );
   
   Exit( );
 }
@@ -412,112 +412,112 @@ void a4_test_task5( ) {
 
 void ring_buf_test( ) {
   declare_ring_queue(int, test, 2 );
-  debug( "buf_count: %d", test_count( ) );
+  debug( 2,  "buf_count: %d", test_count( ) );
   int idx;
   idx = test_push_back( 1 );
-  debug( "buf_count: %d, idx: %d", test_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", test_count( ), idx );
 
   idx = test_push_back( 2 );
-  debug( "buf_count: %d, idx: %d", test_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", test_count( ), idx );
 
   idx = test_push_back( 3 );
-  debug( "buf_count: %d, idx: %d", test_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", test_count( ), idx );
   
   idx = test_push_back( 4 );
-  debug( "buf_count: %d, idx: %d", test_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", test_count( ), idx );
 
   int elm;
   elm = test_top_front( );
-  debug( "buf_count: %d, elm: %d", test_count( ), elm );
+  debug( 2,  "buf_count: %d, elm: %d", test_count( ), elm );
 
   elm = test_top_front( );
-  debug( "buf_count: %d, elm: %d", test_count( ), elm );
+  debug( 2,  "buf_count: %d, elm: %d", test_count( ), elm );
 
   elm = test_top_back( );
-  debug( "buf_count: %d, elm: %d", test_count( ), elm );
+  debug( 2,  "buf_count: %d, elm: %d", test_count( ), elm );
 
   elm = test_top_back( );
-  debug( "buf_count: %d, elm: %d", test_count( ), elm );
+  debug( 2,  "buf_count: %d, elm: %d", test_count( ), elm );
 
 
 
-  debug(" now what's popping " );
+  debug( 2, " now what's popping " );
   elm = test_pop_front( );
-  debug( "buf_count: %d, elm: %d", test_count( ), elm );
+  debug( 2,  "buf_count: %d, elm: %d", test_count( ), elm );
 
   elm = test_pop_back( );
-  debug( "buf_count: %d, elm: %d", test_count( ), elm );
+  debug( 2,  "buf_count: %d, elm: %d", test_count( ), elm );
 
   elm = test_pop_front( );
-  debug( "buf_count: %d, elm: %d", test_count( ), elm );
+  debug( 2,  "buf_count: %d, elm: %d", test_count( ), elm );
 
   idx = test_push_back( 12 );
-  debug( "buf_count: %d, idx: %d", test_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", test_count( ), idx );
 
   idx = test_push_back( 13 );
-  debug( "buf_count: %d, idx: %d", test_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", test_count( ), idx );
   
   idx = test_push_back( 14 );
-  debug( "buf_count: %d, idx: %d", test_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", test_count( ), idx );
 
   idx = test_push_back( 15 );
-  debug( "buf_count: %d, idx: %d", test_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", test_count( ), idx );
 
   declare_ring_queue( char, com2_buf, 3 );
-  debug( "buf_count: %d", com2_buf_count( ) );
+  debug( 2,  "buf_count: %d", com2_buf_count( ) );
   idx = com2_buf_push_back( 'a' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   idx = com2_buf_push_back( 'b' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", com2_buf_count( ), idx );
   
   idx = com2_buf_push_back( 'c' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   idx = com2_buf_push_back( 'd' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   char c = com2_buf_pop_back( );
-  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  debug( 2,  "buf_count: %d, char: %c", com2_buf_count( ), c );
 
   c = com2_buf_pop_back( );
-  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  debug( 2,  "buf_count: %d, char: %c", com2_buf_count( ), c );
 
   idx = com2_buf_push_back( 'e' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", com2_buf_count( ), idx );
   
   c = com2_buf_pop_back( );
-  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  debug( 2,  "buf_count: %d, char: %c", com2_buf_count( ), c );
 
   idx = com2_buf_push_back( 'f' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   idx = com2_buf_push_back( 'g' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   c = com2_buf_pop_back( );
-  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  debug( 2,  "buf_count: %d, char: %c", com2_buf_count( ), c );
 
   idx = com2_buf_push_back( 'h' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   idx = com2_buf_push_back( 'i' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", com2_buf_count( ), idx );
   
   c = com2_buf_pop_back( );
-  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  debug( 2,  "buf_count: %d, char: %c", com2_buf_count( ), c );
 
   c = com2_buf_pop_back( );
-  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  debug( 2,  "buf_count: %d, char: %c", com2_buf_count( ), c );
 
   c = com2_buf_pop_back( );
-  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  debug( 2,  "buf_count: %d, char: %c", com2_buf_count( ), c );
 
   idx = com2_buf_push_back( 'j' );
-  debug( "buf_count: %d, idx: %d", com2_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", com2_buf_count( ), idx );
 
   c = com2_buf_pop_back( );
-  debug( "buf_count: %d, char: %c", com2_buf_count( ), c );
+  debug( 2,  "buf_count: %d, char: %c", com2_buf_count( ), c );
 
   typedef struct test_struct {
     int a;
@@ -529,51 +529,51 @@ void ring_buf_test( ) {
 
   declare_ring_queue( test_struct_t *, st_buf, 3 );
   idx = st_buf_push_back( &st1 );
-  debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", st_buf_count( ), idx );
 
   idx = st_buf_push_back( &st2 );
-  debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", st_buf_count( ), idx );
 
   idx = st_buf_push_back( &st3 );
-  debug( "buf_count: %d, idx: %d", st_buf_count( ), idx );
+  debug( 2,  "buf_count: %d, idx: %d", st_buf_count( ), idx );
 
   test_struct_t * st0;
   st0 = st_buf_pop_back( );
-  debug( "buf_count: %d, st.a: %d", st_buf_count( ), st0->a );
+  debug( 2,  "buf_count: %d, st.a: %d", st_buf_count( ), st0->a );
 
   st0 = st_buf_pop_back( );
-  debug( "buf_count: %d, st.a: %d", st_buf_count( ), st0->a );
+  debug( 2,  "buf_count: %d, st.a: %d", st_buf_count( ), st0->a );
 
   st0 = st_buf_pop_back( );
-  debug( "buf_count: %d, st.a: %d", st_buf_count( ), st0->a );
+  debug( 2,  "buf_count: %d, st.a: %d", st_buf_count( ), st0->a );
 
   
-  debug( "end of test" );
+  debug( 2,  "end of test" );
   return;
 
 }
 
 void dijkstra_test( ) {
-  debug( "dijkstra_test" );
+  debug( 2,  "dijkstra_test" );
   setspeed( COM1, LOW_SPEED );
   wait_cycles(1000);
   enable_two_stop_bits( COM1 );
   setfifo( COM1, OFF );
   setfifo( COM2, ON );
   int nameserver_tid = Create( 3, &nameserver_main );
-  debug( "Nameserver tid: %d", nameserver_tid ); // 33
+  debug( 2,  "Nameserver tid: %d", nameserver_tid ); // 33
   int idle_id = Create( PRIORITY_MAX, &idle_task ); // 34
-  debug( "Idle tid: %d", idle_id );
+  debug( 2,  "Idle tid: %d", idle_id );
   int com2_out_server_tid = Create( 4, &com2_out_server ); // 35
-  debug( "COM2_Out Server tid: %d", com2_out_server_tid );
+  debug( 2,  "COM2_Out Server tid: %d", com2_out_server_tid );
   int com2_in_server_tid = Create( 3, &com2_in_server );  // 37
-  debug( "COM2_In Server tid: %d", com2_in_server_tid );
+  debug( 2,  "COM2_In Server tid: %d", com2_in_server_tid );
   int com1_out_server_tid = Create( 4, &com1_out_server ); // 39
-  debug( "COM1_Out Server tid: %d", com1_out_server_tid );
+  debug( 2,  "COM1_Out Server tid: %d", com1_out_server_tid );
   int com1_in_server_tid = Create( 3, &com1_in_server );  // 41
-  debug( "COM1_In Server tid: %d", com1_in_server_tid );
+  debug( 2,  "COM1_In Server tid: %d", com1_in_server_tid );
   int clock_server_tid = Create( 3, &clock_server ); // 43
-  debug( "Clock Server tid: %d", clock_server_tid );
+  debug( 2,  "Clock Server tid: %d", clock_server_tid );
 
   /* initialize the heap */
 
@@ -609,47 +609,45 @@ void dijkstra_test( ) {
   //assert( 2, min_heap.nodes[2].id == 6 );
   //assert( 2, min_heap.nodes[2].dist == 0 );
 
-  //debug( "size: %d", min_heap.size );
+  //debug( 2,  "size: %d", min_heap.size );
   //print_min_heap( &min_heap );
 
   //track_node_t track_graph[TRACK_MAX];
   //init_trackb( track_graph );
 
-  //debug( "track_graph addr: %x", track_graph );
-  //debug( "track_node size: %d", sizeof( track_node_t ));
+  //debug( 2,  "track_graph addr: %x", track_graph );
+  //debug( 2,  "track_node size: %d", sizeof( track_node_t ));
 
-  //debug( "third field address: %x", &(track_graph[0].name));
-  //debug( "third field address: %x", &(track_graph[0].type));
-  //debug( "third field address: %x", &(track_graph[0].reverse));
-  //debug( "third field address: %x", &(track_graph[0].edge));
+  //debug( 2,  "third field address: %x", &(track_graph[0].name));
+  //debug( 2,  "third field address: %x", &(track_graph[0].type));
+  //debug( 2,  "third field address: %x", &(track_graph[0].reverse));
+  //debug( 2,  "third field address: %x", &(track_graph[0].edge));
 
   //track_node_t * node_3 = &(track_graph[3]);
-  //debug( "track_node A4 addr: %x", node_3 );
-  //debug( "address diff %d", (node_3 - track_graph) );
+  //debug( 2,  "track_node A4 addr: %x", node_3 );
+  //debug( 2,  "address diff %d", (node_3 - track_graph) );
   
   track_node_t track_graph[TRACK_MAX];
-  init_tracka( track_graph );
+  //init_tracka( track_graph );
+  init_trackb( track_graph );
   int src_id;
   int dest_id;
 
   // TESTING dijkstra
-  int all_path[NODE_MAX];
-  int all_dist[NODE_MAX];
-  int all_step[NODE_MAX];
+  //int all_path[NODE_MAX];
+  //int all_dist[NODE_MAX];
+  //int all_step[NODE_MAX];
+  //src_id = 2;
+  //dest_id = 14;
+  //dijkstra( track_graph, src_id, all_path, all_dist, all_step );
 
-  src_id = 2;
-  dest_id = 14;
-
-  dijkstra( track_graph, src_id, all_path, all_dist, all_step );
-
-  debug( "steps: %d", all_step[dest_id] );
-  
-  debug( "dijkstra results: " );
-  int i;
-  for( i = 0; i < NODE_MAX; ++i ) {
-    Printf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
-        i, all_dist[i], all_path[i], all_step[i] );
-  }
+  //debug( 2,  "steps: %d", all_step[dest_id] );
+  //debug( 2,  "dijkstra results: " );
+  //int i;
+  //for( i = 0; i < NODE_MAX; ++i ) {
+  //  Printf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
+  //      i, all_dist[i], all_path[i], all_step[i] );
+  //}
 
 
   //for( i = 0; i < NODE_MAX; ++i ) {
@@ -667,44 +665,35 @@ void dijkstra_test( ) {
   
   train_state_t train;
   init_trains( &train, track_graph, switch_states );
-  train.cur_speed = 12;
-  train.speeds[train.cur_speed].safe_branch_distance += 0;
+  train.cur_speed = 14;
+  train.cur_vel = 18000;
  
   // =================================================================================
   //TESTING switch commands
-  //src_id = 2;
-  //dest_id = 14;
-  //train.prev_sensor_id = src_id;
-  //train.dest_id = dest_id;
-  //while( train.speeds[train.cur_speed].safe_branch_distance < 500 ) {
+  //src_id = 45;
+  //dest_id = 13;
+  //while( train.cur_vel < 47000 ) {
+  //  debugu( 0, "safe_branch_dist: %d", train.speeds[train.cur_speed].safe_branch_distance );
+  //  train.prev_sensor_id = src_id;
+  //  train.dest_id = dest_id;
+  //  get_shortest_path( &train );
   //  init_rail_cmds( &cmds );
-  //  //get_next_command( &train, &cmds );
-  //  train.speeds[train.cur_speed].safe_branch_distance += 50;
-
-  //debug( "Commandes: \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
-  //                   \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
-  //                   \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
-  //                      cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
-  //                      cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
-  //                      cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  //  compute_next_command( &train, &cmds );
+  //  train.cur_vel += 1450;
+  //  print_cmds( &cmds );
   //}
-  //=================================================================================
+  ////=================================================================================
 
   //TESTING reverse commands
-  //init_rail_cmds( &cmds );
-  //src_id = 15;
-  //dest_id = 0;
-  //train.prev_sensor_id = src_id;
-  //train.dest_id= dest_id;
-  //get_next_command( &train, &cmds );
-  //debug( "Reverse commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d 
-  //                    \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
-  //                    \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
-  //                    \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
-  //                        cmds.train_id, cmds.train_action, cmds.train_delay,
-  //                        cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
-  //                        cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
-  //                        cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  debugu( 1, "TESTING REVERSE" );
+  init_rail_cmds( &cmds );
+  src_id = 54;
+  dest_id = 51 ;
+  train.cur_vel = 18000;
+  train.prev_sensor_id = src_id;
+  train.dest_id= dest_id;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
   //=================================================================================
 
   //TESTING stop prediction
@@ -720,7 +709,7 @@ void dijkstra_test( ) {
   //  get_next_command( &train, &cmds );
   //  train.speeds[train.cur_speed].stopping_distance += 100;
 
-  //  debug( "stop commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d 
+  //  debug( 2,  "stop commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d 
   //                    \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
   //                    \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
   //                    \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
@@ -734,28 +723,28 @@ void dijkstra_test( ) {
   //TESTING static prediction
   //train.switch_states[14] = SW_STRAIGHT;
   //predict_next_sensor_static( &train );
-  //debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+  //debug( 2,  "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
 
   //train.switch_states[14] = SW_CURVED;
   //predict_next_sensor_static( &train );
-  //debug( "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
+  //debug( 2,  "static next sensor prediction: %d, dist_to_next_sensor: %d", train.next_sensor_id, train.dist_to_next_sensor );
   
   //=================================================================================
   
   //TESTING dynamic prediction
-  train.cur_speed = 23;
-  train.prev_speed = 0;
-  train.cur_vel = 10000;
-  train.speed_change_time = 0;
-  train.switch_states[14] = SW_STRAIGHT;
-  train.speeds[train.cur_speed].stopping_distance = 0;
-  //train.state = REVERSING;
+  //train.cur_speed = 23;
+  //train.prev_speed = 0;
+  //train.cur_vel = 10000;
+  //train.speed_change_time = 0;
+  //train.switch_states[14] = SW_STRAIGHT;
+  //train.speeds[train.cur_speed].stopping_distance = 0;
+  ////train.state = REVERSING;
 
-  src_id = 26;
-  int next_id = 7;
-  dest_id = 53;
+  //src_id = 26;
+  //int next_id = 7;
+  //dest_id = 53;
   /*while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
-  debug( "AHHHHHHHHHHHHHHHHHHHHHHHHHHH: %d", train.speeds[train.cur_speed].stopping_distance );
+  debug( 2,  "AHHHHHHHHHHHHHHHHHHHHHHHHHHH: %d", train.speeds[train.cur_speed].stopping_distance );
     train.prev_sensor_id = src_id;
     train.next_sensor_id = dest_id;
     train.speeds[train.cur_speed].stopping_distance += 100;
@@ -764,22 +753,23 @@ void dijkstra_test( ) {
     
 
     predict_next_sensor_dynamic( &train );
-    debug( "dynamic next sensor prediction: new previous sensor: %d, next_sensor: %d, dist_to_next_sensor: %d", train.prev_sensor_id, train.next_sensor_id, train.dist_to_next_sensor );
+    debug( 2,  "dynamic next sensor prediction: new previous sensor: %d, next_sensor: %d, dist_to_next_sensor: %d", train.prev_sensor_id, train.next_sensor_id, train.dist_to_next_sensor );
   }*/
-  int cur_time = Time( );
-  train.prev_sensor_id = src_id;
-  train.next_sensor_id = next_id;
-  predict_next_fallback_sensors_static( &train );
-  for( i = 0; i < NUM_FALLBACK && train.fallback_sensors[i] != -1; ++i ) {
-    train.time_to_fallback_sensor[i] = time_to_node( &train, train.fallback_dist[i], cur_time ) + ( cur_time * 10 );
-  }
-  Printf( COM2, "cur_time: %d\r\n", cur_time );
-  for( i = 0; i < 5 && train.fallback_sensors[i] != -1; ++i ) {
-    Printf( COM2, "Fallback sensor: %d\r\n", train.fallback_sensors[i] );
-    Printf( COM2, "Fallback sensor dist: %d\r\n", train.fallback_dist[i] );
-    Printf( COM2, "Fallback sensor time: %d\r\n", train.time_to_fallback_sensor[i] );
-  }
-  Delay( 100 );
+  //int cur_time = Time( );
+  //train.prev_sensor_id = src_id;
+  //train.next_sensor_id = next_id;
+  //predict_next_fallback_sensors_static( &train );
+  //int i;
+  //for( i = 0; i < NUM_FALLBACK && train.fallback_sensors[i] != -1; ++i ) {
+  //  train.time_to_fallback_sensor[i] = time_to_node( &train, train.fallback_dist[i], cur_time ) + ( cur_time * 10 );
+  //}
+  //Printf( COM2, "cur_time: %d\r\n", cur_time );
+  //for( i = 0; i < 5 && train.fallback_sensors[i] != -1; ++i ) {
+  //  Printf( COM2, "Fallback sensor: %d\r\n", train.fallback_sensors[i] );
+  //  Printf( COM2, "Fallback sensor dist: %d\r\n", train.fallback_dist[i] );
+  //  Printf( COM2, "Fallback sensor time: %d\r\n", train.time_to_fallback_sensor[i] );
+  //}
+  //Delay( 100 );
 /*
   char input[9];
   int sensor_num;
@@ -836,32 +826,32 @@ void dijkstra_test( ) {
 }
 
 void first_user_task( ){
-  debug( "first user task" );
+  debug( 2,  "first user task" );
   //bwsetfifo( COM2, OFF );
 #ifdef A1
   int first_tid = MyTid( );
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(first_tid), TID_GEN(first_tid));
+  debug( 2,  "TID_IDX: %d, TID_GEN: %d", TID_IDX(first_tid), TID_GEN(first_tid));
 
   int created_tid;
   created_tid = Create( 10, &a1_user_task );
   bwprintf( COM2, "Created: %d, Priority: Lower than First\n\r", created_tid);
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
+  debug( 2,  "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
 
   created_tid = Create( 10, &a1_user_task );
   bwprintf( COM2, "Created: %d, Priority: Lower than First\n\r", created_tid);
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
+  debug( 2,  "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
 
   created_tid = Create( 1, &a1_user_task );
   bwprintf( COM2, "Created: %d, Priority: Higher than First\n\r", created_tid);
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
+  debug( 2,  "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
 
   created_tid = Create( 1, &a1_user_task );
   bwprintf( COM2, "Created: %d, Priority: Higher than First\n\r", created_tid);
-  debug( "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
+  debug( 2,  "TID_IDX: %d, TID_GEN: %d", TID_IDX(created_tid), TID_GEN(created_tid));
 #endif /* A1 */
 
 #ifdef A2
-  debug( "First User Task" );
+  debug( 2,  "First User Task" );
   //a2_test_task( );
   //a2_user_task( );
 
