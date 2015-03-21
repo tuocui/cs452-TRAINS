@@ -32,6 +32,25 @@
     FOREVER; \
   } else { ; }                                                  
 
+#define assertum( level, cond, fmt, ... ) \
+  if( level <= AST_LEVEL && !( cond )) { \
+    Printf( COM2, "assertm failed (%s:%d):\t"fmt"\n\r", __FILE__, \
+        __LINE__, ## __VA_ARGS__ ); \
+  } \
+  if( AST_LEVEL >= 10 ) { \
+    FOREVER; \
+  } else { ; }
+
+#define assertu( level, cond ) \
+  if( level <= AST_LEVEL && !( cond )) { \
+    Printf(COM2,"Assert failed (%s:%d):\t\n\r\n\r",__FILE__, \
+        __LINE__); \
+  } \
+  if( AST_LEVEL >= 10 ) { \
+    FOREVER; \
+  } else { ; }                                                  
+
+
 #define compile_assert( cond, msg ) \
   typedef char compile_assert_##msg[( cond ) ? 1 : -1]
 
@@ -42,13 +61,22 @@
 #ifndef DEBUG
 #define DEBUG 0
 #endif
-#define debug( fmt, ... )                                     \
+#define debug( level, fmt, ... )                                     \
   do {                                                        \
-    if( DEBUG ) {                                             \
+    if( DEBUG && level <= AST_LEVEL ) {                                             \
       bwprintf(COM2, "DEBUG (%s:%d):\t"fmt"\n\r", __FILE__,   \
           __LINE__, ## __VA_ARGS__ );                         \
     }                                                         \
   } while( 0 )
+
+#define debugu( level, fmt, ... )                                     \
+  do {                                                        \
+    if( DEBUG && level <= AST_LEVEL ) {                                             \
+      Printf( COM2, "DEBUG (%s:%d):\t"fmt"\n\r", __FILE__,   \
+          __LINE__, ## __VA_ARGS__ );                         \
+    }                                                         \
+  } while( 0 )
+
 
 #define min(a, b)              \
    ( {__typeof__ (a) _a = (a); \

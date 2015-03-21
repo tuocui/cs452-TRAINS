@@ -50,7 +50,7 @@ void notifier( ) {
 void insert_client( clock_client_t **new_client, clock_client_t **first_client_q ) {
   if( *first_client_q == NULL ) {
     *first_client_q = *new_client;
-    //debug(" inserted client: first_user_client id: %d, future_ticks", (*first_client_q)->c_tid, (*first_client_q)->future_ticks );
+    //debug( 3, " inserted client: first_user_client id: %d, future_ticks", (*first_client_q)->c_tid, (*first_client_q)->future_ticks );
   } else if( (*new_client)->future_ticks <= (*first_client_q)->future_ticks ) {
     (*new_client)->next_client_q = (*first_client_q);
     (*first_client_q) = (*new_client);
@@ -102,7 +102,7 @@ void clock_server( ) {
   msg_size = sizeof(receive_msg);
 
   int notifier_tid = Create( 2, &notifier );
-  debug( "notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
+  debug( 3,  "notifier_tid: %d, server_tid: %d", notifier_tid, MyTid( ) );
   start_clock( TICKS_TEN_MS );
   FOREVER {
     Receive( &client_tid, (char *)&receive_msg, msg_size );
@@ -114,13 +114,13 @@ void clock_server( ) {
 
       /* update the clock */
       clock_ticks += receive_msg.value;
-      //debug( "clock_ticks: %d", clock_ticks );
+      //debug( 3,  "clock_ticks: %d", clock_ticks );
 
       /* reply to clients */
       //TODO: make below into a separate function
-      //debug("first_user_client id: %d, future_ticks: %d", first_client_q->c_tid, first_client_q->future_ticks );
+      //debug( 3, "first_user_client id: %d, future_ticks: %d", first_client_q->c_tid, first_client_q->future_ticks );
       while( first_client_q != NULL && first_client_q->future_ticks <= clock_ticks ) {
-        //debug( "in while loop" );
+        //debug( 3,  "in while loop" );
         reply_msg.value = clock_ticks;
         Reply( first_client_q->c_tid, (char *)&reply_msg, msg_size );
         first_client_q->c_tid = 0;
@@ -182,7 +182,7 @@ int Delay( int ticks ) {
   int msg_len = sizeof( msg );
   msg.request_type = CM_DELAY;
   msg.value = ticks;
-  debug( "Sending delay: msg.value: %d", msg.value );
+  debug( 3,  "Sending delay: msg.value: %d", msg.value );
   Send( clock_server_id, (char *)&msg, msg_len, (char *)&rpl, msg_len );
   return rpl.value;
 }

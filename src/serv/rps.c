@@ -19,7 +19,7 @@ void initialize_clients( client_t *clients ) {
 void rps_server( ) {
   int errno;
   errno = RegisterAs( (char *)RPS_SERVER );
-  debug( "Woo, registered" );
+  debug( 5,  "Woo, registered" );
   if( errno < 0 ) {
     bwputstr( COM2, "Error registering RPS server, aborting." );
     Exit( );
@@ -171,7 +171,7 @@ void rps_server( ) {
       }
       break;
     case QUIT:
-      debug( "in quit, %d", client_tid );
+      debug( 5,  "in quit, %d", client_tid );
       if( client_tid == player1->c_tid ) {
           p1_quit = 1;
           bwprintf( COM2, "Task %d Quit!\r\n", client_tid );
@@ -252,7 +252,7 @@ void rps_server( ) {
       reply.val = 0;
       Reply( player1->c_tid, (char *)&reply, msg_size );
       Reply( player2->c_tid, (char *)&reply, msg_size );
-      debug( "Players %d, %d ready to play", player1->c_tid, player2->c_tid );
+      debug( 5,  "Players %d, %d ready to play", player1->c_tid, player2->c_tid );
     }
   }
   bwprintf( COM2, "Not enough players. Goodbye!\r\n" );
@@ -285,7 +285,7 @@ void rps_client1( ) {
       }
       Send( rps_server_tid, (char *)&message, msg_size, (char *)&reply, msg_size );
     } else {
-      debug( "SOMETHING WENT WRONG, why can't the client play?" );
+      debug( 5,  "SOMETHING WENT WRONG, why can't the client play?" );
     }
   }
   bwprintf( COM2, "Task %d is done playing\r\n", my_tid );

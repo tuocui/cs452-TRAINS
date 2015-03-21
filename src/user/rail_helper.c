@@ -19,49 +19,54 @@ inline int safe_distance_to_branch( train_state_t *train ) {
 }
 
 inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
+  debugu( 4, "NEW TRIGGERED SENSOR#############: %d", sensor_num );
   //FIXME TODO: handle expected sensor hit list for stopping
   /* loop thorugh the trains to find the expected train for this sensor hit */
   // TODO: Look through the times to hit the next expected sensor and assign this one to the lowest.
   int cur_idx;
   int expected_train_idx = NONE;
   int initializing_train_idx = NONE;
-  int fallback_idx = NONE;
+  int fallback_train_idx = NONE;
   int i;
   int lowest_expected_time = INT_MAX;
   int lowest_fallback_time = INT_MAX;
   for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
-    //assertm( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
-    if( trains[cur_idx].next_sensor_id == sensor_num ) {
-      if( trains[cur_idx].time_to_next_sensor_abs < lowest_expected_time ) {
-        expected_train_idx = cur_idx;
-        lowest_expected_time = trains[cur_idx].time_to_next_sensor_abs;
-      }
+    //assertum( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
+    if( trains[cur_idx].next_sensor_id == sensor_num && trains[cur_idx].time_to_next_sensor_abs < lowest_expected_time ) {
+      debugu( 4,  "found expected train: %d", cur_idx );
+      expected_train_idx = cur_idx;
+      lowest_expected_time = trains[cur_idx].time_to_next_sensor_abs;
     }
     if( trains[cur_idx].state == INITIALIZING ) {
+      debugu( 1,  "found initializing train: %d", cur_idx );
       initializing_train_idx = cur_idx;
     }
-    for( i = 0; i < NUM_FALLBACK; ++i ) {
-      if( trains[cur_idx].fallback_sensors[i] == -1 ) {
-        break;
-      }
+    for( i = 0; i < NUM_FALLBACK && trains[cur_idx].fallback_sensors[i] != -1; ++i ) {
       if( trains[cur_idx].fallback_sensors[i] == sensor_num && trains[cur_idx].time_to_fallback_sensor[i] < lowest_fallback_time ) {
-        fallback_idx = cur_idx;
+        debugu( 1,  "found fallback train: %d", cur_idx );
+        fallback_train_idx = cur_idx;
         lowest_fallback_time = trains[cur_idx].time_to_fallback_sensor[i];
         break;
       }
     }
   }
-  if( expected_train_idx > 0 ) {
+  if( expected_train_idx != NONE ) {
+    debugu( 4,  "returning expected train: %d", expected_train_idx );
+    trains[expected_train_idx].fallback_sensor_hit = false;
     return expected_train_idx;
   }
   /* if can't find matching train, assign the initializing train */ 
   if( initializing_train_idx != NONE ) {
+    debugu( 1,  "returning initializing train: %d", cur_idx );
     return initializing_train_idx;
   }
-  if( fallback_idx != NONE ) {
-    return fallback_idx;
+  if( fallback_train_idx != NONE ) {
+    debugu( 1,  "returning fallback train: %d", cur_idx );
+    trains[fallback_train_idx].fallback_sensor_hit = true;
+    return fallback_train_idx;
   }
-  return expected_train_idx;
+  /* train is lost at this step */
+  return NONE;
 }
 // returns in ms
 int get_accel_time( int cur_speed, int prev_speed, train_state_t *train ) {
@@ -213,12 +218,12 @@ int get_cur_stopping_time( train_state_t *train ) {
   return ( 200000 * cur_stopping_distance ) / (train->cur_vel);
 }
 
-int get_len_train_ahead( train_state_t *train ) {
-  if( train->is_forward ) {
-    return train->front_len;
-  } else {
-    return train->back_len;
-  }
+inline int get_len_train_ahead( train_state_t *train ) {
+  return train->is_forward ? train->front_len : train->back_len;
+}
+
+inline int get_len_train_behind( train_state_t *train ) {
+  return train->is_forward ? train->back_len : train->front_len;
 }
 
 // returns in ms
@@ -255,7 +260,7 @@ int get_delay_time_to_stop( train_state_t *train, int dist ) {
   if( cur_speed_normalized < prev_speed_normalized ) {
     int dist_to_stop_so_far = dist;
     dist_to_stop_so_far -= ( ( ( ( cur_vel - finish_vel ) * accel_finish_time_rel ) / 2 ) + ( finish_vel * accel_finish_time_rel ) ) / 100000;
-    assert( 1, dist_to_stop_so_far >= 0 );
+    assertu( 1, dist_to_stop_so_far >= 0 );
     return ( ( 200000 *  dist_to_stop_so_far ) - ( stopping_time_at_finish_vel * finish_vel ) ) / ( 2 * finish_vel );
   }
 
@@ -549,17 +554,26 @@ void init_12( train_state_t *train ) {
   (train->speeds[29]).stopping_distance = 4158;
 }
 
+inline void reset_rv_sensor_stack( train_state_t *train ) {
+  int i = 0;
+  train->rv_sensor_stack_idx = -1;
+  for( ; i < SENSOR_STACK_MAX; ++i ) {
+    train->rv_sensor_stack[i] = -1;
+  }
+}
+
 void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_states ) {
-  int i;
-  int j;
+  int i, j;
   for( i = 0; i < TR_MAX; ++i ) {
     trains[i].track_graph = track_graph;
     trains[i].switch_states = switch_states;
     trains[i].prev_sensor_id= NONE;
     trains[i].next_sensor_id= NONE;
     trains[i].dest_id = NONE;
+    trains[i].prev_dest_id = NONE;
     trains[i].mm_past_landmark = 0;
     trains[i].cur_speed = 0;
+
     for( j = 0; j < NUM_SPEEDS; ++j ) {
       trains[i].speeds[j].speed = 0;
       trains[i].speeds[j].high_low = 0;
@@ -569,6 +583,11 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
       trains[i].speeds[j].stopping_time = 0;
       trains[i].speeds[j].accel_distance = 0;
       trains[i].speeds[j].accel_time = 0;
+    }
+    
+    trains[i].rv_sensor_stack_idx = -1;
+    for( j = 0; j < SENSOR_STACK_MAX; ++j ) {
+      trains[i].rv_sensor_stack[j] = -1;
     }
   }
 

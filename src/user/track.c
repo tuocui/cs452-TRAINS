@@ -104,7 +104,7 @@ int update_switch_output( short switch_num, char state ) {
 }
 
 // Kill solenoid
-int kill_switch( ) {
+inline int kill_switch( ) {
   Putc( COM1, KILL_SWITCH );
   return 0;
 }
@@ -155,6 +155,7 @@ int set_switch( short switch_num, short c_s, int *switch_states ) {
   }
   msg[0] = c_s;
   msg[1] = switch_num;
+  debugu( 1, "INSIDE SET_SWITCH switch_num: %d, state: %d", msg[1], msg[0] );
   Putstr( COM1, msg, 2 );
   Delay( 20 );
   kill_switch( );

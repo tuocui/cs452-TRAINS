@@ -21,7 +21,7 @@ void nameserver_main( ) {
   for( ; i < SERVER_MAX; ++i ) {
     jobs[i] = 0;
   }
-  debug( "INITIALIZED NAMESERVER" );
+  debug( 4,  "INITIALIZED NAMESERVER" );
   FOREVER {
     rcv_len = Receive( &reply_tid, (char *)&request, msg_len );
     if( rcv_len < msg_len ){
@@ -38,7 +38,7 @@ void nameserver_main( ) {
         // Register, and reply back
         jobs[request.val] = reply_tid;
         reply_back( reply_tid, &reply, msg_len, SUCCESS, 0 );
-        debug( "Woo, a %d server registered with id: %d", request.val, jobs[request.val] );
+        debug( 4,  "Woo, a %d server registered with id: %d", request.val, jobs[request.val] );
       }
       break;
     case WHOIS:

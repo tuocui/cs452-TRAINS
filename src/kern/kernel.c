@@ -82,11 +82,11 @@ void kernel_init( global_context_t *gc) {
   gc->num_ticks_rec = 0;
   gc->num_ticks_idle_rec = 0;
 
-  debug( "before hwi_cleanup" );
+  debug( 3, ,"before hwi_cleanup" );
   hwi_cleanup( );
-  debug( "after hwi_cleanup" );
+  debug( 3, ,"after hwi_cleanup" );
   hwi_init( );
-  debug( "after init " );
+  debug( 3, ,"after init " );
   
   init_kernelentry();
 #ifdef CACHE
@@ -133,7 +133,7 @@ int activate( global_context_t *gc, task_descriptor_t *td ) {
   td->spsr = new_spsr_reg;
   td->retval = user_r0_reg;
 
-  //debug( "sp: %x", td->sp );
+  //debug( 3, ,"sp: %x", td->sp );
   assert(0, hwi_request_flag == HWI_MAGIC || hwi_request_flag == -1 );
   /* if hwi request type is set, we update request_type */
   if( hwi_request_flag == HWI_MAGIC) {
@@ -157,7 +157,7 @@ void handle( global_context_t *gc, int request_type ) {
     while( vic_src_num < 2 ) {
       vic_base = (int)(*((int*)(VIC1_BASE + vic_src_num * 0x10000)));
       while( ( hwi_type = get_lowest_set_bit( gc, vic_base ) ) ) {
-        //debug("INSIDE WHILE");
+        //debug( 3, ,"INSIDE WHILE");
         clean_set_bit( &vic_base, hwi_type );
         hwi_type += ( vic_src_num * 32 );
         handle_hwi( gc, hwi_type );
@@ -214,8 +214,8 @@ int main(int argc, char *argv[]) {
 
   //print_env( );
 
-  debug("TD_BIT: %d", TD_BIT);
-  debug("TD_MAX: %d", TD_MAX);
+  debug( 3, ,"TD_BIT: %d", TD_BIT);
+  debug( 3, ,"TD_MAX: %d", TD_MAX);
 
   int request_type;
   global_context_t gc;

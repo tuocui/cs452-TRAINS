@@ -188,10 +188,9 @@ int handle_switch( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  
     break;
   }
 
-  ((rail_msg->to_server_content).rail_cmds)->switch_id0 = switch_num;
-  ((rail_msg->to_server_content).rail_cmds)->switch_action0 = state;
-  ((rail_msg->to_server_content).rail_cmds)->switch_delay0 = 0;
-  ((rail_msg->to_server_content).rail_cmds)->sw_count = 1;
+  debugu( 0, "handle_switch" );
+  pack_switch_cmd( rail_msg->to_server_content.rail_cmds, switch_num, state, 0 );
+  debugu( 0, "after pack_switch_cmd, idx: %d", rail_msg->to_server_content.rail_cmds->switch_idx );
   Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
   Printf( COM2, "\0337\033[1A\033[2K\rSwitch %d set to %c\0338", switch_num, c_s_c );
   return 0;
@@ -359,6 +358,7 @@ void parse_user_input( ) {
     train_speeds[i] = 0;
   }
   rail_cmds_t rail_cmds;
+  init_rail_cmds( &rail_cmds );
   rail_msg_t rail_msg;
   rail_msg.request_type = USER_INPUT;
   rail_msg.to_server_content.rail_cmds = &rail_cmds;
@@ -380,18 +380,22 @@ void parse_user_input( ) {
       cmd_buffer[cmd_ind] = 0;
       cmd_ind = 0;
       Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
+      init_rail_cmds( &rail_cmds );
+      debugu( 0, "before process buffer" );
       status = process_buffer( cmd_buffer, train_speeds, &rail_msg, rail_server_tid );
-      rail_cmds.train_id = 0;
-      rail_cmds.train_action = -1;
-      rail_cmds.train_delay = 0;
+      debugu( 0, "after_process_buffer, init_rail_cmds is called" );
+      init_rail_cmds( &rail_cmds );
+      //rail_cmds.train_id = 0;
+      //rail_cmds.train_action = -1;
+      //rail_cmds.train_delay = 0;
       rail_cmds.train_speed = 0;
       rail_cmds.train_dest = -1;
       rail_cmds.train_mm_past_dest = 0;
       rail_cmds.train_accel = 100;
       rail_cmds.train_accel = 120;
-      rail_cmds.switch_id0 = 0;
-      rail_cmds.switch_action0 = -1;
-      rail_cmds.switch_delay0 = 0;
+      //rail_cmds.switch_id0 = 0;
+      //rail_cmds.switch_action0 = -1;
+      //rail_cmds.switch_delay0 = 0;
       if( status == QUIT_CMD ) {
         Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
         for( i = 12; i < NUM_TRAINS; ++i ) {
