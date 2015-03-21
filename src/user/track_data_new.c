@@ -1192,6 +1192,17 @@ void init_tracka(track_node_t *track) {
   track[143].name = "EX10";
   track[143].type = NODE_EXIT;
   track[143].reverse = &track[142];
+  int i = 0;
+  for( i = 0; i < 144; ++i ) {
+    track[i].edge[DIR_AHEAD].middle_train_num = -1;
+    track[i].edge[DIR_AHEAD].begin_train_num = -1;
+    track[i].edge[DIR_AHEAD].middle_train_rsv_start = -1;
+    track[i].edge[DIR_AHEAD].begin_train_rsv_end = 0;
+    track[i].edge[DIR_CURVED].middle_train_num = -1;
+    track[i].edge[DIR_CURVED].begin_train_num = -1;
+    track[i].edge[DIR_CURVED].middle_train_rsv_start = -1;
+    track[i].edge[DIR_CURVED].begin_train_rsv_end = 0;
+  }
 }
 
 void init_trackb(track_node_t *track) {
@@ -2356,4 +2367,15 @@ void init_trackb(track_node_t *track) {
   track[139].name = "EX10";
   track[139].type = NODE_EXIT;
   track[139].reverse = &track[138];
+  int i;
+  for( i = 0; i < 140; ++i ) {
+    track[i].edge[DIR_AHEAD].middle_train_num = -1;
+    track[i].edge[DIR_AHEAD].begin_train_num = -1;
+    track[i].edge[DIR_AHEAD].middle_train_rsv_start = -1;
+    track[i].edge[DIR_AHEAD].begin_train_rsv_end = 0;
+    track[i].edge[DIR_CURVED].middle_train_num = -1;
+    track[i].edge[DIR_CURVED].begin_train_num = -1;
+    track[i].edge[DIR_CURVED].middle_train_rsv_start = -1;
+    track[i].edge[DIR_CURVED].begin_train_rsv_end = 0;
+  }
 }

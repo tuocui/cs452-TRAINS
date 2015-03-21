@@ -20,6 +20,10 @@ typedef struct _track_edge_ {
   struct _track_edge_ *reverse;
   struct _track_node_ *src, *dest;
   int dist;             /* in millimetres */
+  int middle_train_num;
+  int begin_train_num;
+  int middle_train_rsv_start;
+  int begin_train_rsv_end;
 } track_edge_t;
 
 typedef struct _track_node_ {

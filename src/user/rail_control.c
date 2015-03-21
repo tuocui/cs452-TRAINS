@@ -45,7 +45,233 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
   cmds->switch_id1 = cmds->switch_action1= cmds->switch_delay1 = \
   cmds->switch_id2 = cmds->switch_action2= cmds->switch_delay2 = \
   cmds->switch_id3 = cmds->switch_action3 = cmds->switch_delay3 = NONE;
+}
 
+// returns 0 on safe allocation
+// -1 if train needs to reverse
+// -2 if train needs to slow down/stop
+// TODO: Update the reservation type when we hit a sensor
+// TODO: Clear reservations when we hit a fallback switch
+// TODO: Clear reservations when we flip a switch
+  // FUCK, need to reserve based on expected switch states, not current ones
+  // Simple early solution: reserve on both, clear when we pass the switch
+// TODO: Need to send back commands for multiple trains
+int update_track_reservation( train_state_t *train, train_state_t *all_trains ) {
+  track_node_t *graph = train->track_graph;
+  int sensor_id = train->prev_sensor_id;
+  int forward_dist = ( safe_distance_to_stop( train ) * 3 ) / 2; // 1.5x the safe distance to stop
+  //Printf( COM2, "forward_dist: %d\r\n", forward_dist );
+  int mm_past_sensor = train->mm_past_landmark / 10;
+  int branch_ind;
+  track_node_t *cur_node = &(graph[sensor_id]);
+  // just hit the last sensor, need to clear the sensor before it
+
+  // Go through nodes that we have passed since last sensor
+  while( 1 ) {
+    // If we are still reserving that track, make sure we don't reserve it any more
+    //Printf( COM2, "first loop\r\n" );
+    if( cur_node->type == NODE_BRANCH ) {
+      branch_ind = cur_node->num;
+      if( branch_ind > 152 ) {
+        branch_ind -= 134;
+      }
+      if( cur_node->edge[train->switch_states[branch_ind]].dist > mm_past_sensor ) {
+        break;
+      }
+      if( cur_node->edge[DIR_CURVED].middle_train_num == train->train_id ) {
+        cur_node->edge[DIR_CURVED].middle_train_num = -1;
+        cur_node->edge[DIR_CURVED].middle_train_rsv_start = -1;
+      }
+      if( cur_node->edge[DIR_STRAIGHT].middle_train_num == train->train_id ) {
+        cur_node->edge[DIR_STRAIGHT].middle_train_num = -1;
+        cur_node->edge[DIR_STRAIGHT].middle_train_rsv_start = -1;
+      }
+      if( cur_node->edge[DIR_CURVED].begin_train_num == train->train_id ) {
+        cur_node->edge[DIR_CURVED].begin_train_num = -1;
+        cur_node->edge[DIR_CURVED].begin_train_rsv_end = 0;
+      }
+      if( cur_node->edge[DIR_STRAIGHT].begin_train_num == train->train_id ) {
+        cur_node->edge[DIR_STRAIGHT].begin_train_num = -1;
+        cur_node->edge[DIR_STRAIGHT].begin_train_rsv_end = 0;
+      }
+      branch_ind = cur_node->num;
+      if( branch_ind > 152 ) {
+        branch_ind -= 134;
+      }
+      mm_past_sensor -= cur_node->edge[train->switch_states[branch_ind]].dist;
+      cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
+    } else {
+      if( cur_node->edge[DIR_STRAIGHT].dist > mm_past_sensor ) {
+        break;
+      }
+      if( cur_node->edge[DIR_STRAIGHT].middle_train_num == train->train_id ) {
+        cur_node->edge[DIR_STRAIGHT].middle_train_num = -1;
+        cur_node->edge[DIR_STRAIGHT].middle_train_rsv_start = -1;
+      }
+      if( cur_node->edge[DIR_STRAIGHT].begin_train_num == train->train_id ) {
+        cur_node->edge[DIR_STRAIGHT].begin_train_num = -1;
+        cur_node->edge[DIR_STRAIGHT].begin_train_rsv_end = 0;
+      }
+      mm_past_sensor -= cur_node->edge[DIR_STRAIGHT].dist;
+      cur_node = cur_node->edge[DIR_STRAIGHT].dest;
+    }
+  }
+
+  // need to reserve until the end of first
+  track_edge_t *edge;
+  track_edge_t *rev_edge;
+  int edge_dist;
+  if( cur_node->type == NODE_BRANCH ) {
+    branch_ind = cur_node->num;
+    if( branch_ind > 152 ) {
+      branch_ind -= 134;
+    }
+    edge = &(cur_node->edge[train->switch_states[branch_ind]]);
+  } else {
+    edge = &(cur_node->edge[DIR_STRAIGHT]);
+  }
+  edge_dist = edge->dist;
+  if( edge->middle_train_num == -1 || edge->middle_train_num == train->train_id ) {
+    edge->middle_train_num = train->train_id;
+    edge->middle_train_rsv_start = mm_past_sensor;
+    forward_dist -= edge->dist - mm_past_sensor;
+    if( edge->begin_train_num == train->train_id ) {
+      edge->begin_train_num = -1;
+      edge->begin_train_rsv_end = 0;
+    }
+  } else {
+    assert( 1, edge->begin_train_num == -1 || edge->begin_train_num == train->train_id );
+    edge->begin_train_num = train->train_id;
+    // TODO: Better check for slowdown
+    if( edge->dist - edge->middle_train_rsv_start < 0 ) {
+      return -2;
+    }
+    edge->begin_train_rsv_end = edge->dist - edge->middle_train_rsv_start; //5 cm buffer
+  }
+  cur_node = edge->dest;
+ 
+  train_state_t *colliding_train;
+  int colliding_train_idx = NONE;
+  int has_collision = 0;
+  // Now, start reserving!
+  while( forward_dist > 0 ) {
+    //Printf( COM2, "second loop, forward_dist: %d\r\n", forward_dist );
+    // grab the current edge
+    // TODO: Make a queue to go down both paths of a branch
+    if( cur_node->type == NODE_BRANCH ) {
+      branch_ind = cur_node->num;
+      if( branch_ind > 152 ) {
+        branch_ind -= 134;
+      }
+      edge = &(cur_node->edge[train->switch_states[branch_ind]]);
+    } else {
+      edge = &(cur_node->edge[DIR_STRAIGHT]);
+    }
+    edge_dist = edge->dist;
+
+    // check for oncoming traffic
+    rev_edge = edge->reverse;
+    // check to see if there's anyone who reserved the rest of the reverse edge
+    if( rev_edge->middle_train_num != -1 ) {
+      //Printf( COM2, "major collision\r\n" );
+      assert( 1, rev_edge->middle_train_num != train->train_id );
+      has_collision = 1;
+      colliding_train_idx = get_train_idx( rev_edge->middle_train_num );
+    }
+    // check to see if our reservations overlap
+    if( rev_edge->begin_train_num != -1 && forward_dist + rev_edge->begin_train_rsv_end >= edge_dist ) {
+      //Printf( COM2, "slightly less major collision\r\n" );
+      assert( 1, rev_edge->begin_train_num != train->train_id );
+      // possibly it
+      if( forward_dist > ( edge_dist - rev_edge->begin_train_rsv_end ) ) {
+        // Do a little bit of reservation
+        edge->begin_train_num = train->train_id;
+        edge->begin_train_rsv_end = edge_dist - rev_edge->begin_train_rsv_end;
+      }
+      forward_dist -= edge_dist - rev_edge->begin_train_rsv_end;
+      has_collision = 1;
+      colliding_train_idx = get_train_idx( rev_edge->begin_train_num );
+    }
+    // Oh shit, a collision
+    if( has_collision && colliding_train_idx != NONE ) {
+      colliding_train = &(all_trains[colliding_train_idx]);
+      // I'm already handling it, just return and continue on
+      if( train->state == HANDLING_COLLISION || train->state == REVERSING ) {
+        return 0;
+      } else if( colliding_train->state == HANDLING_COLLISION || colliding_train->state == REVERSING ) {
+        // If other train handling this collision, then we should probably just slow down
+        return -2;
+      } else {
+        // Oh shit, no one handling this collision, I'll handle it.
+        train->state = HANDLING_COLLISION;
+        Printf( COM2, "@@@@@@@@@@@@@@@@@@ HOLY SHIT A COLLISION TRAIN %d HANDLING IT!!!!\r\n", train->train_id );
+        Printf( COM2, "@@@@@@@@@@@@@@@@@@ COLLIDING TRAIN %d, THIS TRAIN %d\r\n", colliding_train->train_id, train->train_id );
+        Printf( COM2, "@@@@@@@@@@@@@@@@@@ forward_dist %d, THIS TRAIN %d\r\n", forward_dist, train->train_id );
+        return -1;
+      }
+    }
+    
+    // reserve!
+    edge->begin_train_num = train->train_id;
+    if( forward_dist > edge->dist ) {
+      edge->begin_train_rsv_end = edge->dist;
+      forward_dist -= edge->dist;
+    } else {
+      edge->begin_train_rsv_end = forward_dist;
+      forward_dist = 0;
+    }
+    cur_node = edge->dest;
+  }
+
+  int can_exit = 0;
+  while( !can_exit ) {
+    //Printf( COM2, "third loop\r\n" );
+    // If we are still reserving that track, make sure we don't reserve it any more
+    can_exit = 1;
+    if( cur_node->type == NODE_BRANCH ) {
+      if( cur_node->edge[DIR_CURVED].middle_train_num == train->train_id ) {
+        cur_node->edge[DIR_CURVED].middle_train_num = -1;
+        cur_node->edge[DIR_CURVED].middle_train_rsv_start = -1;
+        can_exit = 0;
+      }
+      if( cur_node->edge[DIR_STRAIGHT].middle_train_num == train->train_id ) {
+        cur_node->edge[DIR_STRAIGHT].middle_train_num = -1;
+        cur_node->edge[DIR_STRAIGHT].middle_train_rsv_start = -1;
+        can_exit = 0;
+      }
+      if( cur_node->edge[DIR_CURVED].begin_train_num == train->train_id ) {
+        cur_node->edge[DIR_CURVED].begin_train_num = -1;
+        cur_node->edge[DIR_CURVED].begin_train_rsv_end = 0;
+        can_exit = 0;
+      }
+      if( cur_node->edge[DIR_STRAIGHT].begin_train_num == train->train_id ) {
+        cur_node->edge[DIR_STRAIGHT].begin_train_num = -1;
+        cur_node->edge[DIR_STRAIGHT].begin_train_rsv_end = 0;
+        can_exit = 0;
+      }
+      branch_ind = cur_node->num;
+      if( branch_ind > 152 ) {
+        branch_ind -= 134;
+      }
+      cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
+    } else {
+      if( cur_node->edge[DIR_STRAIGHT].middle_train_num == train->train_id ) {
+        //Printf( COM2, "third loop: dafuq?\r\n" );
+        cur_node->edge[DIR_STRAIGHT].middle_train_num = -1;
+        cur_node->edge[DIR_STRAIGHT].middle_train_rsv_start = -1;
+        can_exit = 0;
+      }
+      if( cur_node->edge[DIR_STRAIGHT].begin_train_num == train->train_id ) {
+        //Printf( COM2, "third loop: whhaaaa??????\r\n" );
+        cur_node->edge[DIR_STRAIGHT].begin_train_num = -1;
+        cur_node->edge[DIR_STRAIGHT].begin_train_rsv_end = 0;
+        can_exit = 0;
+      }
+      cur_node = cur_node->edge[DIR_STRAIGHT].dest;
+    }
+  }
+  return 0;
+  // NOTE: Need to make sure that we release track in front of us after we have reached our limit.
 }
 
 //TODO: call static search after switch comes back 
@@ -93,6 +319,7 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
 //}
 
 void predict_next_sensor_dynamic( train_state_t* train_state ) {
+  Printf( COM2, "POSSSSIIIBBLLLLYYYYYYY\r\n" );
   assert( 1, train_state->cur_speed == 0 || train_state->state == REVERSING );
   track_node_t* cur_node = &( train_state->track_graph[train_state->prev_sensor_id] );
   assert( 1, cur_node );
@@ -132,6 +359,7 @@ void predict_next_sensor_dynamic( train_state_t* train_state ) {
 
   if( next_sensor_id == NONE && train_state->state == REVERSING ) {
     debug( "5" );
+    Printf( COM2, "WOOOOO\r\n" );
     train_state->next_sensor_id = train_state->track_graph[train_state->prev_sensor_id].reverse - train_state->track_graph;
     train_state->dist_to_next_sensor = (stop_dist * 2) - train_state->pickup_len > 0 ? (stop_dist * 2) - train_state->pickup_len : 0;
   } else if( next_sensor_id != NONE ) {

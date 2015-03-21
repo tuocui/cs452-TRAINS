@@ -12,7 +12,90 @@
 // Assume 250ms to switch switch
 // returns distance in mm
 
-//TODO: TONY, give the magic 100000 and 200000 names 
+int get_train_idx( int train_num ) {
+  switch( train_num ) {
+  case TRAIN_58_NUM:
+    return TRAIN_58_IDX;
+    break;
+  case TRAIN_45_NUM:
+    return TRAIN_45_IDX;
+    break;
+  case TRAIN_12_NUM:
+    return TRAIN_12_IDX;
+    break;
+  case TRAIN_24_NUM:
+    return TRAIN_24_IDX;
+    break;
+  default:
+    return -1;
+    break;
+  }
+}
+
+void clear_reservations( track_node_t *graph ) {
+  int i, j;
+  for( i = 0; i < TRACK_MAX; ++i ) {
+    for( j = 0; j < 2; ++j ) {
+      graph[i].edge[j].begin_train_num = -1;
+      graph[i].edge[j].begin_train_rsv_end = 0;
+      graph[i].edge[j].middle_train_num = -1;
+      graph[i].edge[j].middle_train_rsv_start = -1;
+    }
+  }
+}
+
+void clear_prev_train_reservation( train_state_t *train ) {
+  track_node_t *graph = train->track_graph;
+  track_node_t *cur_node = &(graph[train->next_sensor_id]);
+  track_edge_t *prev_edge = cur_node->reverse->edge[DIR_AHEAD].reverse; // phew
+  if( prev_edge->begin_train_num == train->train_id ) {
+    prev_edge->begin_train_num = -1;
+    prev_edge->begin_train_rsv_end = 0;
+  }
+  if( prev_edge->middle_train_num == train->train_id ) {
+    prev_edge->middle_train_num = -1;
+    prev_edge->middle_train_rsv_start = -1;
+  }
+}
+void clear_reservations_by_train( track_node_t *graph, train_state_t *train ) {
+  int i, j;
+  for( i = 0; i < TRACK_MAX; ++i ) {
+    for( j = 0; j < 2; ++j ) {
+      if( graph[i].edge[j].begin_train_num == train->train_id ) {
+        graph[i].edge[j].begin_train_num = -1;
+        graph[i].edge[j].begin_train_rsv_end = 0;
+      }
+      if( graph[i].edge[j].middle_train_num == train->train_id ) {
+        graph[i].edge[j].middle_train_num = -1;
+        graph[i].edge[j].middle_train_rsv_start = -1;
+      }
+    }
+  }
+}
+
+void print_rsv( train_state_t *train, train_state_t *trains ) {
+  track_node_t *graph = trains->track_graph;
+  int train_num = train->train_id;
+  int num_printed = 0;
+  int i, j;
+  int train_idx = get_train_idx( train_num );
+  for( i = 0; i < TRACK_MAX; ++i ) {
+    for( j = 0; j < 2; ++j ) {
+      if( graph[i].edge[j].begin_train_num == train_num ) {
+        Printf( COM2, "\0337\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 0, graph[i].edge[j].begin_train_rsv_end );
+        ++num_printed;
+      }
+      if( graph[i].edge[j].middle_train_num == train_num ) {
+        Printf( COM2, "\0337\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 1, graph[i].edge[j].middle_train_rsv_start );
+        ++num_printed;
+      }
+    }
+  }
+  for( i = num_printed; i < TRACK_MAX / 4; ++i ) {
+    Printf( COM2, "\0337\033[%d;%dH               \0338", 2 + i, ( train_idx * 37 ) + 83 );
+  }
+}
+
 inline int safe_distance_to_branch( train_state_t *train ) {
   int vel = train->cur_vel;
   return ( vel * SW_TIME ) / 100000 + SWITCH_BUFFER;
@@ -51,7 +134,7 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
       }
     }
   }
-  if( expected_train_idx > 0 ) {
+  if( expected_train_idx != NONE ) {
     return expected_train_idx;
   }
   /* if can't find matching train, assign the initializing train */ 

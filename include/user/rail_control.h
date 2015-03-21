@@ -130,6 +130,7 @@ typedef struct _train_state_ {
     REVERSING,
     INITIALIZING,
     NOT_INITIALIZED,
+    HANDLING_COLLISION,
   } state;
 
   int rv_expected_sensors_idx;
@@ -140,7 +141,8 @@ typedef struct _train_state_ {
   int train_id;
   int prev_sensor_id;
   int next_sensor_id;
-  int time_to_next_sensor_abs;
+  int time_to_next_sensor_abs; // time_to_next_sensor + cur_time
+  int time_to_next_sensor;
   int dest_id;
   int front_len;
   int back_len;
@@ -151,7 +153,6 @@ typedef struct _train_state_ {
   int vel_at_last_pos_update;
   int vel_at_last_landmark;
   int mm_past_landmark;
-  int time_to_next_sensor;
   int length;
   int pickup_len;
   int decel_rate;       // mm/s^2
@@ -189,6 +190,8 @@ typedef struct _min_heap_ {
   int * node_id2idx; // map node_id(track_vertex) to heap idx 
   min_heap_node_t * nodes; // heap representation by an array
 } min_heap_t;
+
+int update_track_reservation( train_state_t *train, train_state_t *all_trains );
 
 inline void init_node( min_heap_node_t * node, int id, int dist );
 

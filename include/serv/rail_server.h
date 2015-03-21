@@ -6,11 +6,14 @@
 struct _sensor_data_; 
 struct _rail_cmds_;
 struct _train_state;
+struct _tack_node_;
 
 #define WEIGHT_PREV 85
 #define WEIGHT_NEW 15
 #define SENSOR_WORKER_MAX 4
 #define INIT_SPEED 2
+
+#define REVERSE_FINISHED 1
 
 typedef union _content_ {
   struct _sensor_data_* sensor_data;
@@ -39,6 +42,7 @@ typedef struct _switch_cmd_args_ {
   int state;
   int delay_time;
   int *switch_states;
+  struct _track_node_ *graph;
 } switch_cmd_args_t;
 
 typedef struct _update_trains_args_ {
@@ -55,11 +59,14 @@ typedef struct _rail_msg_ {
     TRAIN_DELAY_TIMEOUT,
     TIMER_READY,
     SENSOR_WORKER_READY,
+    COLLISION_CMDS,
   } request_type;
 
   enum {
     PROCESS_SENSOR_WORK,
   } response_type;
+
+  int general_val;
 
   content_t to_server_content;
   //FIXME: remove from_server_content;

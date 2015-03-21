@@ -10,7 +10,7 @@
 #include "user_task.h"
 #include "context_switch.h"
 
-#define TD_SIZE 0x7000
+#define TD_SIZE 0x8000
 #define TD_MAGIC 0x3b1a4ef5
 #define HWI_MAGIC 0xab
 #define USER_SPACE_SIZE (TD_MAX * TD_SIZE)
