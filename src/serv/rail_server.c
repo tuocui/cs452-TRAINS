@@ -196,6 +196,7 @@ void train_exe_worker( ) {
       break;
     case TR_REVERSE:
       {
+        debugu( 1, "train_exe_worker received reverse request, reversing now ... " );
         train->state = REVERSING;
         int prev_speed = train->cur_speed;
         int stopping_time = get_cur_stopping_time( train ) / 10;
@@ -269,7 +270,7 @@ void switch_exe_worker( ) {
 
   FOREVER {
     ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&switch_cmd_args, sizeof(switch_cmd_args) );
-    debugu( 0, "switch_exe_worker: %d received request to change to: %d ", switch_num, switch_cmd_args.state );
+    debugu( 4, "SWITCH_EXE_WORKER AFTER SEND: %d received request to change to: %d ", switch_num, switch_cmd_args.state );
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     if( switch_cmd_args.delay_time > 0 ) {
       ret_val = Delay( switch_cmd_args.delay_time );
@@ -429,10 +430,9 @@ void rail_server( ) {
         }
         break;
       case USER_INPUT:
-        debugu( 1, "USER_INPUT" );
         ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
         assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-        if( (receive_msg.to_server_content.rail_cmds)->train_id ) {
+        if( (receive_msg.to_server_content.rail_cmds)->train_id != NONE ) {
           // TODO: Make a mapping between train number and idx
           switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
           case TRAIN_58_NUM:
@@ -463,21 +463,19 @@ void rail_server( ) {
             //FIXME: if the train_exe_worker_tid is not ready, should not Reply, or add a secretary
             assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
           }
-        } else if ( true ) {//receive_msg.to_server_content.rail_cmds->switch_idx != NONE ) {
-          debugu( 1, "switch_idx: %d", receive_msg.to_server_content.rail_cmds->switch_idx );
+        } else if ( receive_msg.to_server_content.rail_cmds->switch_idx != NONE ) {
           assertum( 1, receive_msg.to_server_content.rail_cmds->switch_idx == 0, 
               "user packed %d sw_cmds, should it?", receive_msg.to_server_content.rail_cmds->switch_idx + 1 );
           int switch_id = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_id;
           int switch_exe_worker_tid = switch_exe_worker_tids[switch_id];
           switch_cmd_args.state = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action;
           switch_cmd_args.delay_time = 0;
-          debugu( 0, "before reply to switch_exe" );
           ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
           assertum( 1, ret_val >= 0, "retval: %d", ret_val );
         }
         break;
       case RAIL_CMDS:
-        //DEBUG:
+        debugu( 1, "get RAIL_CMDS" );
         /* get and send train cmds */
         recved_cmds = receive_msg.to_server_content.rail_cmds;
         switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
@@ -497,21 +495,23 @@ void rail_server( ) {
           train_exe_worker_tid = -1;
           break;
         }
-        if( train_exe_worker_tid > 0 ) {
+        if( train_exe_worker_tid != NONE ) {
+          debugu( 1, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
           train_cmd_args.cmd = recved_cmds->train_action;
           train_cmd_args.speed_num = recved_cmds->train_speed;
           train_cmd_args.delay_time = recved_cmds->train_delay;
           ret_val = Reply( train_exe_worker_tid, (char*)&train_cmd_args, sizeof( train_cmd_args ));
           assertum( 1, ret_val >= 0, "retval: %d", ret_val );
         }
-        //FIXME: make this into a function or macro
         /* get and send switch cmds */
         int i;
         for( i = 0; i <= recved_cmds->switch_idx; ++i ) {
-          switch_exe_worker_tid = recved_cmds->switch_cmds[i].switch_id;
+          debugu( 4, "before reply to switch_exe_worker: switch_idx: %d, i: %d", recved_cmds->switch_idx, i );
+          switch_exe_worker_tid = switch_exe_worker_tids[recved_cmds->switch_cmds[i].switch_id];
           switch_cmd_args.state = recved_cmds->switch_cmds[i].switch_action;
           switch_cmd_args.delay_time = recved_cmds->switch_cmds[i].switch_delay;
           ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
+          debugu( 4, "after reply to switch_exe_worker" );
           assertum( 1, ret_val >= 0, "retval: %d, switch_worker_tid: %d, switch_id: %d", ret_val, 
               switch_exe_worker_tid, recved_cmds->switch_cmds[i].switch_id );
         }

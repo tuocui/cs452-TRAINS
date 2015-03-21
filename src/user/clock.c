@@ -16,13 +16,13 @@ void clock_user_task( ) {
     time_in_sec = ( time_in_ds / 10 ) % 60;
     time_in_ds = time_in_ds % 10;
     // Print time
-    Printf( 
-      COM2,
-      "\0337\033[HTime: %d min, %d sec, %d dsec\0338", 
-      time_in_min,
-      time_in_sec,
-      time_in_ds
-    );
+    //Printf( 
+    //  COM2,
+    //  "\0337\033[HTime: %d min, %d sec, %d dsec\0338", 
+    //  time_in_min,
+    //  time_in_sec,
+    //  time_in_ds
+    //);
   }
   Exit( );
 }

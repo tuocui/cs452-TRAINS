@@ -19,7 +19,7 @@ inline int safe_distance_to_branch( train_state_t *train ) {
 }
 
 inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
-  debugu( 4, "NEW TRIGGERED SENSOR#############: %d", sensor_num );
+  debugu( 4, "NEW TRIGGERED SENSOR: %d", sensor_num );
   //FIXME TODO: handle expected sensor hit list for stopping
   /* loop thorugh the trains to find the expected train for this sensor hit */
   // TODO: Look through the times to hit the next expected sensor and assign this one to the lowest.

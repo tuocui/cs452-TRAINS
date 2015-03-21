@@ -628,28 +628,26 @@ void dijkstra_test( ) {
   //debug( 2,  "address diff %d", (node_3 - track_graph) );
   
   track_node_t track_graph[TRACK_MAX];
-  init_tracka( track_graph );
+  //init_tracka( track_graph );
+  init_trackb( track_graph );
   int src_id;
   int dest_id;
 
   // TESTING dijkstra
-  int all_path[NODE_MAX];
-  int all_dist[NODE_MAX];
-  int all_step[NODE_MAX];
+  //int all_path[NODE_MAX];
+  //int all_dist[NODE_MAX];
+  //int all_step[NODE_MAX];
+  //src_id = 2;
+  //dest_id = 14;
+  //dijkstra( track_graph, src_id, all_path, all_dist, all_step );
 
-  src_id = 2;
-  dest_id = 14;
-
-  dijkstra( track_graph, src_id, all_path, all_dist, all_step );
-
-  debug( 2,  "steps: %d", all_step[dest_id] );
-  
-  debug( 2,  "dijkstra results: " );
-  int i;
-  for( i = 0; i < NODE_MAX; ++i ) {
-    Printf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
-        i, all_dist[i], all_path[i], all_step[i] );
-  }
+  //debug( 2,  "steps: %d", all_step[dest_id] );
+  //debug( 2,  "dijkstra results: " );
+  //int i;
+  //for( i = 0; i < NODE_MAX; ++i ) {
+  //  Printf( COM2, "node_num: %d, dist: %d, path: %d, step: %d\r\n", 
+  //      i, all_dist[i], all_path[i], all_step[i] );
+  //}
 
 
   //for( i = 0; i < NODE_MAX; ++i ) {
@@ -667,44 +665,35 @@ void dijkstra_test( ) {
   
   train_state_t train;
   init_trains( &train, track_graph, switch_states );
-  train.cur_speed = 12;
-  train.speeds[train.cur_speed].safe_branch_distance += 0;
+  train.cur_speed = 14;
+  train.cur_vel = 18000;
  
   // =================================================================================
   //TESTING switch commands
-  //src_id = 2;
-  //dest_id = 14;
-  //train.prev_sensor_id = src_id;
-  //train.dest_id = dest_id;
-  //while( train.speeds[train.cur_speed].safe_branch_distance < 500 ) {
+  //src_id = 45;
+  //dest_id = 13;
+  //while( train.cur_vel < 47000 ) {
+  //  debugu( 0, "safe_branch_dist: %d", train.speeds[train.cur_speed].safe_branch_distance );
+  //  train.prev_sensor_id = src_id;
+  //  train.dest_id = dest_id;
+  //  get_shortest_path( &train );
   //  init_rail_cmds( &cmds );
-  //  //get_next_command( &train, &cmds );
-  //  train.speeds[train.cur_speed].safe_branch_distance += 50;
-
-  //debug( 2,  "Commandes: \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
-  //                   \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
-  //                   \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
-  //                      cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
-  //                      cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
-  //                      cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  //  compute_next_command( &train, &cmds );
+  //  train.cur_vel += 1450;
+  //  print_cmds( &cmds );
   //}
-  //=================================================================================
+  ////=================================================================================
 
   //TESTING reverse commands
-  //init_rail_cmds( &cmds );
-  //src_id = 15;
-  //dest_id = 0;
-  //train.prev_sensor_id = src_id;
-  //train.dest_id= dest_id;
-  //get_next_command( &train, &cmds );
-  //debug( 2,  "Reverse commands: \n\rtrain_id: %d, train_action: %d, train_delay: %d 
-  //                    \r\nswitch_id0: %d, switch_action0: %d, switch_delay0: %d 
-  //                    \n\rswitch_id1: %d, switch_action1: %d, switch_delay1: %d 
-  //                    \n\rswitch_id2: %d, switch_action2: %d, switch_delay2: %d",
-  //                        cmds.train_id, cmds.train_action, cmds.train_delay,
-  //                        cmds.switch_id0, cmds.switch_action0, cmds.switch_delay0, 
-  //                        cmds.switch_id1, cmds.switch_action1, cmds.switch_delay1, 
-  //                        cmds.switch_id2, cmds.switch_action2, cmds.switch_delay2 );
+  debugu( 1, "TESTING REVERSE" );
+  init_rail_cmds( &cmds );
+  src_id = 54;
+  dest_id = 51 ;
+  train.cur_vel = 18000;
+  train.prev_sensor_id = src_id;
+  train.dest_id= dest_id;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
   //=================================================================================
 
   //TESTING stop prediction
@@ -743,17 +732,17 @@ void dijkstra_test( ) {
   //=================================================================================
   
   //TESTING dynamic prediction
-  train.cur_speed = 23;
-  train.prev_speed = 0;
-  train.cur_vel = 10000;
-  train.speed_change_time = 0;
-  train.switch_states[14] = SW_STRAIGHT;
-  train.speeds[train.cur_speed].stopping_distance = 0;
-  //train.state = REVERSING;
+  //train.cur_speed = 23;
+  //train.prev_speed = 0;
+  //train.cur_vel = 10000;
+  //train.speed_change_time = 0;
+  //train.switch_states[14] = SW_STRAIGHT;
+  //train.speeds[train.cur_speed].stopping_distance = 0;
+  ////train.state = REVERSING;
 
-  src_id = 26;
-  int next_id = 7;
-  dest_id = 53;
+  //src_id = 26;
+  //int next_id = 7;
+  //dest_id = 53;
   /*while( train.speeds[train.cur_speed].stopping_distance < 1000 ) {
   debug( 2,  "AHHHHHHHHHHHHHHHHHHHHHHHHHHH: %d", train.speeds[train.cur_speed].stopping_distance );
     train.prev_sensor_id = src_id;
@@ -766,20 +755,21 @@ void dijkstra_test( ) {
     predict_next_sensor_dynamic( &train );
     debug( 2,  "dynamic next sensor prediction: new previous sensor: %d, next_sensor: %d, dist_to_next_sensor: %d", train.prev_sensor_id, train.next_sensor_id, train.dist_to_next_sensor );
   }*/
-  int cur_time = Time( );
-  train.prev_sensor_id = src_id;
-  train.next_sensor_id = next_id;
-  predict_next_fallback_sensors_static( &train );
-  for( i = 0; i < NUM_FALLBACK && train.fallback_sensors[i] != -1; ++i ) {
-    train.time_to_fallback_sensor[i] = time_to_node( &train, train.fallback_dist[i], cur_time ) + ( cur_time * 10 );
-  }
-  Printf( COM2, "cur_time: %d\r\n", cur_time );
-  for( i = 0; i < 5 && train.fallback_sensors[i] != -1; ++i ) {
-    Printf( COM2, "Fallback sensor: %d\r\n", train.fallback_sensors[i] );
-    Printf( COM2, "Fallback sensor dist: %d\r\n", train.fallback_dist[i] );
-    Printf( COM2, "Fallback sensor time: %d\r\n", train.time_to_fallback_sensor[i] );
-  }
-  Delay( 100 );
+  //int cur_time = Time( );
+  //train.prev_sensor_id = src_id;
+  //train.next_sensor_id = next_id;
+  //predict_next_fallback_sensors_static( &train );
+  //int i;
+  //for( i = 0; i < NUM_FALLBACK && train.fallback_sensors[i] != -1; ++i ) {
+  //  train.time_to_fallback_sensor[i] = time_to_node( &train, train.fallback_dist[i], cur_time ) + ( cur_time * 10 );
+  //}
+  //Printf( COM2, "cur_time: %d\r\n", cur_time );
+  //for( i = 0; i < 5 && train.fallback_sensors[i] != -1; ++i ) {
+  //  Printf( COM2, "Fallback sensor: %d\r\n", train.fallback_sensors[i] );
+  //  Printf( COM2, "Fallback sensor dist: %d\r\n", train.fallback_dist[i] );
+  //  Printf( COM2, "Fallback sensor time: %d\r\n", train.time_to_fallback_sensor[i] );
+  //}
+  //Delay( 100 );
 /*
   char input[9];
   int sensor_num;

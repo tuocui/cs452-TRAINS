@@ -317,7 +317,7 @@ inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int d
   CONVERT_SWITCH_ID( switch_id );
   assertum( 1, cmds->switch_idx < SW_CMD_MAX, "failure here means we need more switch_cmd_t in rail_cmds" );
   assertum( 1, switch_id >= SW1 && switch_id <= SW156, "switch_id: %d", switch_id );
-  debug( 1, "NEWNEWNEWNEW SW_CMD: switch_id: %d, ACTION: %d, delay: %d", switch_id, ACTION, delay );
+  debugu( 1, "NEWNEWNEWNEW SW_CMD: switch_id: %d, ACTION: %d, delay: %d", switch_id, ACTION, delay );
   ++( cmds->switch_idx );
   cmds->switch_cmds[cmds->switch_idx].switch_id = switch_id;
   cmds->switch_cmds[cmds->switch_idx].switch_action = ACTION;
@@ -326,6 +326,7 @@ inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int d
 
 
 inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
+  assertu( 1, cmds->train_id == NONE && cmds->switch_idx == NONE );
   track_node_t *track_graph = train->track_graph;
   int src_id = train->prev_sensor_id;
   int prev_sensor_id = train->prev_sensor_id;
@@ -335,9 +336,9 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   int train_len_behind = get_len_train_behind( train );
   int cur_node_id = NONE;
   int action = NONE;
-  int safe_branch_dist = safe_distance_to_branch( train ); 
+  int safe_branch_dist = safe_distance_to_branch( train );//train->speeds[train->cur_speed].safe_branch_distance;  
 
-  debugu( 1,  "dest_path_cur_idx: %d, total_dest_total_steps: %d", train->dest_path_cur_idx, train->dest_total_steps );
+  debugu( 1, "src_id: %d, dest_id: %d, compute_next_command: dest_path_cur_idx: %d, total_dest_total_steps: %d", src_id, train->dest_path[train->dest_path_cur_idx], train->dest_path_cur_idx, train->dest_total_steps );
   debugu( 4,  "safe_branch_dist: %d", safe_branch_dist );
   assertum( 1, ( train->cur_speed >= 8 && train->cur_speed <= 14 ) || ( train->cur_speed >= 23 || train->cur_speed <= 29 ), "cur_speed: %d", train->cur_speed );
 
@@ -353,17 +354,19 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
 
     /* if the node is the end of the route, and if there is no other tarin command has been issued */
     if( train->dest_path_cur_idx == train->dest_total_steps - 1 && train->cur_speed != 0 && cmds->train_id == NONE ) {
-      debugu( 2,  "END OF ROUTE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
+      debugu( 4,  "END OF ROUTE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       /* get dist between sensor and dest */  
       int sensor2dest_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id] + train->mm_past_dest; 
       /* if we are the last sensor or the dest and second sensor is too close */
       debugu( 4,  "prev_sensor_id: %d, src_id: %d, second_sensor_id: %d, stop_dist: %d, sensor2dest_dist: %d",
               prev_sensor_id, src_id, second_sensor_id, stop_dist, sensor2dest_dist );
       if( prev_sensor_id == src_id || ( prev_sensor_id == second_sensor_id && stop_dist > sensor2dest_dist )) {
-        debugu( 1,  "computing stop command" );
+        debugu( 4,  "computing stop command" );
         int src2dest_dist = train->all_dist[cur_node_id] + train->mm_past_dest;
-        int stop_delay_time = (( src2dest_dist - stop_dist - train_len_ahead ) > 0 ) ? \
-                          (( src2dest_dist - stop_dist - train_len_ahead ) * 10000 ) / train->cur_vel : 0;
+        //int cur2dest_dist = src2dest_dist - train->mm_past_landmark / 10 - train_len_ahead;
+        //int stop_delay_time = src2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) : 0;
+        int stop_delay_time = ((( src2dest_dist - stop_dist - train_len_ahead > 0 ) && train->cur_vel ) > 0 ? 
+                          (( src2dest_dist - stop_dist - train_len_ahead ) * 10000 ) / train->cur_vel : 0 );
         debugu( 4,  "( %d - %d - %d) * 10000 / %d ", src2dest_dist, stop_dist, train_len_ahead, train->cur_vel );
         pack_train_cmd( cmds, train->train_id, TR_STOP, stop_delay_time );
         /* clear train destination */
@@ -373,16 +376,18 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
     /* check reverse before branch, but handle reverse on branch separately, 
      * we should only handle one reverse at a time 
      */
+    debugu( 1, "before reverse, train_id: %d", cmds->train_id );
     if(( train->dest_path_cur_idx - 1 ) >= 0 && cmds->train_id == NONE && // have previous node and nothing issued 
          track_graph[cur_node_id].reverse == &track_graph[train->dest_path[train->dest_path_cur_idx-1]] && // reverse 
          cmds->train_action != TR_REVERSE ) { // train is not currently reversing
       assertu( 1, cmds->train_action == NONE );
-      debugu( 4,  "REVERSE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
+      debugu( 1,  "INSIDE REVERSE: cur_node: %d, node_name: %s", cur_node_id, track_graph[cur_node_id].name );
       assertu( 1, train->dest_path_cur_idx - 1 >= 0 && train->dest_path_cur_idx < train->dest_total_steps );
       
       int sensor2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id];
       /* issue reverse command only if the train is standing at the reverse sensor */
       if( &(track_graph[train->dest_path[train->dest_path_cur_idx-1]]) - track_graph == src_id ) {
+        debugu( 1, "calling pack_train_cmd on normal reverse" );
         pack_train_cmd( cmds, train->train_id, TR_REVERSE, 0 ); 
       }
       /* deal with reverse on branch */
@@ -390,25 +395,30 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
              ( prev_sensor_id  == second_sensor_id && stop_dist > sensor2reverse_dist + train_len_behind ))) {
         assertu( 1, track_graph[train->dest_path[train->dest_path_cur_idx-1]].type == NODE_MERGE );
         int src2reverse_dist = train->all_dist[cur_node_id];
-        int reverse_delay_time = (( src2reverse_dist + train_len_behind - stop_dist ) > 0 ) ? \
-          (( src2reverse_dist + train_len_behind - stop_dist ) * 10000 ) / train->cur_vel : 0;// FIXME delay too short 
+        //int cur2dest_dist = src2reverse_dist + train_len_behind - train->mm_past_landmark / 10;
+        //int reverse_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) : 0; 
+        int reverse_delay_time = ((( src2reverse_dist + train_len_behind - stop_dist > 0 ) && train->cur_vel > 0 ) ? 
+          (( src2reverse_dist + train_len_behind - stop_dist ) * 10000 ) / train->cur_vel : 0 );// FIXME delay too short 
+        debugu( 1, "calling pack_train_cmd on branch reverse" );
         pack_train_cmd( cmds, train->train_id, TR_REVERSE, reverse_delay_time );
       }
     }
     /* finally, branching case, only if we actually have a destination after the branch node */
-    debugu( 1, "before branching case" );
     if( track_graph[cur_node_id].type == NODE_BRANCH && train->dest_path_cur_idx + 1 < train->dest_total_steps ) {
-      debugu( 4,  "BRANCH: %d: %s, node after branch: %d: %s", cur_node_id, track_graph[cur_node_id].name,
+      debugu( 1,  "BRANCH: %d: %s, node after branch: %d: %s", cur_node_id, track_graph[cur_node_id].name,
           train->dest_path[train->dest_path_cur_idx+1], track_graph[train->dest_path[train->dest_path_cur_idx+1]].name );
 
       /* get dist between sensor and branch*/  
       int sensor2branch_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id]; 
       int src2branch_dist = train->all_dist[cur_node_id];
-      int branch_delay_time = ((( src2branch_dist - safe_branch_dist ) * 10000 ) / train->cur_vel - SW_TIME/10 ) > 0 ?
-                        (( src2branch_dist - safe_branch_dist ) * 10000 ) / train->cur_vel - SW_TIME/10  : 0;
-      debugu( 1,  "( %d - %d ) * 1000 / %d - %d", src2branch_dist, safe_branch_dist, train->cur_vel, SW_TIME );
+      int branch_delay_time = train->cur_vel > 0 ? \
+          (((( src2branch_dist - safe_branch_dist ) * 10000 ) / train->cur_vel - SW_TIME / 10 ) > 0 ? \
+          (( src2branch_dist - safe_branch_dist ) * 10000 ) / train->cur_vel - SW_TIME / 10 : 0 ) : 0;
+      debugu( 4,  "( %d - %d ) * 1000 / %d - %d", src2branch_dist, safe_branch_dist, train->cur_vel, SW_TIME/10 );
 
       /* issue switch commands */
+      debugu( 4, "prev_sensor_id: %d, src_id: %d, sensor2branch_dist: %d, safe_branch_dist: %d",
+          prev_sensor_id, src_id, sensor2branch_dist, safe_branch_dist ); 
       if(( prev_sensor_id == src_id && sensor2branch_dist >= safe_branch_dist) ||
          ( prev_sensor_id == second_sensor_id && sensor2branch_dist < safe_branch_dist )) {
         assertum( 1, track_graph[cur_node_id].num > 0 || track_graph[cur_node_id].num < 19 || 
@@ -418,7 +428,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
 
         int switch_id = track_graph[cur_node_id].num;
         action = ( track_graph[cur_node_id].edge[DIR_STRAIGHT].dest == &track_graph[train->dest_path[train->dest_path_cur_idx+1]] ) ? SW_STRAIGHT : SW_CURVED;
-        debugu( 1, "switch_id: %d", switch_id );
+        debugu( 4, "calling pack_swtich_cmd with switch_id: %d", switch_id );
         pack_switch_cmd( cmds, switch_id, action, branch_delay_time );
       }
       else {
@@ -447,7 +457,6 @@ void request_next_command( train_state_t* train, rail_cmds_t* cmds ) {
 
   /* calculate shortest path by dijkstra or train's most recent memory */
   get_shortest_path( train );
-  //DEBUG
   //Printf( COM2, "get_next_command with: train_id: %d, src_id: %d, dest_id: %d, train->cur_speed: %d, train->cur_vel: %d, stop_dist: %d, safe_branch_dist: %d\n\r", train_id, src_id, dest_id, train->cur_speed, train->cur_vel, stop_dist, safe_branch_dist );
 
   compute_next_command( train, cmds );
@@ -665,7 +674,7 @@ void dijkstra( struct _track_node_* track_graph, int src_id, int* path, int* dis
       track_nbr_id = track_node->edge[direction].dest - track_graph;
       assertu( 1, track_nbr_id >= 0 );
       test_dist = dist[track_id] + track_node->edge[direction].dist;
-      assertum( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
+      assertum( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d\n\r\n\r\n\r", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
       test_step = step[track_id] + 1;
       update_info( );
     }
@@ -754,27 +763,36 @@ void print_shortest_path( track_node_t* track_graph, int* all_path, int* all_ste
 
   steps = all_step[dest_id];
   int i;
-//#if( DEBUG == 0 )
-  Printf( COM2, "SHORTEST PATH.................: \n\r" ); 
+#if( BWAIT == 1 )
+  bwprintf( COM2, "SHORTEST PATH.................: " ); 
+  bwprintf( COM2, "%d steps from %s to %s:\t%s", steps, track_graph[src_id].name,
+      track_graph[dest_id].name, track_graph[src_id].name );
+  for( i = 0; i < steps; ++i ) {
+    bwprintf( COM2, "->%s", track_graph[dest_path[i]].name );
+  }
+  bwprintf( COM2, "\r\n" );
+#else 
+  Printf( COM2, "SHORTEST PATH: " ); 
   Printf( COM2, "%d steps from %s to %s:\t%s", steps, track_graph[src_id].name,
       track_graph[dest_id].name, track_graph[src_id].name );
   for( i = 0; i < steps; ++i ) {
     Printf( COM2, "->%s", track_graph[dest_path[i]].name );
   }
   Printf( COM2, "\r\n" );
-//#else 
-//  debugu( 1, "SHORTEST PATH: " ); 
-//  debugu( 1, "%d steps from %s to %s:\t%s", steps, track_graph[src_id].name,
-//      track_graph[dest_id].name, track_graph[src_id].name );
-//  for( i = 0; i < steps; ++i ) {
-//    debugu( 1, "->%s", track_graph[dest_path[i]].name );
-//  }
-//  debugu( 1, "\r\n" );
-//
-//#endif 
+
+#endif 
 }
 
 void print_cmds( struct _rail_cmds_ * cmds ) {
+#if( BWAIT == 1 )
+  bwprintf( COM2, "PRINTING NEW COMMANDS .............. \n\r" );
+  bwprintf( COM2, "train_id: %d, train_action: %d, tarin_delay: %d\n\r", cmds->train_id, cmds->train_action, cmds->train_delay );
+  int i;
+  for( i = 0; i < SW_CMD_MAX; ++i ) {
+    bwprintf( COM2, "sw_id: %d, sw_action: %d, sw_delay: %d\n\r", 
+        cmds->switch_cmds[i].switch_id, cmds->switch_cmds[i].switch_action, cmds->switch_cmds[i].switch_delay );
+  }
+#else 
   Printf( COM2, "PRINTING NEW COMMANDS .............. \n\r" );
   Printf( COM2, "train_id: %d, train_action: %d, tarin_delay: %d\n\r", cmds->train_id, cmds->train_action, cmds->train_delay );
   int i;
@@ -782,4 +800,5 @@ void print_cmds( struct _rail_cmds_ * cmds ) {
     Printf( COM2, "sw_id: %d, sw_action: %d, sw_delay: %d\n\r", 
         cmds->switch_cmds[i].switch_id, cmds->switch_cmds[i].switch_action, cmds->switch_cmds[i].switch_delay );
   }
+#endif
 }

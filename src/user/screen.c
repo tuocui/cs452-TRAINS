@@ -188,9 +188,7 @@ int handle_switch( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  
     break;
   }
 
-  debugu( 0, "handle_switch" );
   pack_switch_cmd( rail_msg->to_server_content.rail_cmds, switch_num, state, 0 );
-  debugu( 0, "after pack_switch_cmd, idx: %d", rail_msg->to_server_content.rail_cmds->switch_idx );
   Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
   Printf( COM2, "\0337\033[1A\033[2K\rSwitch %d set to %c\0338", switch_num, c_s_c );
   return 0;
