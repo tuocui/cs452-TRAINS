@@ -224,6 +224,8 @@ inline void get_shortest_path( train_state_t *train );
 
 void print_shortest_path( struct _track_node_ * track_graph, int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
 
+void print_train_path( struct _train_state_ * train );
+
 void print_cmds( struct _rail_cmds_ * cmds );
 
 void decrease_dist( min_heap_t * min_heap, int id, int dist );
@@ -237,5 +239,6 @@ void predict_next_sensor_dynamic( train_state_t *train_state );
 inline void pack_train_cmd( rail_cmds_t *cmds, int train_id, int ACTION, int delay );
 
 inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int delay );
+
 
 #endif

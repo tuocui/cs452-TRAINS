@@ -125,22 +125,22 @@ void sensor_worker( ) {
       train->prev_speed = 0;
       train->speed_change_time = cur_time;
       train->state = READY;
-      Printf( COM2, "\0337\033[1A\033[2K\rTrain %d INITIALIZED\0338", train->train_id );
-      Printf( COM2, "\0337\033[21;%dHExpected distance to N/A: N/A    \0338", get_train_idx( train->train_id ) * 37 );
-      Printf( COM2, "\0337\033[20;%dHActual distance to N/A: N/A    \0338", get_train_idx( train->train_id ) * 37 );
-      Printf( COM2, "\0337\033[19;%dHDistance difference: N/A    \0338", get_train_idx( train->train_id ) * 37 );
-      Printf( COM2, "\0337\033[15;%dHTime difference: N/A    \0338", get_train_idx( train->train_id ) * 37 );
+      //Printf( COM2, "\0337\033[1A\033[2K\rTrain %d INITIALIZED\0338", train->train_id );
+      //Printf( COM2, "\0337\033[21;%dHExpected distance to N/A: N/A    \0338", get_train_idx( train->train_id ) * 37 );
+      //Printf( COM2, "\0337\033[20;%dHActual distance to N/A: N/A    \0338", get_train_idx( train->train_id ) * 37 );
+      //Printf( COM2, "\0337\033[19;%dHDistance difference: N/A    \0338", get_train_idx( train->train_id ) * 37 );
+      //Printf( COM2, "\0337\033[15;%dHTime difference: N/A    \0338", get_train_idx( train->train_id ) * 37 );
     } else {
       // Do not update velocity if we have picked up the the train from a fallback sensor
       if( train->next_sensor_id == sensor_num ) {
         update_velocity( train, cur_time, train->time_at_last_landmark, train->dist_to_next_sensor );
         sensor_id_to_name( train->next_sensor_id, sensor_name );
-        Printf( COM2, "\0337\033[21;%dHExpected distance to %c%c%c: %d    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2], train->mm_past_landmark / 10 );
-        Printf( COM2, "\0337\033[20;%dHActual distance to %c%c%c: %d    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2], train->dist_to_next_sensor );
-        Printf( COM2, "\0337\033[19;%dHDistance difference: %d    \0338", get_train_idx( train->train_id ) * 37, ( train->mm_past_landmark / 10 ) - train->dist_to_next_sensor );
-        Printf( COM2, "\0337\033[15;%dHTime difference: %d    \0338", get_train_idx( train->train_id ) * 37, train->time_to_next_sensor );
+        //Printf( COM2, "\0337\033[21;%dHExpected distance to %c%c%c: %d    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2], train->mm_past_landmark / 10 );
+        //Printf( COM2, "\0337\033[20;%dHActual distance to %c%c%c: %d    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2], train->dist_to_next_sensor );
+        //Printf( COM2, "\0337\033[19;%dHDistance difference: %d    \0338", get_train_idx( train->train_id ) * 37, ( train->mm_past_landmark / 10 ) - train->dist_to_next_sensor );
+        //Printf( COM2, "\0337\033[15;%dHTime difference: %d    \0338", get_train_idx( train->train_id ) * 37, train->time_to_next_sensor );
       } else {
-        Printf( COM2, "\0337\033[12;30HWOAH NELLY, ALMOST LOST THE TRAIN at time: %d\0338", cur_time );
+        //Printf( COM2, "\0337\033[12;30HWOAH NELLY, ALMOST LOST THE TRAIN at time: %d\0338", cur_time );
       }
       train->vel_at_last_landmark = train->cur_vel;
     }
@@ -162,7 +162,8 @@ void sensor_worker( ) {
       (train->time_to_fallback_sensor)[i] = time_to_node( train, (train->fallback_dist)[i], cur_time ) + ( cur_time * 10 );
     }
     sensor_id_to_name( train->next_sensor_id, sensor_name );
-    Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
+    //Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
+    Printf( COM2, "%d Next expected sensor: %c%c%c\n\r", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
     clear_reservations_by_train( train->track_graph, train );
     // if no reverse, 
   }
@@ -206,7 +207,8 @@ void train_exe_worker( ) {
         predict_next_sensor_dynamic( train );
         predict_next_fallback_sensors_static( train );
         sensor_id_to_name( train->next_sensor_id, sensor_name );
-        Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
+        //Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
+        Printf( COM2, "%dNext expected sensor: %c%c%c\n\r", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
         Delay( stopping_time + STOP_TIME_BUFFER ); // TODO: Change this to stopping time;
         set_train_speed( train, 15 );
         set_train_speed( train, prev_speed );
@@ -232,9 +234,11 @@ void train_exe_worker( ) {
         char dest[3];
         sensor_id_to_name( train->dest_id, dest );
         if( train->dest_id == NONE ) {
-          Printf( COM2, "\0337\033[15;%dHCurrent destination: N/A\0338", get_train_idx( train->train_id ) * 37 );
+          //Printf( COM2, "\0337\033[15;%dHCurrent destination: N/A\0338", get_train_idx( train->train_id ) * 37 );
+          Printf( COM2, "%d Current destination: N/A", get_train_idx( train->train_id ) * 37 );
         } else {
-          Printf( COM2, "\0337\033[15;%dHCurrent destination: %c%c%c\0338", get_train_idx( train->train_id ) * 37, dest[0], dest[1], dest[2] );
+          //Printf( COM2, "\0337\033[15;%dHCurrent destination: %c%c%c\0338", get_train_idx( train->train_id ) * 37, dest[0], dest[1], dest[2] );
+          Printf( COM2, "%d Current destination: %c%c%c", get_train_idx( train->train_id ) * 37, dest[0], dest[1], dest[2] );
         }
         break;
       }
@@ -332,7 +336,7 @@ void update_trains( ) {
         trains[i].time_since_last_pos_update = cur_time;
         trains[i].vel_at_last_pos_update = trains[i].cur_vel;
         trains[i].time_to_next_sensor = time_to_node( &(trains[i]), trains[i].dist_to_next_sensor, cur_time );
-        ret_val = update_track_reservation( &(trains[i]), trains );
+        //ret_val = update_track_reservation( &(trains[i]), trains );
         if( ret_val == -1 ) {
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
           ((rail_msg.to_server_content).rail_cmds)->train_action = TR_REVERSE;
@@ -376,15 +380,15 @@ void print_trains( ) {
       ((rail_msg.to_server_content).rail_cmds)->train_speed = -1;
       ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
       if( trains[i].state != NOT_INITIALIZED && trains[i].state != INITIALIZING ) {
-        Printf( COM2, "\0337\033[18;%dH%d    \0338", ( i * 37 ) + 10, trains[i].mm_past_landmark / 10 );
-        Printf( COM2, "\0337\033[16;%dH%d    \0338", ( i * 37 ) + 10, trains[i].cur_vel );
-        Printf( COM2, "\0337\033[14;%dH%d    \0338", ( i * 37 ) + 15, trains[i].time_to_next_sensor );
-        print_rsv( &(trains[i]), trains );
+        //Printf( COM2, "\0337\033[18;%dH%d    \0338", ( i * 37 ) + 10, trains[i].mm_past_landmark / 10 );
+        //Printf( COM2, "\0337\033[16;%dH%d    \0338", ( i * 37 ) + 10, trains[i].cur_vel );
+        //Printf( COM2, "\0337\033[14;%dH%d    \0338", ( i * 37 ) + 15, trains[i].time_to_next_sensor );
+        //print_rsv( &(trains[i]), trains );
       } else if( trains[i].state == INITIALIZING ) {
-        Printf( COM2, "\0337\033[13;%dH===== TRAIN %d ====\0338", ( i * 37 ), trains[i].train_id );
-        Printf( COM2, "\0337\033[18;%dHmm past: N/A\0338", ( i * 37 ) );
-        Printf( COM2, "\0337\033[16;%dHCur vel: N/A\0338", ( i * 37 ) );
-        Printf( COM2, "\0337\033[14;%dHTime to next: N/A\0338", ( i * 37 ) );
+        //Printf( COM2, "\0337\033[13;%dH===== TRAIN %d ====\0338", ( i * 37 ), trains[i].train_id );
+        //Printf( COM2, "\0337\033[18;%dHmm past: N/A\0338", ( i * 37 ) );
+        //Printf( COM2, "\0337\033[16;%dHCur vel: N/A\0338", ( i * 37 ) );
+        //Printf( COM2, "\0337\033[14;%dHTime to next: N/A\0338", ( i * 37 ) );
       }
     }
   }
