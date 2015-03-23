@@ -27,6 +27,9 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 'k' && ( cmd2 == ' ' || cmd2 == 0 ) ) {
     return KILL_CMD;  
   }
+  if ( cmd1 == 'c' && cmd2 == 'l' && ( cmd3 == ' ' || cmd3 == 0 ) ) {
+    return CLEAR_CMD;  
+  }
   if ( cmd3 != ' ' ) {
     return -1;
   }
@@ -301,6 +304,11 @@ int handle_quit( ) {
   return QUIT_CMD;
 }
 
+int handle_clear( ) {
+  Printf( COM2, "\033[2J" );
+  return 0;
+}
+
 int process_buffer( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg, int rail_server_tid ) {
   int cmd = get_cmd( cmd_buffer );
 
@@ -334,6 +342,9 @@ int process_buffer( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg,
     break;
   case KILL_CMD:
     handle_kill( );
+    break;
+  case CLEAR_CMD:
+    handle_clear( );
     break;
   case QUIT_CMD:
     return handle_quit( rail_msg, rail_server_tid );

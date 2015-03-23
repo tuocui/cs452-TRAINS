@@ -82,17 +82,17 @@ void print_rsv( train_state_t *train, train_state_t *trains ) {
   for( i = 0; i < TRACK_MAX; ++i ) {
     for( j = 0; j < 2; ++j ) {
       if( graph[i].edge[j].begin_train_num == train_num ) {
-        Printf( COM2, "\0337\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 0, graph[i].edge[j].begin_train_rsv_end );
+        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 0, graph[i].edge[j].begin_train_rsv_end );
         ++num_printed;
       }
       if( graph[i].edge[j].middle_train_num == train_num ) {
-        Printf( COM2, "\0337\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 1, graph[i].edge[j].middle_train_rsv_start );
+        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 1, graph[i].edge[j].middle_train_rsv_start );
         ++num_printed;
       }
     }
   }
-  for( i = num_printed; i < TRACK_MAX / 4; ++i ) {
-    Printf( COM2, "\0337\033[%d;%dH               \0338", 2 + i, ( train_idx * 37 ) + 83 );
+  for( i = num_printed; i < TRACK_MAX / 10; ++i ) {
+    Printf( COM2, "\0337\033[?25l\033[%d;%dH               \0338", 2 + i, ( train_idx * 37 ) + 83 );
   }
 }
 
@@ -115,10 +115,10 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   int lowest_fallback_time = INT_MAX;
   for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
     //assertum( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
-    if( trains[cur_idx].next_sensor_id == sensor_num && trains[cur_idx].time_to_next_sensor_abs < lowest_expected_time ) {
+    if( trains[cur_idx].next_sensor_id == sensor_num && trains[cur_idx].time_to_next_sensor < lowest_expected_time ) {
       debugu( 4,  "found expected train: %d", cur_idx );
       expected_train_idx = cur_idx;
-      lowest_expected_time = trains[cur_idx].time_to_next_sensor_abs;
+      lowest_expected_time = trains[cur_idx].time_to_next_sensor;
     }
     if( trains[cur_idx].state == INITIALIZING ) {
       debugu( 1,  "found initializing train: %d", cur_idx );

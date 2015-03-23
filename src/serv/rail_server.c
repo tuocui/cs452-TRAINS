@@ -130,6 +130,7 @@ void sensor_worker( ) {
       Printf( COM2, "\0337\033[20;%dHActual distance to N/A: N/A    \0338", get_train_idx( train->train_id ) * 37 );
       Printf( COM2, "\0337\033[19;%dHDistance difference: N/A    \0338", get_train_idx( train->train_id ) * 37 );
       Printf( COM2, "\0337\033[15;%dHTime difference: N/A    \0338", get_train_idx( train->train_id ) * 37 );
+      clear_reservations_by_train( train->track_graph, train );
     } else {
       // Do not update velocity if we have picked up the the train from a fallback sensor
       if( train->next_sensor_id == sensor_num ) {
@@ -139,8 +140,10 @@ void sensor_worker( ) {
         Printf( COM2, "\0337\033[20;%dHActual distance to %c%c%c: %d    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2], train->dist_to_next_sensor );
         Printf( COM2, "\0337\033[19;%dHDistance difference: %d    \0338", get_train_idx( train->train_id ) * 37, ( train->mm_past_landmark / 10 ) - train->dist_to_next_sensor );
         Printf( COM2, "\0337\033[15;%dHTime difference: %d    \0338", get_train_idx( train->train_id ) * 37, train->time_to_next_sensor );
+        clear_prev_train_reservation( train );
       } else {
         Printf( COM2, "\0337\033[12;30HWOAH NELLY, ALMOST LOST THE TRAIN at time: %d\0338", cur_time );
+        clear_reservations_by_train( train->track_graph, train );
       }
       train->vel_at_last_landmark = train->cur_vel;
     }
@@ -157,13 +160,11 @@ void sensor_worker( ) {
       predict_next_sensor_static( train );
     }
     predict_next_fallback_sensors_static( train );
-    train->time_to_next_sensor_abs = time_to_node( train, train->dist_to_next_sensor, cur_time ) + ( cur_time * 10 );
     for( i = 0; i < NUM_FALLBACK && (train->fallback_sensors)[i] != -1; ++i ) {
       (train->time_to_fallback_sensor)[i] = time_to_node( train, (train->fallback_dist)[i], cur_time ) + ( cur_time * 10 );
     }
     sensor_id_to_name( train->next_sensor_id, sensor_name );
     Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
-    clear_reservations_by_train( train->track_graph, train );
     // if no reverse, 
   }
 }
@@ -173,6 +174,7 @@ void train_exe_worker( ) {
   rail_msg.request_type = TRAIN_EXE_READY;
   rail_msg.to_server_content.nullptr = NULL;
   rail_msg.from_server_content.nullptr = NULL;
+  rail_msg.general_val = NONE;
   int ret_val;
   int rail_server_tid;
   train_state_t *train;
@@ -308,6 +310,7 @@ void update_trains( ) {
   int rail_server_tid;
   int i;
   int cur_time;
+  //bool all_stopped;
   rail_cmds_t rail_cmds;
   rail_msg_t rail_msg;
   rail_msg.request_type = COLLISION_CMDS;
@@ -321,6 +324,7 @@ void update_trains( ) {
   trains = update_train_args.trains;
   FOREVER {
     cur_time = Delay( 1 );
+    //all_stopped = 1;
     for( i = 0; i < TR_MAX; ++i ) {
       ((rail_msg.to_server_content).rail_cmds)->train_id = NONE;
       ((rail_msg.to_server_content).rail_cmds)->train_action = NONE;
@@ -343,6 +347,18 @@ void update_trains( ) {
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
           ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
           ((rail_msg.to_server_content).rail_cmds)->train_speed = 8;
+          ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
+          ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+        } else if( ret_val == -3 ) {
+          ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
+          ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
+          ((rail_msg.to_server_content).rail_cmds)->train_speed = 0;
+          ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
+          ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+        } else if( ret_val > 0 ) {
+          ((rail_msg.to_server_content).rail_cmds)->train_id = ret_val;
+          ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
+          ((rail_msg.to_server_content).rail_cmds)->train_speed = 12;
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
           ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
         }
@@ -376,12 +392,14 @@ void print_trains( ) {
       ((rail_msg.to_server_content).rail_cmds)->train_speed = -1;
       ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
       if( trains[i].state != NOT_INITIALIZED && trains[i].state != INITIALIZING ) {
+        Printf( COM2, "\0337\033[13;%dH%d    \0338", ( i * 37 ) + 8, trains[i].cur_speed );
         Printf( COM2, "\0337\033[18;%dH%d    \0338", ( i * 37 ) + 10, trains[i].mm_past_landmark / 10 );
         Printf( COM2, "\0337\033[16;%dH%d    \0338", ( i * 37 ) + 10, trains[i].cur_vel );
         Printf( COM2, "\0337\033[14;%dH%d    \0338", ( i * 37 ) + 15, trains[i].time_to_next_sensor );
         print_rsv( &(trains[i]), trains );
       } else if( trains[i].state == INITIALIZING ) {
-        Printf( COM2, "\0337\033[13;%dH===== TRAIN %d ====\0338", ( i * 37 ), trains[i].train_id );
+        Printf( COM2, "\0337\033[12;%dH===== TRAIN %d ====\0338", ( i * 37 ), trains[i].train_id );
+        Printf( COM2, "\0337\033[13;%dHSpeed: N/A\0338", ( i * 37 ) );
         Printf( COM2, "\0337\033[18;%dHmm past: N/A\0338", ( i * 37 ) );
         Printf( COM2, "\0337\033[16;%dHCur vel: N/A\0338", ( i * 37 ) );
         Printf( COM2, "\0337\033[14;%dHTime to next: N/A\0338", ( i * 37 ) );
@@ -428,7 +446,7 @@ void rail_server( ) {
   ret_val = Send( update_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
 
-  int print_trains_tid = Create( 13, &print_trains );
+  int print_trains_tid = Create( 14, &print_trains );
   ret_val = Send( print_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
   assertm( 1, ret_val >= 0, "retval: %d", ret_val );
 
@@ -590,8 +608,9 @@ void rail_server( ) {
         break;
       case TRAIN_EXE_READY:
         {
-          train_state_t *train = &(trains[get_train_idx( receive_msg.general_val )]);
           if( receive_msg.general_val != NONE ) {
+            train_state_t *train = &(trains[get_train_idx( receive_msg.general_val )]);
+            update_prev_sensor_id_for_rev( train );
             clear_reservations_by_train( track_graph, train );
           }
         }
