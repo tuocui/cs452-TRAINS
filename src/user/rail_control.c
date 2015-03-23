@@ -1,5 +1,6 @@
 #include "rail_control.h"
 #include "tools.h"
+
 #include "track_data_new.h"
 #include "track_node.h"
 #include "global.h"
@@ -606,13 +607,13 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
 
     /* handle reverse on branch */
     debugu( 3, "before reverse, train_id: %d", cmds->train_id );
-    if(( traverse_cur_idx - 1 ) >= 0 && cmds->train_id == NONE && // have previous node and nothing issued 
+    if(( traverse_cur_idx - 1 ) >= train->dest_path_cur_idx && cmds->train_id == NONE && // have previous node and nothing issued 
          track_graph[cur_node_id].reverse == &track_graph[train->dest_path[traverse_cur_idx-1]] && // reverse 
          cmds->train_action != TR_REVERSE ) { // train is not currently reversing, this condition will be unnecessary
                                               // once we have the trains to memorize the path
       assertu( 1, cmds->train_action == NONE );
       debugu( 1,  "reverse on branch: cur_node_id: %d, node_name: %s", cur_node_id, track_graph[cur_node_id].name );
-      assertu( 1, traverse_cur_idx - 1 >= 0 && traverse_cur_idx < train->dest_total_steps );
+      assertu( 1, traverse_cur_idx - 1 >= train->dest_path_cur_idx && traverse_cur_idx < train->dest_total_steps );
       
       int sensor2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id];
       if( track_graph[cur_node_id].type == NODE_BRANCH && ( prev_sensor_id == src_id || 
