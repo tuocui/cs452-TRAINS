@@ -14,8 +14,8 @@
 #define AST_LEVEL -1
 #endif
 
-#define BWAIT 0
-//#define BWAIT 1
+//#define BWAIT 0
+#define BWAIT 1
 
 #define assertm( level, cond, fmt, ... ) \
   if( level <= AST_LEVEL && !( cond )) { \

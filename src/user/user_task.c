@@ -688,7 +688,7 @@ void dijkstra_test( ) {
   debugu( 1, "TESTING REVERSE" );
   init_rail_cmds( &cmds );
   src_id = 70; //E7
-  dest_id = 75 ; // E12
+  dest_id = 74 ; // E11
   train.cur_vel = 18000;
   train.prev_sensor_id = src_id;
   train.dest_id= dest_id;
@@ -696,15 +696,22 @@ void dijkstra_test( ) {
   print_cmds( &cmds );
 
   init_rail_cmds( &cmds );
-  train.prev_sensor_id = 54;
+  train.prev_sensor_id = 54; // D7
   request_next_command( &train, &cmds );
   print_cmds( &cmds );
 
   init_rail_cmds( &cmds );
-  train.prev_sensor_id = 73;
+  train.prev_sensor_id = 73; // E10
   train.fallback_sensor_hit = true;
   request_next_command( &train, &cmds );
   print_cmds( &cmds );
+
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = 75; // E10
+  train.fallback_sensor_hit = true;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
   debugu( 1, "END OF TEST" );
 
   //=================================================================================
