@@ -3,7 +3,8 @@
 
 #include "global.h"
 
-#define NUM_SPEEDS 30
+#define NUM_SPEEDS  30
+#define DIST_MAX    200000
 
 #define TR_MAX 4
 
@@ -143,6 +144,7 @@ typedef struct _train_state_ {
   int rv_expected_branches[5];
 
   bool fallback_sensor_hit;
+  bool train_reach_destination;
   int train_id;
   int prev_sensor_id;
   int next_sensor_id;
@@ -218,13 +220,15 @@ min_heap_node_t * extract_min( min_heap_t * min_heap );
 
 inline void print_min_heap( min_heap_t * min_heap );
 
-void dijkstra( struct _track_node_* track_graph, int src_id, int* all_path, int* all_dist, int* all_step );
+void dijkstra( struct _track_node_* track_graph, int train_id, int src_id, int* all_path, int* all_dist, int* all_step );
 
 void extract_shortest_path( int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
 
 inline void get_shortest_path( train_state_t *train );
 
 void print_shortest_path( struct _track_node_ * track_graph, int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
+
+void print_train_path( struct _train_state_ * train );
 
 void print_cmds( struct _rail_cmds_ * cmds );
 
@@ -239,5 +243,6 @@ void predict_next_sensor_dynamic( train_state_t *train_state );
 inline void pack_train_cmd( rail_cmds_t *cmds, int train_id, int ACTION, int delay );
 
 inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int delay );
+
 
 #endif

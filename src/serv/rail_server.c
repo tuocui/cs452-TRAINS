@@ -41,7 +41,6 @@ void rail_graph_worker( ) {
     assertu( 1, train_state );
 
     init_rail_cmds( &rail_cmds );
-    debugu( 0, "before get next command" );
     request_next_command( train_state, &rail_cmds );
   }
 }
@@ -200,7 +199,7 @@ void train_exe_worker( ) {
       break;
     case TR_REVERSE:
       {
-        debugu( 1, "train_exe_worker received reverse request, reversing now ... " );
+        debugu( 4, "train_exe_worker received reverse request, reversing now ... " );
         train->state = REVERSING;
         int prev_speed = train->cur_speed;
         int stopping_time = get_cur_stopping_time( train ) / 10;
@@ -208,7 +207,8 @@ void train_exe_worker( ) {
         predict_next_sensor_dynamic( train );
         predict_next_fallback_sensors_static( train );
         sensor_id_to_name( train->next_sensor_id, sensor_name );
-        Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
+        //Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
+        Printf( COM2, "%dNext expected sensor: %c%c%c\n\r", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
         Delay( stopping_time + STOP_TIME_BUFFER ); // TODO: Change this to stopping time;
         set_train_speed( train, 15 );
         set_train_speed( train, prev_speed );
@@ -234,9 +234,11 @@ void train_exe_worker( ) {
         char dest[3];
         sensor_id_to_name( train->dest_id, dest );
         if( train->dest_id == NONE ) {
-          Printf( COM2, "\0337\033[15;%dHCurrent destination: N/A\0338", get_train_idx( train->train_id ) * 37 );
+          //Printf( COM2, "\0337\033[15;%dHCurrent destination: N/A\0338", get_train_idx( train->train_id ) * 37 );
+          Printf( COM2, "%d Current destination: N/A", get_train_idx( train->train_id ) * 37 );
         } else {
-          Printf( COM2, "\0337\033[15;%dHCurrent destination: %c%c%c\0338", get_train_idx( train->train_id ) * 37, dest[0], dest[1], dest[2] );
+          //Printf( COM2, "\0337\033[15;%dHCurrent destination: %c%c%c\0338", get_train_idx( train->train_id ) * 37, dest[0], dest[1], dest[2] );
+          Printf( COM2, "%d Current destination: %c%c%c", get_train_idx( train->train_id ) * 37, dest[0], dest[1], dest[2] );
         }
         break;
       }
@@ -336,6 +338,12 @@ void update_trains( ) {
         trains[i].time_since_last_pos_update = cur_time;
         trains[i].vel_at_last_pos_update = trains[i].cur_vel;
         trains[i].time_to_next_sensor = time_to_node( &(trains[i]), trains[i].dist_to_next_sensor, cur_time );
+        /* clear destination if stopping flag is set */
+        if( trains[i].train_reach_destination == true ) {
+          trains[i].train_reach_destination = false;
+          trains[i].prev_dest_id = NONE;
+          trains[i].dest_id = NONE;
+        }
       }
     }
     i = cur_time % TR_MAX;
@@ -568,7 +576,6 @@ void rail_server( ) {
         }
         break;
       case RAIL_CMDS:
-        debugu( 1, "get RAIL_CMDS" );
         /* get and send train cmds */
         recved_cmds = receive_msg.to_server_content.rail_cmds;
         switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
@@ -589,7 +596,7 @@ void rail_server( ) {
           break;
         }
         if( train_exe_worker_tid != NONE ) {
-          debugu( 1, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
+          debugu( 4, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
           train_cmd_args.cmd = recved_cmds->train_action;
           train_cmd_args.speed_num = recved_cmds->train_speed;
           train_cmd_args.delay_time = recved_cmds->train_delay;

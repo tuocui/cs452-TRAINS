@@ -9,7 +9,8 @@
 #include "nameserver.h"
 
 int output_invalid( ) {
-  Putstr( COM2, "\0337\033[1A\033[2K\rInvalid command\0338", 28 );
+  //Putstr( COM2, "\0337\033[1A\033[2K\rInvalid command\0338", 28 );
+  Printf( COM2, "Invalid command\n\r" );
   return 0;
 }
 
@@ -57,6 +58,7 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 's' && cmd2 == 'w' ) {
     return SWITCH_CMD;  
   }
+  
   return -1;
 }
 
@@ -347,7 +349,7 @@ int process_buffer( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg,
     handle_clear( );
     break;
   case QUIT_CMD:
-    return handle_quit( rail_msg, rail_server_tid );
+    return handle_quit( );
     break;
   default:
     output_invalid( );
@@ -388,11 +390,10 @@ void parse_user_input( ) {
     if ( c == 13 ) {
       cmd_buffer[cmd_ind] = 0;
       cmd_ind = 0;
-      Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
+      //Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
+      Printf( COM2, "$->" );
       init_rail_cmds( &rail_cmds );
-      debugu( 0, "before process buffer" );
       status = process_buffer( cmd_buffer, train_speeds, &rail_msg, rail_server_tid );
-      debugu( 0, "after_process_buffer, init_rail_cmds is called" );
       init_rail_cmds( &rail_cmds );
       //rail_cmds.train_id = 0;
       //rail_cmds.train_action = -1;
@@ -406,7 +407,8 @@ void parse_user_input( ) {
       //rail_cmds.switch_action0 = -1;
       //rail_cmds.switch_delay0 = 0;
       if( status == QUIT_CMD ) {
-        Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
+        //Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
+        Putstr( COM2, "Shutting down. Goodbye!\n\r", 45 );
         for( i = 12; i < NUM_TRAINS; ++i ) {
           train_speeds[i] = 0;
           set_train_speed_old( i, 0 );

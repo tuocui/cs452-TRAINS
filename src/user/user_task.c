@@ -23,9 +23,9 @@
 //#define A1 1
 //#define A2 1 
 //#define A3 1
-#define A4 1
+//#define A4 1
 //#define RING_TEST
-//#define RAIL_TEST
+#define RAIL_TEST
 
 
 struct Server {
@@ -686,14 +686,83 @@ void dijkstra_test( ) {
 
   //TESTING reverse commands
   debugu( 1, "TESTING REVERSE" );
-  init_rail_cmds( &cmds );
-  src_id = 54;
-  dest_id = 51 ;
+  src_id = 70; //E7
+  dest_id = 74 ; // E11
   train.cur_vel = 18000;
-  train.prev_sensor_id = src_id;
   train.dest_id= dest_id;
+  train.train_id = 58;
+
+  debugu( 1, "should see normal path because the train itself reserves the edge " );
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = src_id;
+  train.track_graph[70].edge[DIR_AHEAD].begin_train_num = 58;
   request_next_command( &train, &cmds );
   print_cmds( &cmds );
+
+  debugu( 1, "should see normal path because the train itself reserves oppoosite direction edge " );
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = src_id;
+  train.track_graph[70].edge[DIR_AHEAD].begin_train_num = NONE;
+  train.track_graph[70].edge[DIR_AHEAD].reverse->begin_train_num = 58;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  debugu( 1, "should see reverse path because another train reserves the edge" );
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = src_id;
+  train.track_graph[70].edge[DIR_AHEAD].begin_train_num = 1000;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  debugu( 1, "should see reverse path because another train also reserves the edge " );
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = src_id;
+  train.track_graph[70].edge[DIR_AHEAD].begin_train_num = 58;
+  train.track_graph[70].edge[DIR_AHEAD].middle_train_num = 1000;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  debugu( 1, "should see reverse path because another train is coming from the other way" );
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = src_id;
+  train.track_graph[70].edge[DIR_AHEAD].begin_train_num = NONE;
+  train.track_graph[70].edge[DIR_AHEAD].middle_train_num = NONE;
+  train.track_graph[70].edge[DIR_AHEAD].reverse->begin_train_num = 1000;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  debugu( 1, "should see train stop because both directions are blocked" );
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = src_id;
+  train.track_graph[70].edge[DIR_AHEAD].begin_train_num = 58;
+  train.track_graph[71].edge[DIR_AHEAD].middle_train_num = 2000;
+  train.track_graph[70].edge[DIR_AHEAD].reverse->begin_train_num = 1000;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  train.track_graph[70].edge[DIR_AHEAD].begin_train_num = NONE;
+  train.track_graph[71].edge[DIR_AHEAD].middle_train_num = NONE;
+  train.track_graph[70].edge[DIR_AHEAD].reverse->begin_train_num = NONE;
+
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = 54; // D7
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = 73; // E10
+  train.fallback_sensor_hit = true;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = 75; // E10
+  train.fallback_sensor_hit = true;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  debugu( 1, "END OF TEST" );
+
   //=================================================================================
 
   //TESTING stop prediction
