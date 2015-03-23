@@ -395,7 +395,7 @@ void a4_test_task5( ) {
   debug( 2,  "Clock Server tid: %d", clock_server_tid );
   Printf( COM2, "\033[2J" );
   initialize_track( );
-  int track_sensor_task_tid = Create( 4, &track_sensor_task );
+  int track_sensor_task_tid = Create( 3, &track_sensor_task );
   debug( 2,  "Track Sensor task tid: %d", track_sensor_task_tid );
   int rail_server_tid = Create( 3, &rail_server ); // 43
   debug( 2,  "Rail Server tid: %d", rail_server_tid );

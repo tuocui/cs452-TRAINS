@@ -47,6 +47,7 @@ void clear_reservations( track_node_t *graph ) {
 void clear_prev_train_reservation( train_state_t *train ) {
   track_node_t *graph = train->track_graph;
   track_node_t *cur_node = &(graph[train->next_sensor_id]);
+  track_edge_t *cur_edge = &(cur_node->edge[DIR_AHEAD]);
   track_edge_t *prev_edge = cur_node->reverse->edge[DIR_AHEAD].reverse; // phew
   if( prev_edge->begin_train_num == train->train_id ) {
     prev_edge->begin_train_num = -1;
@@ -55,6 +56,13 @@ void clear_prev_train_reservation( train_state_t *train ) {
   if( prev_edge->middle_train_num == train->train_id ) {
     prev_edge->middle_train_num = -1;
     prev_edge->middle_train_rsv_start = -1;
+  }
+  // make sure we start reserving from "middle" now
+  if( cur_edge->begin_train_num == train->train_id ) {
+    cur_edge->begin_train_num = -1;
+    cur_edge->begin_train_rsv_end = 0;
+    cur_edge->middle_train_num = train->train_id;
+    cur_edge->middle_train_rsv_start = 0;
   }
 }
 void clear_reservations_by_train( track_node_t *graph, train_state_t *train ) {

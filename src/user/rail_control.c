@@ -56,18 +56,41 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
 // TODO: Reserve based on where the train is going to go, not on current state
 // TODO: Need to start train back up again
 // TODO: May need to keep some reservation behind.
+// TODO: Clear reservation from previous sensor continously rather than on sensor hits
 // TODO: shit, what if the train ahead is reversing????
 int update_track_reservation( train_state_t *train, train_state_t *all_trains ) {
   track_node_t *graph = train->track_graph;
   int sensor_id = train->prev_sensor_id;
+  int mm_past_sensor = train->mm_past_landmark / 10;
+  int cur_speed = train->cur_speed;
+  int train_state = train->state;
   int forward_dist = ( safe_distance_to_stop( train ) * 3 ) / 2; // 1.25x the safe distance to stop
   int orig_forward_dist = forward_dist;
   //Printf( COM2, "forward_dist: %d\r\n", forward_dist );
-  int mm_past_sensor = train->mm_past_landmark / 10;
   int branch_ind;
   track_node_t *cur_node = &(graph[sensor_id]);
   int length_rsvd = 0;
+  track_edge_t *edge;
+  track_edge_t *rev_edge;
+  int edge_dist;
+  int colliding_train_idx = NONE;
+  int has_collision = 0;
+  int has_rsvd = 0;
+  track_edge_t *prev_edge = cur_node->reverse->edge[DIR_AHEAD].reverse; // phew
+  train_state_t *colliding_train;
+  int colliding_train_state;
+  int can_exit = 0;
+
+  clear_reservations_by_train( graph, train );
   // just hit the last sensor, need to clear the sensor before it
+  if( prev_edge->begin_train_num == train->train_id ) {
+    prev_edge->begin_train_num = -1;
+    prev_edge->begin_train_rsv_end = 0;
+  }
+  if( prev_edge->middle_train_num == train->train_id ) {
+    prev_edge->middle_train_num = -1;
+    prev_edge->middle_train_rsv_start = -1;
+  }
 
   // Go through nodes that we have passed since last sensor
   while( 1 ) {
@@ -78,7 +101,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       if( branch_ind > 152 ) {
         branch_ind -= 134;
       }
-      if( cur_node->edge[train->switch_states[branch_ind]].dist > mm_past_sensor ) {
+      if( cur_node->edge[train->switch_states[branch_ind]].dist >= mm_past_sensor ) {
         break;
       }
       if( cur_node->edge[DIR_CURVED].middle_train_num == train->train_id ) {
@@ -104,7 +127,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       mm_past_sensor -= cur_node->edge[train->switch_states[branch_ind]].dist;
       cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
     } else {
-      if( cur_node->edge[DIR_STRAIGHT].dist > mm_past_sensor ) {
+      if( cur_node->edge[DIR_STRAIGHT].dist >= mm_past_sensor ) {
         break;
       }
       if( cur_node->edge[DIR_STRAIGHT].middle_train_num == train->train_id ) {
@@ -121,11 +144,6 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   }
 
   // need to reserve until the end of first
-  track_edge_t *edge;
-  track_edge_t *rev_edge;
-  int edge_dist;
-  int colliding_train_idx = NONE;
-  train_state_t *colliding_train;
   if( cur_node->type == NODE_BRANCH ) {
     branch_ind = cur_node->num;
     if( branch_ind > 152 ) {
@@ -149,15 +167,12 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     assert( 1, edge->begin_train_num == -1 || edge->begin_train_num == train->train_id );
     edge->begin_train_num = train->train_id;
     edge->begin_train_rsv_end = edge->dist - edge->middle_train_rsv_start; //5 cm buffer
-    if( train->cur_speed == 8 || train->cur_speed == 23 ) {
+    if( cur_speed == 8 || cur_speed == 23 ) {
       return edge->middle_train_num;
     }
     return -2;
   }
   cur_node = edge->dest;
-
-  int has_collision = 0;
-  int has_rsvd = 0;
   // Now, start reserving!
   while( forward_dist > 0 ) {
     //Printf( COM2, "second loop, forward_dist: %d\r\n", forward_dist );
@@ -202,10 +217,11 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     // Oh shit, a collision
     if( has_collision && colliding_train_idx != NONE ) {
       colliding_train = &(all_trains[colliding_train_idx]);
+      colliding_train_state = colliding_train->state;
       // I'm already handling it, just return and continue on
-      if( train->state == HANDLING_COLLISION || train->state == REVERSING ) {
+      if( train_state == HANDLING_COLLISION || train_state == REVERSING ) {
         return 0;
-      } else if( colliding_train->state == HANDLING_COLLISION || colliding_train->state == REVERSING ) {
+      } else if( colliding_train_state == HANDLING_COLLISION || colliding_train_state == REVERSING ) {
         // If other train handling this collision, then we should probably just slow down
         return -2;
       } else {
@@ -217,6 +233,11 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     
     // reserve!
     if( edge->middle_train_num != NONE ) {
+      if( edge->middle_train_num == train->train_id ) {
+        // For some reason, we are seeing that this train has already reserved the track in front.
+        // Just handling this race condition fail
+        return 0;
+      }
       edge->begin_train_num = train->train_id;
       edge->begin_train_rsv_end = edge->dist - edge->middle_train_rsv_start; //5 cm buffer
       length_rsvd += edge->dist - edge->middle_train_rsv_start;
@@ -231,7 +252,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         return 0;
       }
       if( length_rsvd < 2 * train->length ) {
-        if( train->cur_speed == 8 || train->cur_speed == 23 ) {
+        if( cur_speed == 8 || cur_speed == 23 ) {
           //Printf( COM2, "OMG I CANT GO ANY SLOWER YOU NEED TO HURRY THE FUCK UP\r\n" );
           return edge->middle_train_num;
         }
@@ -242,8 +263,8 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       return 0;
     } else if ( edge->begin_train_num != NONE && edge->begin_train_num != train->train_id && cur_node->type == NODE_MERGE ) {
       // Hit a merge and train has reserved it, stop.
-      Printf( COM2, "HOLY SHITTTTT, TRAIN %d ABOUT TO MERGE INTO A TRAIN AT NODE %s MY CURRENT LOCATION IS %d, STOP NOW\r\n", train->train_id, cur_node->name, train->prev_sensor_id );
-      colliding_train_idx = get_train_idx( edge->begin_train_num );
+      Printf( COM2, "HOLY SHITTTTT, TRAIN %d ABOUT TO MERGE INTO A TRAIN AT NODE %s MY CURRENT LOCATION IS %d past  %d, STOP NOW\r\n", train->train_id, cur_node->name, train->mm_past_landmark, train->prev_sensor_id );
+      /*colliding_train_idx = get_train_idx( edge->begin_train_num );
       colliding_train = &(all_trains[colliding_train_idx]);
       print_rsv( train, all_trains );
       print_rsv( colliding_train, all_trains );
@@ -252,7 +273,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         ;      
       }
       
-      Kill_the_system( 0xdeadbeef );
+      Kill_the_system( 0xdeadbeef );*/
       return -3;
     } else {
       edge->begin_train_num = train->train_id;
@@ -270,7 +291,6 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     cur_node = edge->dest;
   }
 
-  int can_exit = 0;
   while( !can_exit ) {
     //Printf( COM2, "third loop\r\n" );
     // If we are still reserving that track, make sure we don't reserve it any more
