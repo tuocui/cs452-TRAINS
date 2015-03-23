@@ -515,7 +515,7 @@ inline void get_shortest_path( train_state_t *train ) {
   //if( train->prev_dest_id != train->dest_id || train->fallback_sensor_hit ) { 
   //
   /* run dijkstra on the src and dest */
-  dijkstra( train->track_graph, train->prev_sensor_id, all_path, train->all_dist , all_step );
+  dijkstra( train->track_graph, train->train_id, train->prev_sensor_id, all_path, train->all_dist , all_step );
     
   /* get shortest path for our destination and store it in the train state */
   train->dest_path_cur_idx = 0;
@@ -567,8 +567,15 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   debugu( 4, "src_id: %d, dest_id: %d, compute_next_command: traverse_cur_idx: %d, total_dest_total_steps: %d", src_id, train->dest_path[traverse_cur_idx], traverse_cur_idx, train->dest_total_steps );
   debugu( 4,  "safe_branch_dist: %d", safe_branch_dist );
   assertum( 1, ( train->cur_speed >= 8 && train->cur_speed <= 14 ) || ( train->cur_speed >= 23 || train->cur_speed <= 29 ), "cur_speed: %d", train->cur_speed );
-
   print_train_path( train );
+
+  debugu(1,  "TEST: total length: %d, should see -1 here: %d", train->all_dist[train->dest_path[train->dest_total_steps-1]], train->dest_path[train->dest_total_steps] );
+  if( train->all_dist[train->dest_path[train->dest_total_steps-1]] >= DIST_MAX ) {
+    debugu( 1, "all possible paths are reserved, we will just stop the train now" );
+    pack_train_cmd( cmds, train->train_id, TR_STOP, 0 );
+    return;
+  }
+
   for( ; traverse_cur_idx < train->dest_total_steps; ++traverse_cur_idx ) {
     cur_node_id = train->dest_path[traverse_cur_idx];
     debugu( 2, "traverse_cur_idx: %d, cur_node_name: %s", traverse_cur_idx, track_graph[cur_node_id].name );
@@ -580,9 +587,10 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
       prev_sensor_id = second_sensor_id;
     } 
 
-    /* if the node is the end of the route, and if there is no other tarin command has been issued */
-    if( traverse_cur_idx == train->dest_total_steps - 1 && train->cur_speed != 0 && cmds->train_id == NONE ) {
-      debugu( 4,  "END OF ROUTE: %d, %s", cur_node_id, track_graph[cur_node_id].name );
+    /* if the node is the end of the route, and if there is no other train command has been issued */
+    if(( train->cur_speed != 0 && cmds->train_id == NONE && train->state != REVERSING ) && 
+        ( traverse_cur_idx == train->dest_total_steps - 1 )) { 
+      debugu( 4,  "END OF ROUTE or TRACK RESERVED: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       /* get dist between sensor and dest */  
       int sensor2dest_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id] + train->mm_past_dest; 
       /* if we are the last sensor or the dest and second sensor is too close */
@@ -604,8 +612,8 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
     }
 
     /* handle reverse on immediate sensor hit */
-    if( traverse_cur_idx == train->dest_path_cur_idx && cmds->train_id == NONE && 
-        track_graph[cur_node_id].reverse == &track_graph[src_id] ) {
+    if( traverse_cur_idx == train->dest_path_cur_idx && track_graph[cur_node_id].reverse == &track_graph[src_id] && 
+        ( cmds->train_id == NONE && train->cur_speed != 0 && train->state != REVERSING )) {
       debugu( 2, "calling pack_train_cmd on immeidate reverse" );
       pack_train_cmd( cmds, train->train_id, TR_REVERSE, 0 );
     }
@@ -797,13 +805,7 @@ min_heap_node_t * extract_min( min_heap_t * min_heap ) {
   if( min_heap->size > 0 )
     make_min_heap( min_heap, 0 );
 
-  assertum( 1, last->dist < INT_MAX, "if this fails, make sure you set 140 nodes to trackB and 144 to trackA" );
-  //TODO: remove below testing code
-  if( last->dist >= INT_MAX ) {
-    debugu( 4,  "extracted: id: %d, dist: %d", last->id, last->dist );
-    print_min_heap( min_heap );
-    FOREVER;
-  }
+  assertum( 1, last->dist < INT_MAX, "failure here means did not set 140 nodes to trackB and 144 to trackA" );
 
   return last;  
 }
@@ -852,7 +854,7 @@ inline void print_min_heap( min_heap_t * min_heap ) {
   //Printf( COM2, "\n\r" );
 }
 
-void dijkstra( struct _track_node_* track_graph, int src_id, int* path, int* dist, int* step ) {
+void dijkstra( struct _track_node_* track_graph, int train_id, int src_id, int* path, int* dist, int* step ) {
   assertu( 1, track_graph || src_id >= 0 || src_id < NODE_MAX )
   
   /* initialize the heap */
@@ -861,7 +863,7 @@ void dijkstra( struct _track_node_* track_graph, int src_id, int* path, int* dis
   min_heap_node_t nodes[NODE_MAX];
   init_min_heap( &min_heap, src_id, node_id2idx, nodes );
 
-  /* initialize all distance to INT_MAX, all path to invalid */
+  /* initialize all distance to DIST_MAX, all path to invalid */
   int i;
   for( i = 0; i < NODE_MAX; ++i ) {
     dist[i] = INT_MAX;
@@ -898,12 +900,21 @@ void dijkstra( struct _track_node_* track_graph, int src_id, int* path, int* dis
         step[track_nbr_id] = test_step; \
         decrease_dist( &min_heap, track_nbr_id, test_dist ); \
       }
-
+      
+    /* we add DIST_MAX only to forward direction */
     inline void __attribute__((always_inline)) \
     update_forward( int direction ) {
       track_nbr_id = track_node->edge[direction].dest - track_graph;
       assertu( 1, track_nbr_id >= 0 );
-      test_dist = dist[track_id] + track_node->edge[direction].dist;
+      bool is_reserved = ( // iff the edge AND the reversed edge is reserved by someone else
+        ( track_node->edge[direction].middle_train_num != NONE && track_node->edge[direction].middle_train_num != train_id )
+     || ( track_node->edge[direction].begin_train_num != NONE  && track_node->edge[direction].begin_train_num != train_id )
+     || ( track_node->edge[direction].reverse->middle_train_num != NONE 
+       && track_node->edge[direction].reverse->middle_train_num != train_id )
+     || ( track_node->edge[direction].reverse->begin_train_num != NONE 
+       && track_node->edge[direction].reverse->begin_train_num != train_id ));
+      test_dist = is_reserved ? dist[track_id] + DIST_MAX : dist[track_id] + track_node->edge[direction].dist;
+      assertum( 1, test_dist >= 0, "failure indicates test_dist overflows int size" );
       assertum( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d\n\r\n\r\n\r", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
       test_step = step[track_id] + 1;
       update_info( );
@@ -913,7 +924,7 @@ void dijkstra( struct _track_node_* track_graph, int src_id, int* path, int* dis
     update_backward( ) {
       track_nbr_id = track_node->reverse - track_graph;
       assertu( 1, track_nbr_id >= 0 );
-      test_dist = dist[track_id];// + 1000000;//dist[track_id] // FIXME: this is so that we do not have reverse case
+      test_dist = dist[track_id];// + 1000000; // to disable reverse 
       assertum( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
       test_step = step[track_id] + 1;
       update_info( );

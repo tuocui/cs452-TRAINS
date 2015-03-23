@@ -3,6 +3,7 @@
 #include "track_data_new.h"
 #include "track_node.h"
 #include "global.h"
+#include "rail_control.h"
 
 static void *memset(void *s, int c, unsigned int n) {
   unsigned char *p = s;
@@ -1194,13 +1195,13 @@ void init_tracka(track_node_t *track) {
   track[143].reverse = &track[142];
   int i = 0;
   for( i = 0; i < 144; ++i ) {
-    track[i].edge[DIR_AHEAD].middle_train_num = -1;
-    track[i].edge[DIR_AHEAD].begin_train_num = -1;
-    track[i].edge[DIR_AHEAD].middle_train_rsv_start = -1;
+    track[i].edge[DIR_AHEAD].middle_train_num = NONE;
+    track[i].edge[DIR_AHEAD].begin_train_num = NONE;
+    track[i].edge[DIR_AHEAD].middle_train_rsv_start = NONE;
     track[i].edge[DIR_AHEAD].begin_train_rsv_end = 0;
-    track[i].edge[DIR_CURVED].middle_train_num = -1;
-    track[i].edge[DIR_CURVED].begin_train_num = -1;
-    track[i].edge[DIR_CURVED].middle_train_rsv_start = -1;
+    track[i].edge[DIR_CURVED].middle_train_num = NONE;
+    track[i].edge[DIR_CURVED].begin_train_num = NONE;
+    track[i].edge[DIR_CURVED].middle_train_rsv_start = NONE;
     track[i].edge[DIR_CURVED].begin_train_rsv_end = 0;
   }
 }
@@ -2369,13 +2370,13 @@ void init_trackb(track_node_t *track) {
   track[139].reverse = &track[138];
   int i;
   for( i = 0; i < 140; ++i ) {
-    track[i].edge[DIR_AHEAD].middle_train_num = -1;
-    track[i].edge[DIR_AHEAD].begin_train_num = -1;
-    track[i].edge[DIR_AHEAD].middle_train_rsv_start = -1;
+    track[i].edge[DIR_AHEAD].middle_train_num = NONE;
+    track[i].edge[DIR_AHEAD].begin_train_num = NONE;
+    track[i].edge[DIR_AHEAD].middle_train_rsv_start = NONE;
     track[i].edge[DIR_AHEAD].begin_train_rsv_end = 0;
-    track[i].edge[DIR_CURVED].middle_train_num = -1;
-    track[i].edge[DIR_CURVED].begin_train_num = -1;
-    track[i].edge[DIR_CURVED].middle_train_rsv_start = -1;
+    track[i].edge[DIR_CURVED].middle_train_num = NONE;
+    track[i].edge[DIR_CURVED].begin_train_num = NONE;
+    track[i].edge[DIR_CURVED].middle_train_rsv_start = NONE;
     track[i].edge[DIR_CURVED].begin_train_rsv_end = 0;
   }
 }

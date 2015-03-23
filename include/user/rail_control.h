@@ -3,7 +3,8 @@
 
 #include "global.h"
 
-#define NUM_SPEEDS 30
+#define NUM_SPEEDS  30
+#define DIST_MAX    200000
 
 #define TR_MAX 4
 
@@ -217,7 +218,7 @@ min_heap_node_t * extract_min( min_heap_t * min_heap );
 
 inline void print_min_heap( min_heap_t * min_heap );
 
-void dijkstra( struct _track_node_* track_graph, int src_id, int* all_path, int* all_dist, int* all_step );
+void dijkstra( struct _track_node_* track_graph, int train_id, int src_id, int* all_path, int* all_dist, int* all_step );
 
 void extract_shortest_path( int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
 
