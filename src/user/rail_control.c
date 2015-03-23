@@ -478,57 +478,61 @@ void predict_next_fallback_sensors_static( train_state_t *train ) {
 }
 
 inline void get_shortest_path( train_state_t *train ) {
-  /* we run dijstra only if:
-   * 1. the destination is changed, we can have an "old_dest" to specify it
-   * 2. we fall on a fallback, we find out by checking the fallback_sensor_hit flag
-   */
-  /* src_id is train->prev_sensor_id, which is the most recenlty triggered sensor */
-  int all_path[NODE_MAX], all_step[NODE_MAX];
-  debugu( 1, "get_shortest_path: train->prev_dest_id: %d, FALLBACK_SENSORHIT?: %d", 
-        train->prev_dest_id, train->fallback_sensor_hit );
-  debugu( 1, "train_prev_id: %d, train_cur_dest_id: %d", train->prev_dest_id, train->dest_id );
-  if( true ) { //train->prev_dest_id != train->dest_id || train->fallback_sensor_hit ) { 
-    debugu( 1, "DIJKSTRA, train->prev_dest_id: %d, fallback_sensorhit?: %d", 
-        train->prev_dest_id, train->fallback_sensor_hit );
-    /* run dijkstra on the src and dest */
-    dijkstra( train->track_graph, train->prev_sensor_id, all_path, (int*)( train->all_dist ), all_step );
-    
-    /* get shortest path for our destination and store it in the train state */
-    train->dest_path_cur_idx = 0;
-    train->dest_total_steps = all_step[train->dest_id];
-    debugu( 4, "train->dest_total_steps: %d", train->dest_total_steps );
-    extract_shortest_path( all_path, all_step, train->prev_sensor_id, train->dest_id, (int*)( train->dest_path ));
-    print_shortest_path( train->track_graph, all_path, all_step, train->prev_sensor_id, train->dest_id, (int*)( train->dest_path ));
-    /* we run graph search for each destination only once, unless the fall back sensor is hit, so we update prev_dest */
-    train->prev_dest_id = train->dest_id;
-  }
-  else {
-    debugu( 1, "???????running old path\n\r\n\r" );
-  /* use the memorized path, it shoud be a loop to get to the next sensor, 
-   * which should be the same as the current sensor hit, if the momorized path run out of index,
-   * TODO: need to think about when to run dijkstra next destination if there is one
-   */
-    int i;
-    for( i = 0; i < train->dest_total_steps; ++i ) {
-      assertu( 1, train->dest_path[i] != NONE );
-      debugu( 1, "prev_sensor_id: %d, dest_path: %d, node: %s", 
-          train->prev_sensor_id, train->dest_path[i], train->track_graph[train->dest_path[i]].name );
+
+  /* first, try to match the sensor hit with the next sensor in the train path */
+  //TODO: handle it differently for reversing
+  //
+
+  debugu( 1, "searching in old path ... " );
+  int i;
+  for( i = train->dest_path_cur_idx; i < train->dest_total_steps; ++i ) {
+    assertu( 1, train->dest_path[i] != NONE );
+    debugu( 4, "prev_sensor_id: %d, dest_path: %d, node: %s", 
+        train->prev_sensor_id, train->dest_path[i], train->track_graph[train->dest_path[i]].name );
+    if( train->track_graph[train->dest_path[i]].type == NODE_SENSOR ) {
+      debugu( 1, "traversing history path: cur_idx: %d, node: %s", i, train->track_graph[train->dest_path[i]].name );
       if( train->prev_sensor_id == train->dest_path[i] ) {
         train->dest_path_cur_idx = i + 1;
-        break;
+        debugu( 1, "sensor foun in old path" );
+        return;
       }
+      break;
     }
-
-    //TODO: handle train run out of graph case
-    debugu( 1, "train->cur_idx: %d, train->dest_total_steps: %d", train->dest_path_cur_idx, train->dest_total_steps );
-    assertu( 1, train->dest_path_cur_idx >= 0 );
   }
+
+  //TODO: handle train run out of graph case
+  
+  debugu( 1, "sensor not found in old path, running dijkstra now ... " );
+  debugu( 1, "train->cur_idx: %d, train->dest_total_steps: %d", train->dest_path_cur_idx, train->dest_total_steps );
   assertu( 1, train->dest_path_cur_idx >= 0 );
-  assertu( 1, train->track_graph[train->dest_path_cur_idx].type == NODE_SENSOR );
+
+  /* we run dijstra only if we did not find the sensor in history path */
+  /* src_id is train->prev_sensor_id, which is the most recenlty triggered sensor */
+  int all_path[NODE_MAX], all_step[NODE_MAX];
+  debugu( 4, "get_shortest_path: prev_dest: %s, cur_dest: %s FALLBACK_SENSORHIT?: %d", 
+     train->track_graph[train->dest_id].name, train->track_graph[train->prev_dest_id].name, train->fallback_sensor_hit );
+  //debugu( 1, "train_prev_id: %d, train_cur_dest_id: %d", train->prev_dest_id, train->dest_id );
+  //if( train->prev_dest_id != train->dest_id || train->fallback_sensor_hit ) { 
+  //
+  /* run dijkstra on the src and dest */
+  dijkstra( train->track_graph, train->prev_sensor_id, all_path, train->all_dist , all_step );
+    
+  /* get shortest path for our destination and store it in the train state */
+  train->dest_path_cur_idx = 0;
+  train->dest_total_steps = all_step[train->dest_id];
+  debugu( 4, "train->dest_total_steps: %d", train->dest_total_steps );
+  extract_shortest_path( all_path, all_step, train->prev_sensor_id, train->dest_id, train->dest_path );
+  print_shortest_path( train->track_graph, all_path, all_step, train->prev_sensor_id, train->dest_id, train->dest_path );
+  /* we run graph search for each destination only once, unless the fall back sensor is hit, so we update prev_dest */
+  train->prev_dest_id = train->dest_id;
+
+  assertu( 1, train->dest_path_cur_idx >= 0 );
+  debugu( 1, "cur_idx node: %s", train->track_graph[train->dest_path[train->dest_path_cur_idx]].name );
+  //assertu( 1, train->track_graph[train->dest_path_cur_idx].type == NODE_SENSOR );
 }
 
 inline void pack_train_cmd( rail_cmds_t *cmds, int train_id, int ACTION, int delay ) {
-  debugu( 1, "NEWNEW TRAIN_CMD: train_id: %d, ACTION: %d, delay: %d", train_id, ACTION, delay );
+  debugu( 4, "NEWNEW TRAIN_CMD: train_id: %d, ACTION: %d, delay: %d", train_id, ACTION, delay );
   cmds->train_id = train_id;
   cmds->train_action = ACTION;
   cmds->train_delay = delay;
@@ -538,7 +542,7 @@ inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int d
   CONVERT_SWITCH_ID( switch_id );
   assertum( 1, cmds->switch_idx < SW_CMD_MAX, "failure here means we need more switch_cmd_t in rail_cmds" );
   assertum( 1, switch_id >= SW1 && switch_id <= SW156, "switch_id: %d", switch_id );
-  debugu( 1, "NEWNEW SW_CMD: switch_id: %d, ACTION: %d, delay: %d", switch_id, ACTION, delay );
+  debugu( 4, "NEWNEW SW_CMD: switch_id: %d, ACTION: %d, delay: %d", switch_id, ACTION, delay );
   ++( cmds->switch_idx );
   cmds->switch_cmds[cmds->switch_idx].switch_id = switch_id;
   cmds->switch_cmds[cmds->switch_idx].switch_action = ACTION;
@@ -560,14 +564,14 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   int action = NONE;
   int safe_branch_dist = safe_distance_to_branch( train );//train->speeds[train->cur_speed].safe_branch_distance;  
 
-  debugu( 1, "src_id: %d, dest_id: %d, compute_next_command: traverse_cur_idx: %d, total_dest_total_steps: %d", src_id, train->dest_path[traverse_cur_idx], traverse_cur_idx, train->dest_total_steps );
+  debugu( 4, "src_id: %d, dest_id: %d, compute_next_command: traverse_cur_idx: %d, total_dest_total_steps: %d", src_id, train->dest_path[traverse_cur_idx], traverse_cur_idx, train->dest_total_steps );
   debugu( 4,  "safe_branch_dist: %d", safe_branch_dist );
   assertum( 1, ( train->cur_speed >= 8 && train->cur_speed <= 14 ) || ( train->cur_speed >= 23 || train->cur_speed <= 29 ), "cur_speed: %d", train->cur_speed );
 
+  print_train_path( train );
   for( ; traverse_cur_idx < train->dest_total_steps; ++traverse_cur_idx ) {
-    print_train_path( train );
     cur_node_id = train->dest_path[traverse_cur_idx];
-    debugu( 1, "traverse_cur_idx: %d, cur_node_name: %s", traverse_cur_idx, track_graph[cur_node_id].name );
+    debugu( 2, "traverse_cur_idx: %d, cur_node_name: %s", traverse_cur_idx, track_graph[cur_node_id].name );
 
     /* update prev_sensor iff cur_sensor is the sensor immediately after src */
     if( track_graph[cur_node_id].type == NODE_SENSOR && second_sensor_id == -1 ) {
@@ -593,6 +597,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
                           (( src2dest_dist - stop_dist - train_len_ahead ) * 10000 ) / train->cur_vel : 0 );
         debugu( 4,  "( %d - %d - %d) * 10000 / %d ", src2dest_dist, stop_dist, train_len_ahead, train->cur_vel );
         pack_train_cmd( cmds, train->train_id, TR_STOP, stop_delay_time );
+        train->train_reach_destination = true;
         /* clear train destination */
         //train->dest_id = NONE;
       }
@@ -601,7 +606,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
     /* handle reverse on immediate sensor hit */
     if( traverse_cur_idx == train->dest_path_cur_idx && cmds->train_id == NONE && 
         track_graph[cur_node_id].reverse == &track_graph[src_id] ) {
-      debugu( 1, "calling pack_train_cmd on immeidate reverse" );
+      debugu( 2, "calling pack_train_cmd on immeidate reverse" );
       pack_train_cmd( cmds, train->train_id, TR_REVERSE, 0 );
     }
 
@@ -612,7 +617,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
          cmds->train_action != TR_REVERSE ) { // train is not currently reversing, this condition will be unnecessary
                                               // once we have the trains to memorize the path
       assertu( 1, cmds->train_action == NONE );
-      debugu( 1,  "reverse on branch: cur_node_id: %d, node_name: %s", cur_node_id, track_graph[cur_node_id].name );
+      debugu( 2,  "reverse on branch: cur_node_id: %d, node_name: %s", cur_node_id, track_graph[cur_node_id].name );
       assertu( 1, traverse_cur_idx - 1 >= train->dest_path_cur_idx && traverse_cur_idx < train->dest_total_steps );
       
       int sensor2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id];
@@ -624,13 +629,13 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
         //int reverse_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) : 0; 
         int reverse_delay_time = ((( src2reverse_dist + train_len_behind - stop_dist > 0 ) && train->cur_vel > 0 ) ? 
           (( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist ) * 10000 ) / train->cur_vel : 0 );// FIXME delay too short 
-        debugu( 1, "calling pack_train_cmd on branch reverse" );
+        debugu( 2, "calling pack_train_cmd on branch reverse" );
         pack_train_cmd( cmds, train->train_id, TR_REVERSE, reverse_delay_time );
       }
     }
     /* finally, branching case, only if we actually have a destination after the branch node */
     if( track_graph[cur_node_id].type == NODE_BRANCH && traverse_cur_idx + 1 < train->dest_total_steps ) {
-      debugu( 1,  "BRANCH: %d: %s, node after branch: %d: %s", cur_node_id, track_graph[cur_node_id].name,
+      debugu( 2,  "BRANCH: %d: %s, node after branch: %d: %s", cur_node_id, track_graph[cur_node_id].name,
           train->dest_path[traverse_cur_idx+1], track_graph[train->dest_path[traverse_cur_idx+1]].name );
 
       /* get dist between sensor and branch*/  
@@ -671,7 +676,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
 void request_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   // for now, we only get called if there is a destination, but we should also make decisions for avoiding colissions
   assertu( 1, train->dest_id != NONE ); 
-  debugu( 1,  "request_next_command with src_id: %d and dest_id: %d", train->prev_sensor_id, train->dest_id );
+  debugu( 4,  "request_next_command with src_id: %d and dest_id: %d", train->prev_sensor_id, train->dest_id );
   track_node_t* track_graph = train->track_graph;
   int src_id = train->prev_sensor_id;
   int dest_id = train->dest_id;
@@ -795,7 +800,7 @@ min_heap_node_t * extract_min( min_heap_t * min_heap ) {
   assertum( 1, last->dist < INT_MAX, "if this fails, make sure you set 140 nodes to trackB and 144 to trackA" );
   //TODO: remove below testing code
   if( last->dist >= INT_MAX ) {
-    debugu( 1,  "extracted: id: %d, dist: %d", last->id, last->dist );
+    debugu( 4,  "extracted: id: %d, dist: %d", last->id, last->dist );
     print_min_heap( min_heap );
     FOREVER;
   }

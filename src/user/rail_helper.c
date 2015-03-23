@@ -656,6 +656,7 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
     trains[i].prev_dest_id = NONE;
     trains[i].mm_past_landmark = 0;
     trains[i].cur_speed = 0;
+    trains[i].train_reach_destination = false;
 
     for( j = 0; j < NUM_SPEEDS; ++j ) {
       trains[i].speeds[j].speed = 0;

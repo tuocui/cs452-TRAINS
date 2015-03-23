@@ -143,6 +143,7 @@ typedef struct _train_state_ {
   int rv_expected_branches[5];
 
   bool fallback_sensor_hit;
+  bool train_reach_destination;
   int train_id;
   int prev_sensor_id;
   int next_sensor_id;

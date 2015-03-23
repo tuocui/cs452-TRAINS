@@ -41,7 +41,6 @@ void rail_graph_worker( ) {
     assertu( 1, train_state );
 
     init_rail_cmds( &rail_cmds );
-    debugu( 0, "before get next command" );
     request_next_command( train_state, &rail_cmds );
   }
 }
@@ -199,7 +198,7 @@ void train_exe_worker( ) {
       break;
     case TR_REVERSE:
       {
-        debugu( 1, "train_exe_worker received reverse request, reversing now ... " );
+        debugu( 4, "train_exe_worker received reverse request, reversing now ... " );
         train->state = REVERSING;
         int prev_speed = train->cur_speed;
         int stopping_time = get_cur_stopping_time( train ) / 10;
@@ -349,6 +348,12 @@ void update_trains( ) {
           ((rail_msg.to_server_content).rail_cmds)->train_speed = 8;
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
           ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+        }
+        /* clear destination if stopping flag is set */
+        if( trains[i].train_reach_destination == true ) {
+          trains[i].train_reach_destination = false;
+          trains[i].prev_dest_id = NONE;
+          trains[i].dest_id = NONE;
         }
       }
     }
@@ -551,7 +556,6 @@ void rail_server( ) {
         }
         break;
       case RAIL_CMDS:
-        debugu( 1, "get RAIL_CMDS" );
         /* get and send train cmds */
         recved_cmds = receive_msg.to_server_content.rail_cmds;
         switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
@@ -572,7 +576,7 @@ void rail_server( ) {
           break;
         }
         if( train_exe_worker_tid != NONE ) {
-          debugu( 1, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
+          debugu( 4, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
           train_cmd_args.cmd = recved_cmds->train_action;
           train_cmd_args.speed_num = recved_cmds->train_speed;
           train_cmd_args.delay_time = recved_cmds->train_delay;

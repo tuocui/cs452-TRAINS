@@ -28,6 +28,9 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 'k' && ( cmd2 == ' ' || cmd2 == 0 ) ) {
     return KILL_CMD;  
   }
+  if ( cmd1 == 'c' && ( cmd2 == 'l' || cmd2 == 0 ) ) {
+    return CLEAN_SCREEN;
+  }
   if ( cmd3 != ' ' ) {
     return -1;
   }
@@ -55,9 +58,7 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 's' && cmd2 == 'w' ) {
     return SWITCH_CMD;  
   }
-  if ( cmd1 == 'c' && cmd2 == 'l' ) {
-    return CLEAN_SCREEN;
-  }
+  
   return -1;
 }
 
