@@ -158,7 +158,7 @@ typedef struct _train_state_ {
   int train_id;
   int prev_sensor_id;
   int next_sensor_id;
-  int time_to_next_sensor_abs; // time_to_next_sensor + cur_time
+  //int time_to_next_sensor_abs; // time_to_next_sensor + cur_time
   int time_to_next_sensor;
   int dest_id;
   int prev_dest_id;
@@ -223,6 +223,8 @@ void make_min_heap( min_heap_t * min_heap, int idx );
 inline bool heap_empty( min_heap_t * min_heap );
 
 inline bool heap_find( min_heap_t * min_heap, int id );
+
+void update_prev_sensor_id_for_rev( train_state_t *train );
 
 min_heap_node_t * extract_min( min_heap_t * min_heap );
 

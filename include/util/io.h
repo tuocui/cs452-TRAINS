@@ -10,8 +10,8 @@
 
 #define LOW_SPEED 2400
 #define HIGH_SPEED 115200
-#define OUT_BUF_SIZE 2048
-#define PRINTF_MAX_SIZE 128
+#define OUT_BUF_SIZE 4096
+#define PRINTF_MAX_SIZE 1024
 #define MAX_IN_SIZE 16
 #define MAX_OUT_SIZE 8
 

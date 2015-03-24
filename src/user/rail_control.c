@@ -7,7 +7,7 @@
 #include "io.h" 
 #include "ring_buf.h"
 #include "rail_helper.h"
-
+#include "syscall.h"
 /* get_next_command calls graph search to get the shortest path,
  * for now, if the path only has length of one, the we issue stop command.
  * if there are more than one node, it finds out if there needs reverse/switch
@@ -54,21 +54,44 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
 // returns 0 on safe allocation
 // -1 if train needs to reverse
 // -2 if train needs to slow down/stop
-// TODO: Update the reservation type when we hit a sensor
-// TODO: Clear reservations when we hit a fallback switch
-// TODO: Clear reservations when we flip a switch
-  // FUCK, need to reserve based on expected switch states, not current ones
-  // Simple early solution: reserve on both, clear when we pass the switch
-// TODO: Need to send back commands for multiple trains
+// TODO: Reserve based on where the train is going to go, not on current state
+// TODO: Need to start train back up again
+// TODO: May need to keep some reservation behind.
+// TODO: Clear reservation from previous sensor continously rather than on sensor hits
+// TODO: shit, what if the train ahead is reversing????
 int update_track_reservation( train_state_t *train, train_state_t *all_trains ) {
   track_node_t *graph = train->track_graph;
   int sensor_id = train->prev_sensor_id;
-  int forward_dist = ( safe_distance_to_stop( train ) * 3 ) / 2; // 1.5x the safe distance to stop
-  //Printf( COM2, "forward_dist: %d\r\n", forward_dist );
   int mm_past_sensor = train->mm_past_landmark / 10;
+  int cur_speed = train->cur_speed;
+  int train_state = train->state;
+  int forward_dist = ( safe_distance_to_stop( train ) * 3 ) / 2; // 1.25x the safe distance to stop
+  int orig_forward_dist = forward_dist;
+  //Printf( COM2, "forward_dist: %d\r\n", forward_dist );
   int branch_ind;
   track_node_t *cur_node = &(graph[sensor_id]);
+  int length_rsvd = 0;
+  track_edge_t *edge;
+  track_edge_t *rev_edge;
+  int edge_dist;
+  int colliding_train_idx = NONE;
+  int has_collision = 0;
+  int has_rsvd = 0;
+  track_edge_t *prev_edge = cur_node->reverse->edge[DIR_AHEAD].reverse; // phew
+  train_state_t *colliding_train;
+  int colliding_train_state;
+  int can_exit = 0;
+
+  clear_reservations_by_train( graph, train );
   // just hit the last sensor, need to clear the sensor before it
+  if( prev_edge->begin_train_num == train->train_id ) {
+    prev_edge->begin_train_num = -1;
+    prev_edge->begin_train_rsv_end = 0;
+  }
+  if( prev_edge->middle_train_num == train->train_id ) {
+    prev_edge->middle_train_num = -1;
+    prev_edge->middle_train_rsv_start = -1;
+  }
 
   // Go through nodes that we have passed since last sensor
   while( 1 ) {
@@ -79,7 +102,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       if( branch_ind > 152 ) {
         branch_ind -= 134;
       }
-      if( cur_node->edge[train->switch_states[branch_ind]].dist > mm_past_sensor ) {
+      if( cur_node->edge[train->switch_states[branch_ind]].dist >= mm_past_sensor ) {
         break;
       }
       if( cur_node->edge[DIR_CURVED].middle_train_num == train->train_id ) {
@@ -105,7 +128,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       mm_past_sensor -= cur_node->edge[train->switch_states[branch_ind]].dist;
       cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
     } else {
-      if( cur_node->edge[DIR_STRAIGHT].dist > mm_past_sensor ) {
+      if( cur_node->edge[DIR_STRAIGHT].dist >= mm_past_sensor ) {
         break;
       }
       if( cur_node->edge[DIR_STRAIGHT].middle_train_num == train->train_id ) {
@@ -122,9 +145,6 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   }
 
   // need to reserve until the end of first
-  track_edge_t *edge;
-  track_edge_t *rev_edge;
-  int edge_dist;
   if( cur_node->type == NODE_BRANCH ) {
     branch_ind = cur_node->num;
     if( branch_ind > 152 ) {
@@ -139,6 +159,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     edge->middle_train_num = train->train_id;
     edge->middle_train_rsv_start = mm_past_sensor;
     forward_dist -= edge->dist - mm_past_sensor;
+    length_rsvd += edge->dist - mm_past_sensor;
     if( edge->begin_train_num == train->train_id ) {
       edge->begin_train_num = -1;
       edge->begin_train_rsv_end = 0;
@@ -146,17 +167,13 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   } else {
     assert( 1, edge->begin_train_num == -1 || edge->begin_train_num == train->train_id );
     edge->begin_train_num = train->train_id;
-    // TODO: Better check for slowdown
-    if( edge->dist - edge->middle_train_rsv_start < 0 ) {
-      return -2;
-    }
     edge->begin_train_rsv_end = edge->dist - edge->middle_train_rsv_start; //5 cm buffer
+    if( cur_speed == 8 || cur_speed == 23 ) {
+      return edge->middle_train_num;
+    }
+    return -2;
   }
   cur_node = edge->dest;
- 
-  train_state_t *colliding_train;
-  int colliding_train_idx = NONE;
-  int has_collision = 0;
   // Now, start reserving!
   while( forward_dist > 0 ) {
     //Printf( COM2, "second loop, forward_dist: %d\r\n", forward_dist );
@@ -168,6 +185,8 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         branch_ind -= 134;
       }
       edge = &(cur_node->edge[train->switch_states[branch_ind]]);
+    } else if ( cur_node->type == NODE_EXIT ) {
+      break;
     } else {
       edge = &(cur_node->edge[DIR_STRAIGHT]);
     }
@@ -199,35 +218,80 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     // Oh shit, a collision
     if( has_collision && colliding_train_idx != NONE ) {
       colliding_train = &(all_trains[colliding_train_idx]);
+      colliding_train_state = colliding_train->state;
       // I'm already handling it, just return and continue on
-      if( train->state == HANDLING_COLLISION || train->state == REVERSING ) {
+      if( train_state == HANDLING_COLLISION || train_state == REVERSING ) {
         return 0;
-      } else if( colliding_train->state == HANDLING_COLLISION || colliding_train->state == REVERSING ) {
+      } else if( colliding_train_state == HANDLING_COLLISION || colliding_train_state == REVERSING ) {
         // If other train handling this collision, then we should probably just slow down
         return -2;
       } else {
         // Oh shit, no one handling this collision, I'll handle it.
         train->state = HANDLING_COLLISION;
-        Printf( COM2, "@@@@@@@@@@@@@@@@@@ HOLY SHIT A COLLISION TRAIN %d HANDLING IT!!!!\r\n", train->train_id );
-        Printf( COM2, "@@@@@@@@@@@@@@@@@@ COLLIDING TRAIN %d, THIS TRAIN %d\r\n", colliding_train->train_id, train->train_id );
-        Printf( COM2, "@@@@@@@@@@@@@@@@@@ forward_dist %d, THIS TRAIN %d\r\n", forward_dist, train->train_id );
         return -1;
       }
     }
     
     // reserve!
-    edge->begin_train_num = train->train_id;
-    if( forward_dist > edge->dist ) {
-      edge->begin_train_rsv_end = edge->dist;
-      forward_dist -= edge->dist;
+    if( edge->middle_train_num != NONE ) {
+      if( edge->middle_train_num == train->train_id ) {
+        // For some reason, we are seeing that this train has already reserved the track in front.
+        // Just handling this race condition fail
+        return 0;
+      }
+      edge->begin_train_num = train->train_id;
+      edge->begin_train_rsv_end = edge->dist - edge->middle_train_rsv_start; //5 cm buffer
+      length_rsvd += edge->dist - edge->middle_train_rsv_start;
+      colliding_train_idx = get_train_idx( edge->middle_train_num );
+      colliding_train = &(all_trains[colliding_train_idx]);
+      if( colliding_train->cur_speed == 0 ) {
+        if( length_rsvd < orig_forward_dist ) {
+          return -3;
+        }
+        //Printf( COM2, "HOLY SHITTTT, TRAIN %d IN FRONT HAS STOPPED FOR SOME GOD AWFUL REASON\r\n", colliding_train->train_id );
+        //Printf( COM2, "middle train num: %d, colliding train idx: %d, colliding train num: %d, colliding train vel%d\r\n", edge->middle_train_num, colliding_train_idx, colliding_train->train_id, colliding_train->cur_vel );
+        return 0;
+      }
+      if( length_rsvd < 2 * train->length ) {
+        if( cur_speed == 8 || cur_speed == 23 ) {
+          //Printf( COM2, "OMG I CANT GO ANY SLOWER YOU NEED TO HURRY THE FUCK UP\r\n" );
+          return edge->middle_train_num;
+        }
+        //Printf( COM2, "HOLY SHIT I NEED TO SLOW DOWN\r\n" );
+        return -2;
+      }
+      //Printf( COM2, "PHEW, DON'T NEED TO DO SHIT\r\n" );
+      return 0;
+    } else if ( edge->begin_train_num != NONE && edge->begin_train_num != train->train_id && cur_node->type == NODE_MERGE ) {
+      // Hit a merge and train has reserved it, stop.
+      Printf( COM2, "HOLY SHITTTTT, TRAIN %d ABOUT TO MERGE INTO A TRAIN AT NODE %s MY CURRENT LOCATION IS %d past  %d, STOP NOW\r\n", train->train_id, cur_node->name, train->mm_past_landmark, train->prev_sensor_id );
+      /*colliding_train_idx = get_train_idx( edge->begin_train_num );
+      colliding_train = &(all_trains[colliding_train_idx]);
+      print_rsv( train, all_trains );
+      print_rsv( colliding_train, all_trains );
+      Printf( COM2, "sdoknskdfn\r\n" );
+      FOREVER {
+        ;      
+      }
+      
+      Kill_the_system( 0xdeadbeef );*/
+      return -3;
     } else {
-      edge->begin_train_rsv_end = forward_dist;
-      forward_dist = 0;
+      edge->begin_train_num = train->train_id;
+      if( forward_dist > edge->dist ) {
+        edge->begin_train_rsv_end = edge->dist;
+        forward_dist -= edge->dist;
+        length_rsvd += edge->dist;
+      } else {
+        edge->begin_train_rsv_end = forward_dist;
+        forward_dist = 0;
+        length_rsvd += forward_dist;
+      }
     }
+    ++has_rsvd;
     cur_node = edge->dest;
   }
 
-  int can_exit = 0;
   while( !can_exit ) {
     //Printf( COM2, "third loop\r\n" );
     // If we are still reserving that track, make sure we don't reserve it any more
@@ -258,6 +322,8 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         branch_ind -= 134;
       }
       cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
+    } else if ( cur_node->type == NODE_EXIT ) {
+      break;
     } else {
       if( cur_node->edge[DIR_STRAIGHT].middle_train_num == train->train_id ) {
         //Printf( COM2, "third loop: dafuq?\r\n" );
@@ -302,6 +368,44 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
  *      do not do anything, can assert on: recalculate a result, should be the same as the one calculated at step 2
  */
 
+// predict one sensor at a time, this function is called when the train is in reversing or stopping state
+// prbly need another function for switches tracking
+//void predict_next_sensor_dynamic( train_state_t* train_state, rail_cmds_t* rail_cmds ) {
+//  //assertu( 1, train_state
+//  ///* reversing case */
+//  //if( train_state->state == REVERSING ) {
+//  //  train_state->rv_original_expected_sensor = train_state->next_sensor_id; 
+//  //  int stop_dist = get_cur_stopping_distance( train_state );
+//  //}
+//
+//  ///* stopping case */
+//  //else if( train_state->cur_speed == TR_STOP ) {
+//
+//  //}
+//  //else {
+//  //  assertum( 1, false, "calling predict_next_sensor_dynamic in unnecessary condition" );
+//  //}
+//
+//}
+void update_prev_sensor_id_for_rev( train_state_t *train ) {
+  track_node_t *cur_node = &(train->track_graph[train->prev_sensor_id]);
+  cur_node = cur_node->edge[DIR_AHEAD].dest;
+  int branch_ind;
+  while( cur_node->type != NODE_SENSOR ) {
+    if( cur_node->type == NODE_BRANCH ) {
+      branch_ind = cur_node->num;
+      if( branch_ind > 152 ) {
+        branch_ind -= 134;
+      }
+      cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
+    } else if ( cur_node->type == NODE_EXIT ) {
+      return;
+    } else {
+      cur_node = cur_node->edge[DIR_AHEAD].dest;
+    }
+  }
+  train->prev_sensor_id = cur_node->reverse->num;
+}
 
 /* algorithm:
  * if train_state has path memory:
@@ -317,7 +421,7 @@ void predict_next_sensor_dynamic( train_state_t* train_state ) {
   assertu( 1, cur_node );
   assertu( 1, cur_node->type == NODE_SENSOR );
   int next_sensor_id = NONE;
-  int next_sensor_dist = cur_node->edge[DIR_AHEAD].dist;
+  int next_sensor_dist = cur_node->edge[DIR_AHEAD].dist - (train_state->mm_past_landmark / 10);
   int branch_ind;
   cur_node = cur_node->edge[DIR_AHEAD].dest;
   //int stop_dist = get_cur_stopping_distance( train_state );
@@ -414,6 +518,8 @@ void predict_next_fallback_sensors_static( train_state_t *train ) {
           branch_ind -= 134;
         }
         cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
+      } else if( cur_node->type == NODE_EXIT ){
+        break;
       } else {
         cur_node = cur_node->edge[DIR_AHEAD].dest;
       }
@@ -449,8 +555,7 @@ void predict_next_fallback_sensors_static( train_state_t *train ) {
         train->fallback_sensors[fallback_idx] = cur_node->num;
         train->fallback_dist[fallback_idx++] = dist;
       }
-    }
-    else if( cur_node->type == NODE_BRANCH ) {
+    } else if( cur_node->type == NODE_BRANCH ) {
       if( saw_expected_sensor ) {
         branch_ind = cur_node->num;
         if( branch_ind > 152 ) {
@@ -516,13 +621,13 @@ inline void get_shortest_path( train_state_t *train ) {
   //
   /* run dijkstra on the src and dest */
   dijkstra( train->track_graph, train->train_id, train->prev_sensor_id, all_path, train->all_dist , all_step );
-    
+
   /* get shortest path for our destination and store it in the train state */
   train->dest_path_cur_idx = 0;
   train->dest_total_steps = all_step[train->dest_id];
   debugu( 4, "train->dest_total_steps: %d", train->dest_total_steps );
   extract_shortest_path( all_path, all_step, train->prev_sensor_id, train->dest_id, train->dest_path );
-  print_shortest_path( train->track_graph, all_path, all_step, train->prev_sensor_id, train->dest_id, train->dest_path );
+  //print_shortest_path( train->track_graph, all_path, all_step, train->prev_sensor_id, train->dest_id, train->dest_path );
   /* we run graph search for each destination only once, unless the fall back sensor is hit, so we update prev_dest */
   train->prev_dest_id = train->dest_id;
 
@@ -701,8 +806,6 @@ void request_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   //print_cmds( cmds );
 }
 
-
-//TODO: put below into a separate file "rail_control_helper"
 inline void init_node( min_heap_node_t * node, int id, int dist ) {
   assertu( 1, node || id >= 0 || id < NODE_MAX );
 

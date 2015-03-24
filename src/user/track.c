@@ -55,7 +55,7 @@ short set_train_speed( train_state_t *train, short speed ) {
       // accelerating?
       train->prev_speed = train->cur_speed;
       train->cur_speed = speed_normalized;
-      if( cur_speed_normalized < speed_normalized ) {
+      if( cur_speed_normalized < speed_normalized && cur_speed_normalized != 0 ) {
         train->cur_speed += 15;
       }
       train->speed_change_time = Time( );

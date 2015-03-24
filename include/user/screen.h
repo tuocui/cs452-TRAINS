@@ -14,7 +14,7 @@
 #define ACCEL_CMD 7
 #define DECEL_CMD 8
 #define CH_DIR_CMD 9
-#define CLEAN_SCREEN 98
+#define CLEAR_CMD 98
 #define QUIT_CMD 99
 
 void parse_user_input( );

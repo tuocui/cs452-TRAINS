@@ -47,6 +47,7 @@ void clear_reservations( track_node_t *graph ) {
 void clear_prev_train_reservation( train_state_t *train ) {
   track_node_t *graph = train->track_graph;
   track_node_t *cur_node = &(graph[train->next_sensor_id]);
+  track_edge_t *cur_edge = &(cur_node->edge[DIR_AHEAD]);
   track_edge_t *prev_edge = cur_node->reverse->edge[DIR_AHEAD].reverse; // phew
   if( prev_edge->begin_train_num == train->train_id ) {
     prev_edge->begin_train_num = -1;
@@ -55,6 +56,13 @@ void clear_prev_train_reservation( train_state_t *train ) {
   if( prev_edge->middle_train_num == train->train_id ) {
     prev_edge->middle_train_num = -1;
     prev_edge->middle_train_rsv_start = -1;
+  }
+  // make sure we start reserving from "middle" now
+  if( cur_edge->begin_train_num == train->train_id ) {
+    cur_edge->begin_train_num = -1;
+    cur_edge->begin_train_rsv_end = 0;
+    cur_edge->middle_train_num = train->train_id;
+    cur_edge->middle_train_rsv_start = 0;
   }
 }
 void clear_reservations_by_train( track_node_t *graph, train_state_t *train ) {
@@ -82,17 +90,17 @@ void print_rsv( train_state_t *train, train_state_t *trains ) {
   for( i = 0; i < TRACK_MAX; ++i ) {
     for( j = 0; j < 2; ++j ) {
       if( graph[i].edge[j].begin_train_num == train_num ) {
-        Printf( COM2, "\0337\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 0, graph[i].edge[j].begin_train_rsv_end );
+        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 0, graph[i].edge[j].begin_train_rsv_end );
         ++num_printed;
       }
       if( graph[i].edge[j].middle_train_num == train_num ) {
-        Printf( COM2, "\0337\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 1, graph[i].edge[j].middle_train_rsv_start );
+        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 1, graph[i].edge[j].middle_train_rsv_start );
         ++num_printed;
       }
     }
   }
-  for( i = num_printed; i < TRACK_MAX / 4; ++i ) {
-    Printf( COM2, "\0337\033[%d;%dH               \0338", 2 + i, ( train_idx * 37 ) + 83 );
+  for( i = num_printed; i < TRACK_MAX / 10; ++i ) {
+    Printf( COM2, "\0337\033[?25l\033[%d;%dH               \0338", 2 + i, ( train_idx * 37 ) + 83 );
   }
 }
 
@@ -115,10 +123,10 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   int lowest_fallback_time = INT_MAX;
   for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
     //assertum( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
-    if( trains[cur_idx].next_sensor_id == sensor_num && trains[cur_idx].time_to_next_sensor_abs < lowest_expected_time ) {
+    if( trains[cur_idx].next_sensor_id == sensor_num && trains[cur_idx].time_to_next_sensor < lowest_expected_time ) {
       debugu( 4,  "found expected train: %d", cur_idx );
       expected_train_idx = cur_idx;
-      lowest_expected_time = trains[cur_idx].time_to_next_sensor_abs;
+      lowest_expected_time = trains[cur_idx].time_to_next_sensor;
     }
     if( trains[cur_idx].state == INITIALIZING ) {
       debugu( 1,  "found initializing train: %d", cur_idx );
