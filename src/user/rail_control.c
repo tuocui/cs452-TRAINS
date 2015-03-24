@@ -56,8 +56,6 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
 // -2 if train needs to slow down/stop
 // TODO: Reserve based on where the train is going to go, not on current state
 // TODO: Need to start train back up again
-// TODO: May need to keep some reservation behind.
-// TODO: Clear reservation from previous sensor continously rather than on sensor hits
 // TODO: shit, what if the train ahead is reversing????
 int update_track_reservation( train_state_t *train, train_state_t *all_trains ) {
   track_node_t *graph = train->track_graph;
@@ -168,7 +166,10 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     assert( 1, edge->begin_train_num == -1 || edge->begin_train_num == train->train_id );
     edge->begin_train_num = train->train_id;
     edge->begin_train_rsv_end = edge->dist - edge->middle_train_rsv_start; //5 cm buffer
-    if( cur_speed == 8 || cur_speed == 23 ) {
+    if( edge->middle_train_num == USER_INPUT_NUM ) {
+      return -3;
+    }
+    if( ( cur_speed == 8 || cur_speed == 23 ) ) {
       return edge->middle_train_num;
     }
     return -2;
@@ -178,7 +179,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   while( forward_dist > 0 ) {
     //Printf( COM2, "second loop, forward_dist: %d\r\n", forward_dist );
     // grab the current edge
-    // TODO: Make a queue to go down both paths of a branch
+    // TODO: Check the expected path to determine which branch
     if( cur_node->type == NODE_BRANCH ) {
       branch_ind = cur_node->num;
       if( branch_ind > 152 ) {
@@ -216,13 +217,17 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       colliding_train_idx = get_train_idx( rev_edge->begin_train_num );
     }
     // Oh shit, a collision
+    if( has_collision && rev_edge->begin_train_num == USER_INPUT_NUM ) {
+      train->state = HANDLING_COLLISION;
+      return -1;
+    }
     if( has_collision && colliding_train_idx != NONE ) {
       colliding_train = &(all_trains[colliding_train_idx]);
       colliding_train_state = colliding_train->state;
       // I'm already handling it, just return and continue on
       if( train_state == HANDLING_COLLISION || train_state == REVERSING ) {
         return 0;
-      } else if( colliding_train_state == HANDLING_COLLISION || colliding_train_state == REVERSING ) {
+      } else if( ( colliding_train_state == HANDLING_COLLISION || colliding_train_state == REVERSING ) && cur_speed > 0 ) {
         // If other train handling this collision, then we should probably just slow down
         return -2;
       } else {
@@ -243,6 +248,9 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       edge->begin_train_rsv_end = edge->dist - edge->middle_train_rsv_start; //5 cm buffer
       length_rsvd += edge->dist - edge->middle_train_rsv_start;
       colliding_train_idx = get_train_idx( edge->middle_train_num );
+      if( edge->middle_train_num == USER_INPUT_NUM ) {
+        return -3;
+      }
       colliding_train = &(all_trains[colliding_train_idx]);
       if( colliding_train->cur_speed == 0 ) {
         if( length_rsvd < orig_forward_dist ) {
@@ -623,6 +631,7 @@ inline void get_shortest_path( train_state_t *train ) {
   dijkstra( train->track_graph, train->train_id, train->prev_sensor_id, all_path, train->all_dist , all_step );
 
   /* get shortest path for our destination and store it in the train state */
+  train->train_reach_destination = false;
   train->dest_path_cur_idx = 0;
   train->dest_total_steps = all_step[train->dest_id];
   debugu( 4, "train->dest_total_steps: %d", train->dest_total_steps );
@@ -672,7 +681,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   debugu( 4, "src_id: %d, dest_id: %d, compute_next_command: traverse_cur_idx: %d, total_dest_total_steps: %d", src_id, train->dest_path[traverse_cur_idx], traverse_cur_idx, train->dest_total_steps );
   debugu( 4,  "safe_branch_dist: %d", safe_branch_dist );
   assertum( 1, ( train->cur_speed >= 8 && train->cur_speed <= 14 ) || ( train->cur_speed >= 23 || train->cur_speed <= 29 ), "cur_speed: %d", train->cur_speed );
-  print_train_path( train );
+  //print_train_path( train );
 
   debugu(1,  "TEST: total length: %d, should see -1 here: %d", train->all_dist[train->dest_path[train->dest_total_steps-1]], train->dest_path[train->dest_total_steps] );
   if( train->all_dist[train->dest_path[train->dest_total_steps-1]] >= DIST_MAX ) {
@@ -1016,7 +1025,7 @@ void dijkstra( struct _track_node_* track_graph, int train_id, int src_id, int* 
        && track_node->edge[direction].reverse->middle_train_num != train_id )
      || ( track_node->edge[direction].reverse->begin_train_num != NONE 
        && track_node->edge[direction].reverse->begin_train_num != train_id ));
-      test_dist = is_reserved ? dist[track_id] + DIST_MAX : dist[track_id] + track_node->edge[direction].dist;
+      test_dist = is_reserved? dist[track_id] + DIST_MAX : dist[track_id] + track_node->edge[direction].dist;
       assertum( 1, test_dist >= 0, "failure indicates test_dist overflows int size" );
       assertum( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d\n\r\n\r\n\r", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
       test_step = step[track_id] + 1;

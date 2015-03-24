@@ -13,8 +13,8 @@
 #define TRAIN_24_NUM 24
 #define TRAIN_12_NUM 12
 #define TRAIN_58_IDX 0
-#define TRAIN_45_IDX 1
-#define TRAIN_24_IDX 2
+#define TRAIN_45_IDX 2
+#define TRAIN_24_IDX 1
 #define TRAIN_12_IDX 3
 
 #define NONE      -1
@@ -71,10 +71,13 @@
 #define TR_ACCEL        5
 #define TR_DECEL        6
 #define TR_CH_DIR       7
+#define TRACK_RSV       8
 
 #define NUM_FALLBACK 5
 #define SENSOR_STACK_MAX 10 
 #define SW_CMD_MAX   4
+
+#define USER_INPUT_NUM  99
 
 #define CONVERT_SWITCH_ID( _switch_num ) \
   if( _switch_num > 18 ) { \
@@ -99,6 +102,9 @@ typedef struct _rail_cmds_ {
   int train_mm_past_dest;
   int train_accel;
   int train_decel;
+
+  int rsv_node_id;
+  int rsv_node_dir;
   
   int switch_idx;
   switch_cmd_t switch_cmds[SW_CMD_MAX];
@@ -169,6 +175,7 @@ typedef struct _train_state_ {
   int prev_speed;
   int cur_vel;
   int speed_change_time;
+  int init_time;
   bool is_forward;
   int fallback_sensors[NUM_FALLBACK];
   int fallback_dist[NUM_FALLBACK];

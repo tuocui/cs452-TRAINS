@@ -32,6 +32,25 @@ int get_train_idx( int train_num ) {
   }
 }
 
+int get_rand_dest( int super_complicated_seed, track_node_t *graph ) {
+  int dest_id = super_complicated_seed % 80;
+  int totally_rand_num = super_complicated_seed % 10;
+  track_node_t *dest_node;
+  while( 1 ) {
+    dest_node = &(graph[dest_id]);
+    while( 1 ) {
+      if( dest_node->type == NODE_BRANCH ) {
+        return dest_id;
+      } else if (dest_node->type == NODE_EXIT ) {
+        dest_id = ( dest_id + totally_rand_num ) % 80;
+        break;
+      } else {
+        dest_node = dest_node->edge[DIR_AHEAD].dest;
+      }
+    }
+  }
+}
+
 void clear_reservations( track_node_t *graph ) {
   int i, j;
   for( i = 0; i < TRACK_MAX; ++i ) {
@@ -87,14 +106,15 @@ void print_rsv( train_state_t *train, train_state_t *trains ) {
   int num_printed = 0;
   int i, j;
   int train_idx = get_train_idx( train_num );
+  Printf( COM2, "\0337\033[?25l\033[2;%dH==== %d ====\0338", ( train_idx * 37 ) + 83, train->train_id );
   for( i = 0; i < TRACK_MAX; ++i ) {
     for( j = 0; j < 2; ++j ) {
       if( graph[i].edge[j].begin_train_num == train_num ) {
-        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 0, graph[i].edge[j].begin_train_rsv_end );
+        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 3 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 0, graph[i].edge[j].begin_train_rsv_end );
         ++num_printed;
       }
       if( graph[i].edge[j].middle_train_num == train_num ) {
-        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 2 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 1, graph[i].edge[j].middle_train_rsv_start );
+        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 3 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 1, graph[i].edge[j].middle_train_rsv_start );
         ++num_printed;
       }
     }

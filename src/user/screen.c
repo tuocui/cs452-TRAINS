@@ -9,8 +9,7 @@
 #include "nameserver.h"
 
 int output_invalid( ) {
-  //Putstr( COM2, "\0337\033[1A\033[2K\rInvalid command\0338", 28 );
-  Printf( COM2, "Invalid command\n\r" );
+  Putstr( COM2, "\0337\033[1A\033[2K\rInvalid command\0338", 28 );
   return 0;
 }
 
@@ -58,6 +57,9 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 's' && cmd2 == 'w' ) {
     return SWITCH_CMD;  
   }
+  if ( cmd1 == 'r' && cmd2 == 's' ) {
+    return RSV_CMD;  
+  }
   
   return -1;
 }
@@ -103,6 +105,38 @@ short parse_sensor_name( char *cmd_buffer, int *buf_ind_ptr ) {
     ++(*buf_ind_ptr);
   }
   return sensor_num;
+}
+
+short parse_node_name( char *cmd_buffer, int *buf_ind_ptr ) {
+  short num;
+  char first_c = cmd_buffer[(*buf_ind_ptr)++];
+  char second_c = cmd_buffer[(*buf_ind_ptr)++];
+  if( first_c == 'B' && second_c == 'R' ) {
+    num = parse_short( cmd_buffer, buf_ind_ptr );
+    if( num <= 0 || ( num > 18 && !( num >= 153 && num <= 156 ) ) ) {
+      output_invalid( );
+      return -1;  
+    }
+    if( num >= 153 && num <= 156 ) {
+      num -= 134;
+    }
+    return (num * 2) + 78;
+  }
+
+  if( first_c == 'M' && second_c == 'R' ) {
+    num = parse_short( cmd_buffer, buf_ind_ptr );
+    if( num <= 0 || ( num > 18 && !( num >= 153 && num <= 156 ) ) ) {
+      output_invalid( );
+      return -1;  
+    }
+    if( num >= 153 && num <= 156 ) {
+      num -= 134;
+    }
+    return ( num * 2 ) + 79;
+  }
+
+  *buf_ind_ptr -= 2;
+  return parse_sensor_name( cmd_buffer, buf_ind_ptr );
 }
 
 int handle_move( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg, int rail_server_tid ) {
@@ -290,6 +324,20 @@ int handle_ch_dir( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  
   return 0;
 }
 
+int handle_rsv( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
+  int buf_ind = 3;
+  int node_id = parse_node_name( cmd_buffer, &buf_ind );
+  ++buf_ind;
+  int dir = parse_short( cmd_buffer, &buf_ind );
+  if( node_id >= 0 || dir == 0 || dir == 1 ) {
+    ((rail_msg->to_server_content).rail_cmds)->rsv_node_id = node_id;
+    ((rail_msg->to_server_content).rail_cmds)->rsv_node_dir = dir;
+    ((rail_msg->to_server_content).rail_cmds)->train_action = TRACK_RSV;
+    Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  }
+  return 0;
+}
+
 int handle_go( ) {
   track_go( );
   Putstr( COM2, "\0337\033[1A\033[2K\rTrack ON\0338", 21 );
@@ -338,6 +386,9 @@ int process_buffer( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg,
     break;
   case CH_DIR_CMD:
     handle_ch_dir( cmd_buffer, rail_msg, rail_server_tid );
+    break;
+  case RSV_CMD:
+    handle_rsv( cmd_buffer, rail_msg, rail_server_tid );
     break;
   case GO_CMD:
     handle_go( );
@@ -390,8 +441,7 @@ void parse_user_input( ) {
     if ( c == 13 ) {
       cmd_buffer[cmd_ind] = 0;
       cmd_ind = 0;
-      //Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
-      Printf( COM2, "$->" );
+      Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
       init_rail_cmds( &rail_cmds );
       status = process_buffer( cmd_buffer, train_speeds, &rail_msg, rail_server_tid );
       init_rail_cmds( &rail_cmds );
@@ -403,12 +453,13 @@ void parse_user_input( ) {
       rail_cmds.train_mm_past_dest = 0;
       rail_cmds.train_accel = 100;
       rail_cmds.train_accel = 120;
+      rail_cmds.rsv_node_id = -1;
+      rail_cmds.rsv_node_dir = -1;
       //rail_cmds.switch_id0 = 0;
       //rail_cmds.switch_action0 = -1;
       //rail_cmds.switch_delay0 = 0;
       if( status == QUIT_CMD ) {
-        //Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
-        Putstr( COM2, "Shutting down. Goodbye!\n\r", 45 );
+        Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
         for( i = 12; i < NUM_TRAINS; ++i ) {
           train_speeds[i] = 0;
           set_train_speed_old( i, 0 );

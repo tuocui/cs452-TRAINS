@@ -97,7 +97,7 @@ int update_switch_output( short switch_num, char state ) {
     return 0;
   }
 
-  int line_num = 7 + ( switch_ind / 5 );
+  int line_num = 4 + ( switch_ind / 5 );
   int col_num = 20 + ( ( switch_ind % 5 ) * 11 );
   Printf( COM2, "\0337\033[%d;%dH sw%d: %c\0338", line_num, col_num, switch_num, state);
   return 0;
@@ -177,8 +177,8 @@ int initialize_track( ) {
   int initialized = 0;
   int switch_ind = 0;
   // Make things look kinda pretty
-  Printf( COM2, "\0337\033[2;0HINITIALIZING\033[5;0HRECENT SENSORS:\r\n---------------\r\n\0338" );
-  Putstr( COM2, "\0337\033[5;20HSwitches:\033[6;20H---------\033[24;0H\0338", 43 );
+  Printf( COM2, "\0337\033[2;0HINITIALIZING\033[3;0HRECENT SENSORS:\r\n---------------\r\n\0338" );
+  Putstr( COM2, "\0337\033[3;20HSwitches:\033[4;20H---------\033[24;0H\0338", 43 );
   track_go( );
   while( !initialized ) {
     if ( switch_ind == 18 ) {
@@ -259,7 +259,7 @@ void track_sensor_task( ) {
       if ( recent_sensor_ind == -1 ) recent_sensor_ind = NUM_RECENT_SENSORS - 1;
       recent_sensor = recent_sensors[recent_sensor_ind];
       sensor_id_to_name( recent_sensor, sensor_name );
-      Printf( COM2, "\0337\033[%d;0H     %c%c%c  \0338", j + 7, sensor_name[0], sensor_name[1], sensor_name[2] );
+      Printf( COM2, "\0337\033[%d;0H     %c%c%c  \0338", j + 4, sensor_name[0], sensor_name[1], sensor_name[2] );
       --recent_sensor_ind;
     }
     //Delay( 1 );
