@@ -54,12 +54,12 @@ typedef struct _rail_msg_ {
     SENSOR_DATA = 0,
     USER_INPUT,
     RAIL_CMDS,
+    COLLISION_CMDS,
     TRAIN_EXE_READY,
     SWITCH_EXE_READY,
     TRAIN_DELAY_TIMEOUT,
     TIMER_READY,
     SENSOR_WORKER_READY,
-    COLLISION_CMDS,
   } request_type;
 
   enum {

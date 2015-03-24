@@ -12,6 +12,8 @@
 #define TRAIN_45_NUM 45
 #define TRAIN_24_NUM 24
 #define TRAIN_12_NUM 12
+
+#define TRAIN_MAX    4
 #define TRAIN_58_IDX 0
 #define TRAIN_45_IDX 1
 #define TRAIN_24_IDX 2
@@ -74,14 +76,22 @@
 
 #define NUM_FALLBACK 5
 #define SENSOR_STACK_MAX 10 
-#define SW_CMD_MAX   4
+
+#define CMD_QUEUE_MAX 4
+#define SW_CMD_MAX 4
 
 #define CONVERT_SWITCH_ID( _switch_num ) \
   if( _switch_num > 18 ) { \
     switch_id -= 134; \
-  }
+  } else { ; }
 
 struct _track_node_;
+
+typedef struct _train_cmd_ {
+  int train_id;
+  int train_action;
+  int switch_delay;
+} train_cmd_t;
 
 typedef struct _switch_cmd_ {
   int switch_id;

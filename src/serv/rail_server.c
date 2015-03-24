@@ -18,8 +18,8 @@
 
 void rail_graph_worker( ) {
   //DEBUG
-  int rail_server_tid = MyParentTid( );
-  assertu( 1, rail_server_tid > 0 );
+  int cmd_server_tid = WhoIs((char *)CMD_SERVER );
+  assertum( 1, cmd_server_tid > 0, "cmd_server is not registered" );
   int ret_val;
 
   /* content to send to the server, first msg has NULL cmds */
@@ -36,7 +36,8 @@ void rail_graph_worker( ) {
   init_rail_cmds( &rail_cmds );
 
   FOREVER {
-    ret_val = Send( rail_server_tid, (char*)&rail_msg, sizeof( rail_msg ), (char*)&train_state, sizeof( train_state ));
+    /* send to cmd_worker for new issued cmds, but the reply is from rail_server with new sensor data and train info */
+    ret_val = Send( cmd_server_tid, (char*)&rail_msg, sizeof( rail_msg ), (char*)&train_state, sizeof( train_state ));
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     assertu( 1, train_state );
 
@@ -60,6 +61,7 @@ void sensor_data_courier( ) {
   int ret_val;
   int sensor_num;
   int sensor_task_id = WhoIs( (char *) SENSOR_PROCESSING_TASK );
+  assertum( 1, sensor_task_id >= 0, "sensor_task is not registered" );
   FOREVER {
     ret_val =Send( sensor_task_id, (char *)&sensor_num, 0, (char *)&sensor_num, sizeof(sensor_num) );
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
@@ -308,7 +310,7 @@ void switch_exe_worker( ) {
 void update_trains( ) {
   train_state_t *trains;
   int ret_val;
-  int rail_server_tid;
+  int rail_server_tid, cmd_server_tid;
   int i;
   int cur_time;
   rail_cmds_t rail_cmds;
@@ -317,6 +319,8 @@ void update_trains( ) {
   rail_msg.to_server_content.rail_cmds = &rail_cmds;
   rail_msg.from_server_content.nullptr = NULL;
   update_train_args_t update_train_args;
+  cmd_server_tid = WhoIs(( char* )CMD_SERVER );
+  assertum( 1, cmd_server_tid >= 0, "cmd_server is not registered" );
   ret_val = Receive( &rail_server_tid, (char *)&update_train_args, sizeof( update_train_args ) );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   ret_val = Reply( rail_server_tid, (char *)&trains, 0 );
@@ -341,13 +345,13 @@ void update_trains( ) {
           ((rail_msg.to_server_content).rail_cmds)->train_action = TR_REVERSE;
           ((rail_msg.to_server_content).rail_cmds)->train_speed = -1;
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
-          ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+          ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
         } else if( ret_val == -2 ) {
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
           ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
           ((rail_msg.to_server_content).rail_cmds)->train_speed = 8;
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
-          ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+          ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
         }
         /* clear destination if stopping flag is set */
         if( trains[i].train_reach_destination == true ) {
@@ -399,65 +403,78 @@ void print_trains( ) {
   }
 }
 
-void rail_server( ) {
-  if( RegisterAs( (char*)RAIL_SERVER ) == -1 ) {
-    bwputstr( COM2, "ERROR: failed to register rail_server, aborting ...\n\r" );
+
+void cmd_server( ) {
+  if( RegisterAs(( char* )CMD_SERVER ) == -1 ) {
+    bwputstr( COM2, "ERROR: failed to register cmd_server, aborting ...\n\r" );
     Exit( );
   }
-  int client_tid;
-  int ret_val;
-  
-  /* track state initialization */
-  track_node_t track_graph[TRACK_MAX];
-  //init_tracka( (track_node_t*)track_graph );
-  init_trackb( (track_node_t*)track_graph );
-  int switch_states[SW_MAX];
-  rail_msg_t receive_msg;
+  //switch_cmd_t * switch_cmds[SW_MAX]; // idx 0 - 22, 1-22 are used, 0 is empty
+  //switch_cmd_t switch1_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch2_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch3_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch4_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch5_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch6_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch7_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch8_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch9_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch10_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch11_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch12_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch13_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch14_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch15_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch16_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch17_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch18_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch153_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch154_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch155_cmds[CMD_QUEUE_MAX];
+  //switch_cmd_t switch156_cmds[CMD_QUEUE_MAX];
+  //switch_cmds[1] = switch1_cmds;
+  //switch_cmds[2] = switch2_cmds;
+  //switch_cmds[3] = switch3_cmds;
+  //switch_cmds[4] = switch4_cmds;
+  //switch_cmds[5] = switch5_cmds;
+  //switch_cmds[6] = switch6_cmds;
+  //switch_cmds[7] = switch7_cmds;
+  //switch_cmds[8] = switch8_cmds;
+  //switch_cmds[9] = switch9_cmds;
+  //switch_cmds[10] = switch10_cmds;
+  //switch_cmds[11] = switch11_cmds;
+  //switch_cmds[12] = switch12_cmds;
+  //switch_cmds[13] = switch13_cmds;
+  //switch_cmds[14] = switch14_cmds;
+  //switch_cmds[15] = switch15_cmds;
+  //switch_cmds[16] = switch16_cmds;
+  //switch_cmds[17] = switch17_cmds;
+  //switch_cmds[18] = switch18_cmds;
+  //switch_cmds[19] = switch153_cmds;
+  //switch_cmds[20] = switch154_cmds;
+  //switch_cmds[21] = switch155_cmds;
+  //switch_cmds[22] = switch156_cmds;
 
-  /* trains initialization */
-  train_state_t trains[TR_MAX];
-  init_trains( trains, (track_node_t*)track_graph, switch_states );
-  init_switches( switch_states );
-  int rail_graph_worker_tids[TR_MAX]; 
+  //train_cmd_t * train_cmds[TRAIN_MAX];
+  //train_cmd_t train0_cmds[CMD_QUEUE_MAX];
+  //train_cmd_t train1_cmds[CMD_QUEUE_MAX];
+  //train_cmd_t train2_cmds[CMD_QUEUE_MAX];
+  //train_cmd_t train3_cmds[CMD_QUEUE_MAX];
+  //train_cmds[0] = train0_cmds;
+  //train_cmds[1] = train0_cmds;
+  //train_cmds[2] = train0_cmds;
+  //train_cmds[3] = train0_cmds;
 
-  //bool train_graph_search_ready[TR_MAX];
-  //bool train_delay_treads_arrived[TR_MAX]; TODO
-  /* graph_search_workers */
-  int i;
-  for( i = 0; i < TR_MAX; ++i ) {
-    rail_graph_worker_tids[i] = Create( 10, &rail_graph_worker );
-    assertu( 1, rail_graph_worker_tids[i] > 0 );
-  }
-  rail_cmds_t* recved_cmds; 
+  int i, ret_val, client_tid, rail_server_tid;
+  train_state_t * trains;
+  rail_server_tid = MyParentTid( );
+  assertu( 1, rail_server_tid > 0 );
 
-
-  int update_trains_tid = Create( 13, &update_trains );
-  update_train_args_t update_train_args;
-  update_train_args.trains = trains;
-  ret_val = Send( update_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
+  /* get trains states from rail_server */
+  ret_val = Receive( &client_tid, (char *)&trains, sizeof( trains ));
+  assertum( 1, rail_server_tid == client_tid && ret_val >= 0, "retval: %d", ret_val );
+  ret_val = Reply( rail_server_tid, (char *)&client_tid, 0 );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-
-  int print_trains_tid = Create( 13, &print_trains );
-  ret_val = Send( print_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
-  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
-
-
-  int worker_tid;
-  /* Sensor worker declarations */
-  int sensor_courier_tid = Create( 2, &sensor_data_courier );
-  assertu( 1, sensor_courier_tid > 0 );
-
-  declare_ring_queue( int, sensor_workers, SENSOR_WORKER_MAX );
-  int sensor_worker_tids[SENSOR_WORKER_MAX];
-  char sensor_name[4];
-  for( i = 0; i < SENSOR_WORKER_MAX; ++i ) {
-    sensor_worker_tids[i] = Create( 10, &sensor_worker );
-    assertu( 1, sensor_worker_tids[i] > 0 );
-    ret_val = Send( sensor_worker_tids[i], (char *)&client_tid, 0, (char *)&client_tid, 0 );
-    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-  }
-  sensor_args_t sensor_args;
-  sensor_args.trains = trains;
 
   /* Train action workers */
   int train_exe_worker_tids[TR_MAX];
@@ -475,6 +492,9 @@ void rail_server( ) {
   int switch_exe_worker_tid = NONE;
   int switch_exe_worker_tids[SW_MAX];
   int switch_num;
+  rail_msg_t receive_msg;
+  rail_cmds_t* receive_cmds; 
+
   for( i = 1; i < SW_MAX; ++i ) {
     switch_exe_worker_tids[i] = Create( 10, &switch_exe_worker );
     assertu( 1, switch_exe_worker_tids[i] > 0 );
@@ -486,28 +506,14 @@ void rail_server( ) {
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
   }
   switch_cmd_args_t switch_cmd_args;
-  switch_cmd_args.switch_states = switch_states;
-  switch_cmd_args.graph = track_graph;
+  switch_cmd_args.switch_states = trains->switch_states;
+  switch_cmd_args.graph = trains->track_graph;
 
+  //TODO: refactor, create another struct for cmd_msg_t for this server
   FOREVER { 
-    ret_val = Receive( &client_tid, (char *)&receive_msg, sizeof( rail_msg_t ));
+    ret_val = Receive( &client_tid, (char *)&receive_msg, sizeof( receive_msg ));
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     switch( receive_msg.request_type ) {
-      case SENSOR_DATA:
-        {
-        //DEBUG
-          /* retrieve data, find sensor number and corresponding train, set ready */
-          ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
-          assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-          if( !sensor_workers_empty( ) ) {
-            int sensor_num = (receive_msg.to_server_content.sensor_data)->sensor_num;
-            worker_tid = sensor_workers_pop_front( );
-            sensor_args.sensor_num = sensor_num;
-            ret_val = Reply( worker_tid, (char *)&sensor_args, sizeof(sensor_args) );
-            assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-          }
-        }
-        break;
       case COLLISION_CMDS:
         // just fall through to user input, same diff
       case USER_INPUT:
@@ -557,7 +563,7 @@ void rail_server( ) {
         break;
       case RAIL_CMDS:
         /* get and send train cmds */
-        recved_cmds = receive_msg.to_server_content.rail_cmds;
+        receive_cmds = receive_msg.to_server_content.rail_cmds;
         switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
         case TRAIN_58_NUM:
           train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
@@ -577,30 +583,30 @@ void rail_server( ) {
         }
         if( train_exe_worker_tid != NONE ) {
           debugu( 4, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
-          train_cmd_args.cmd = recved_cmds->train_action;
-          train_cmd_args.speed_num = recved_cmds->train_speed;
-          train_cmd_args.delay_time = recved_cmds->train_delay;
+          train_cmd_args.cmd = receive_cmds->train_action;
+          train_cmd_args.speed_num = receive_cmds->train_speed;
+          train_cmd_args.delay_time = receive_cmds->train_delay;
           ret_val = Reply( train_exe_worker_tid, (char*)&train_cmd_args, sizeof( train_cmd_args ));
           assertum( 1, ret_val >= 0, "retval: %d", ret_val );
         }
         /* get and send switch cmds */
         int i;
-        for( i = 0; i <= recved_cmds->switch_idx; ++i ) {
-          debugu( 4, "before reply to switch_exe_worker: switch_idx: %d, i: %d", recved_cmds->switch_idx, i );
-          switch_exe_worker_tid = switch_exe_worker_tids[recved_cmds->switch_cmds[i].switch_id];
-          switch_cmd_args.state = recved_cmds->switch_cmds[i].switch_action;
-          switch_cmd_args.delay_time = recved_cmds->switch_cmds[i].switch_delay;
+        for( i = 0; i <= receive_cmds->switch_idx; ++i ) {
+          debugu( 4, "before reply to switch_exe_worker: switch_idx: %d, i: %d", receive_cmds->switch_idx, i );
+          switch_exe_worker_tid = switch_exe_worker_tids[receive_cmds->switch_cmds[i].switch_id];
+          switch_cmd_args.state = receive_cmds->switch_cmds[i].switch_action;
+          switch_cmd_args.delay_time = receive_cmds->switch_cmds[i].switch_delay;
           ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
           debugu( 4, "after reply to switch_exe_worker" );
           assertum( 1, ret_val >= 0, "retval: %d, switch_worker_tid: %d, switch_id: %d", ret_val, 
-              switch_exe_worker_tid, recved_cmds->switch_cmds[i].switch_id );
+              switch_exe_worker_tid, receive_cmds->switch_cmds[i].switch_id );
         }
         break;
       case TRAIN_EXE_READY:
         {
           train_state_t *train = &(trains[get_train_idx( receive_msg.general_val )]);
           if( receive_msg.general_val != NONE ) {
-            clear_reservations_by_train( track_graph, train );
+            clear_reservations_by_train( train->track_graph, train );
           }
         }
         //DEBUG
@@ -609,20 +615,257 @@ void rail_server( ) {
         // Update train direction if reverse is given
         break;
       case SWITCH_EXE_READY:
-        //DEBUG
         for( i = 0; i < TR_MAX; ++i ) {
           if( trains[i].state != NOT_INITIALIZED && trains[i].state != INITIALIZING ) {
             if( trains[i].state == REVERSING ) {
               predict_next_sensor_dynamic( &(trains[i]) );
-            } else {
+            } 
+            else {
               predict_next_sensor_static( &(trains[i]) );
             }
+            //char sensor_name[4];
             predict_next_fallback_sensors_static( &(trains[i]) );
-            sensor_id_to_name( trains[i].next_sensor_id, sensor_name );
+            //sensor_id_to_name( trains[i].next_sensor_id, sensor_name );
             //Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );
           }
         }
         break;
+      default:
+        assertum( 1, false, "ERROR: wrong request_type: %d was sent to cmd_server by tid: %d", 
+            receive_msg.request_type, client_tid );
+        break;
+    }
+  }
+}
+
+
+void rail_server( ) {
+  if( RegisterAs( (char*)RAIL_SERVER ) == -1 ) {
+    bwputstr( COM2, "ERROR: failed to register rail_server, aborting ...\n\r" );
+    Exit( );
+  }
+  
+  int i, client_tid, ret_val;
+  
+  /* initialization of track and trains */
+  track_node_t track_graph[TRACK_MAX];
+  //init_tracka( (track_node_t*)track_graph );
+  init_trackb( (track_node_t*)track_graph );
+
+  int switch_states[SW_MAX];
+  init_switches( switch_states );
+  rail_msg_t receive_msg;
+
+  train_state_t trains[TR_MAX];
+  init_trains( trains, (track_node_t*)track_graph, switch_states );
+
+  /* create cmd_server, first, because other workers need to know cmd_server_tid */
+  int cmd_server_tid = Create( 3, &cmd_server );
+  assertu( 1, cmd_server_tid > 0 );
+  ret_val = Send( cmd_server_tid, (char *)&trains, sizeof( trains ), (char *)&cmd_server_tid, 0 );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+
+  /* rail_graph_workers */
+  int rail_graph_worker_tids[TR_MAX]; 
+  for( i = 0; i < TR_MAX; ++i ) {
+    rail_graph_worker_tids[i] = Create( 10, &rail_graph_worker );
+    assertu( 1, rail_graph_worker_tids[i] > 0 );
+  }
+
+  /* update_trains worker */
+  int update_trains_tid = Create( 13, &update_trains );
+  update_train_args_t update_train_args;
+  update_train_args.trains = trains;
+  ret_val = Send( update_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+
+  /* print trains worker */
+  int print_trains_tid = Create( 13, &print_trains );
+  ret_val = Send( print_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
+  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+
+  /* Sensor worker */
+  int sensor_worker_tid;
+  int sensor_courier_tid = Create( 2, &sensor_data_courier );
+  assertu( 1, sensor_courier_tid > 0 );
+
+  declare_ring_queue( int, sensor_workers, SENSOR_WORKER_MAX );
+  int sensor_worker_tids[SENSOR_WORKER_MAX];
+  //char sensor_name[4];
+  for( i = 0; i < SENSOR_WORKER_MAX; ++i ) {
+    sensor_worker_tids[i] = Create( 10, &sensor_worker );
+    assertu( 1, sensor_worker_tids[i] > 0 );
+    ret_val = Send( sensor_worker_tids[i], (char *)&client_tid, 0, (char *)&client_tid, 0 );
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+  }
+  sensor_args_t sensor_args;
+  sensor_args.trains = trains;
+  
+  //rail_cmds_t* recved_cmds; 
+  ///* Train action workers */
+  //int train_exe_worker_tids[TR_MAX];
+  //int train_exe_worker_tid = NONE;
+  //for( i = 0; i < TR_MAX; ++i ) {
+  //  train_exe_worker_tids[i] = Create( 10, &train_exe_worker );
+  //  assertu( 1, train_exe_worker_tids[i] > 0 );
+  //  train_state_t *train = &(trains[i]);
+  //  ret_val = Send( train_exe_worker_tids[i], (char *)&train, sizeof( train ), (char *)&client_tid, 0 );
+  //  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+  //}
+  //train_cmd_args_t train_cmd_args;
+
+  ///* Switch action workers */
+  //int switch_exe_worker_tid = NONE;
+  //int switch_exe_worker_tids[SW_MAX];
+  //int switch_num;
+  //for( i = 1; i < SW_MAX; ++i ) {
+  //  switch_exe_worker_tids[i] = Create( 10, &switch_exe_worker );
+  //  assertu( 1, switch_exe_worker_tids[i] > 0 );
+  //  switch_num = i;
+  //  if( switch_num > 18 ) {
+  //    switch_num += 134;
+  //  }
+  //  ret_val = Send( switch_exe_worker_tids[i], (char *)&switch_num, sizeof( switch_num ), (char *)&client_tid, 0 );
+  //  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+  //}
+  //switch_cmd_args_t switch_cmd_args;
+  //switch_cmd_args.switch_states = switch_states;
+  //switch_cmd_args.graph = track_graph;
+
+  FOREVER { 
+    ret_val = Receive( &client_tid, (char *)&receive_msg, sizeof( rail_msg_t ));
+    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+    switch( receive_msg.request_type ) {
+      case SENSOR_DATA:
+        {
+        //DEBUG
+          /* retrieve data, find sensor number and corresponding train, set ready */
+          ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
+          assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+          if( !sensor_workers_empty( ) ) {
+            int sensor_num = (receive_msg.to_server_content.sensor_data)->sensor_num;
+            sensor_worker_tid = sensor_workers_pop_front( );
+            sensor_args.sensor_num = sensor_num;
+            ret_val = Reply( sensor_worker_tid, (char *)&sensor_args, sizeof(sensor_args) );
+            assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+          }
+        }
+        break;
+      //case COLLISION_CMDS:
+      //  // just fall through to user input, same diff
+      //case USER_INPUT:
+      //  ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
+      //  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+      //  if( (receive_msg.to_server_content.rail_cmds)->train_id != NONE ) {
+      //    // TODO: Make a mapping between train number and idx
+      //    switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
+      //    case TRAIN_58_NUM:
+      //      train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
+      //      break;
+      //    case TRAIN_45_NUM:
+      //      train_exe_worker_tid = train_exe_worker_tids[TRAIN_45_IDX];
+      //      break;
+      //    case TRAIN_24_NUM:
+      //      train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
+      //      break;
+      //    case TRAIN_12_NUM:
+      //      train_exe_worker_tid = train_exe_worker_tids[TRAIN_12_IDX];
+      //      break;
+      //    default:
+      //      train_exe_worker_tid = -1;
+      //      break;
+      //    }
+      //    if( train_exe_worker_tid > 0 ) {
+      //      train_cmd_args.cmd = (receive_msg.to_server_content.rail_cmds)->train_action;
+      //      train_cmd_args.speed_num = (receive_msg.to_server_content.rail_cmds)->train_speed;
+      //      train_cmd_args.delay_time = (receive_msg.to_server_content.rail_cmds)->train_delay;
+      //      train_cmd_args.dest = (receive_msg.to_server_content.rail_cmds)->train_dest;
+      //      train_cmd_args.mm_past_dest = (receive_msg.to_server_content.rail_cmds)->train_mm_past_dest;
+      //      train_cmd_args.accel_rate = (receive_msg.to_server_content.rail_cmds)->train_accel;
+      //      train_cmd_args.decel_rate = (receive_msg.to_server_content.rail_cmds)->train_decel;
+      //      ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
+      //      //FIXME: if the train_exe_worker_tid is not ready, should not Reply, or add a secretary
+      //      assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
+      //    }
+      //  } else if ( receive_msg.to_server_content.rail_cmds->switch_idx != NONE ) {
+      //    assertum( 1, receive_msg.to_server_content.rail_cmds->switch_idx == 0, 
+      //        "user packed %d sw_cmds, should it?", receive_msg.to_server_content.rail_cmds->switch_idx + 1 );
+      //    int switch_id = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_id;
+      //    int switch_exe_worker_tid = switch_exe_worker_tids[switch_id];
+      //    switch_cmd_args.state = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action;
+      //    switch_cmd_args.delay_time = 0;
+      //    ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
+      //    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+      //  }
+      //  break;
+      //case RAIL_CMDS:
+      //  /* get and send train cmds */
+      //  recved_cmds = receive_msg.to_server_content.rail_cmds;
+      //  switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
+      //  case TRAIN_58_NUM:
+      //    train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
+      //    break;
+      //  case TRAIN_45_NUM:
+      //    train_exe_worker_tid = train_exe_worker_tids[TRAIN_45_IDX];
+      //    break;
+      //  case TRAIN_24_NUM:
+      //    train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
+      //    break;
+      //  case TRAIN_12_NUM:
+      //    train_exe_worker_tid = train_exe_worker_tids[TRAIN_12_IDX];
+      //    break;
+      //  default:
+      //    train_exe_worker_tid = -1;
+      //    break;
+      //  }
+      //  if( train_exe_worker_tid != NONE ) {
+      //    debugu( 4, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
+      //    train_cmd_args.cmd = recved_cmds->train_action;
+      //    train_cmd_args.speed_num = recved_cmds->train_speed;
+      //    train_cmd_args.delay_time = recved_cmds->train_delay;
+      //    ret_val = Reply( train_exe_worker_tid, (char*)&train_cmd_args, sizeof( train_cmd_args ));
+      //    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+      //  }
+      //  /* get and send switch cmds */
+      //  int i;
+      //  for( i = 0; i <= recved_cmds->switch_idx; ++i ) {
+      //    debugu( 4, "before reply to switch_exe_worker: switch_idx: %d, i: %d", recved_cmds->switch_idx, i );
+      //    switch_exe_worker_tid = switch_exe_worker_tids[recved_cmds->switch_cmds[i].switch_id];
+      //    switch_cmd_args.state = recved_cmds->switch_cmds[i].switch_action;
+      //    switch_cmd_args.delay_time = recved_cmds->switch_cmds[i].switch_delay;
+      //    ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
+      //    debugu( 4, "after reply to switch_exe_worker" );
+      //    assertum( 1, ret_val >= 0, "retval: %d, switch_worker_tid: %d, switch_id: %d", ret_val, 
+      //        switch_exe_worker_tid, recved_cmds->switch_cmds[i].switch_id );
+      //  }
+      //  break;
+      //case TRAIN_EXE_READY:
+      //  {
+      //    train_state_t *train = &(trains[get_train_idx( receive_msg.general_val )]);
+      //    if( receive_msg.general_val != NONE ) {
+      //      clear_reservations_by_train( track_graph, train );
+      //    }
+      //  }
+      //  //DEBUG
+      //  // rerun graph search only if command was given by user AND if command is reverse or change speed
+      //  // Don't run graph search if train state is busy, or reversing
+      //  // Update train direction if reverse is given
+      //  break;
+      //case SWITCH_EXE_READY:
+      //  //DEBUG
+      //  for( i = 0; i < TR_MAX; ++i ) {
+      //    if( trains[i].state != NOT_INITIALIZED && trains[i].state != INITIALIZING ) {
+      //      if( trains[i].state == REVERSING ) {
+      //        predict_next_sensor_dynamic( &(trains[i]) );
+      //      } else {
+      //        predict_next_sensor_static( &(trains[i]) );
+      //      }
+      //      predict_next_fallback_sensors_static( &(trains[i]) );
+      //      sensor_id_to_name( trains[i].next_sensor_id, sensor_name );
+      //      //Printf( COM2, "\0337\033[7A\033[2K\rNext expected sensor: %c%c%c    \0338", sensor_name[0], sensor_name[1], sensor_name[2] );
+      //    }
+      //  }
+      //  break;
       case SENSOR_WORKER_READY: // worker responds with the train that hit the sensor
         // get train, graph search
         sensor_workers_push_back( client_tid );
@@ -641,7 +884,7 @@ void rail_server( ) {
         //TODO: run dynamic graph search
         break;
       default:
-        assertum( 1, false, "ERROR: unrecognized request: %d", receive_msg.request_type );
+        assertum( 1, false, "ERROR: unrecognized request: %d sent from tid: %d", receive_msg.request_type, client_tid );
         break;
     }
   }
