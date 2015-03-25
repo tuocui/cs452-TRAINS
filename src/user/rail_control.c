@@ -251,6 +251,9 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       }
       if( length_rsvd < 2 * train->length ) {
         if( cur_speed == 9 || cur_speed == 24 ) {
+          if( colliding_train->cur_speed == 11 || colliding_train->cur_speed == 26 ) {
+            return 0;
+          }
           return edge->middle_train_num;
         }
         return -2;
