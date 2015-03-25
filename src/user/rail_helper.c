@@ -42,8 +42,10 @@ int get_rand_dest( int super_complicated_seed, track_node_t *graph, int cur_sens
     dest_node = &(graph[dest_id]);
     while( 1 ) {
       if( dest_node->type == NODE_BRANCH ) {
-        if( dest_id - cur_sensor_id >= -30 && dest_id - cur_sensor_id <= 30 ) { 
+        if( dest_id - cur_sensor_id <= -30 || dest_id - cur_sensor_id >= 30 ) { 
           front_good = 1;
+        } else {
+          dest_id = ( dest_id + totally_rand_num ) % 80;
         }
         break;
       } else if (dest_node->type == NODE_EXIT ) {
@@ -124,21 +126,21 @@ void print_rsv( train_state_t *train, train_state_t *trains ) {
   int num_printed = 0;
   int i, j;
   int train_idx = get_train_idx( train_num );
-  Printf( COM2, "\0337\033[?25l\033[2;%dH==== %d ====\0338", ( train_idx * 37 ) + 83, train->train_id );
+  Printf( COM2, "\0337\033[?25l\033[2;%dH==== %d ====\0338", ( train_idx * 15 ) + 83, train->train_id );
   for( i = 0; i < TRACK_MAX; ++i ) {
     for( j = 0; j < 2; ++j ) {
       if( graph[i].edge[j].begin_train_num == train_num ) {
-        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 3 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 0, graph[i].edge[j].begin_train_rsv_end );
+        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 3 + num_printed, ( train_idx * 15 ) + 83, graph[i].name, 0, graph[i].edge[j].begin_train_rsv_end );
         ++num_printed;
       }
       if( graph[i].edge[j].middle_train_num == train_num ) {
-        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 3 + num_printed, ( train_idx * 37 ) + 83, graph[i].name, 1, graph[i].edge[j].middle_train_rsv_start );
+        Printf( COM2, "\0337\033[?25l\033[%d;%dH%s %d, %d    \0338", 3 + num_printed, ( train_idx * 15 ) + 83, graph[i].name, 1, graph[i].edge[j].middle_train_rsv_start );
         ++num_printed;
       }
     }
   }
   for( i = num_printed; i < 20; ++i ) {
-    Printf( COM2, "\0337\033[?25l\033[%d;%dH               \0338", 2 + i, ( train_idx * 37 ) + 83 );
+    Printf( COM2, "\0337\033[?25l\033[%d;%dH               \0338", 2 + i, ( train_idx * 15 ) + 83 );
   }
 }
 

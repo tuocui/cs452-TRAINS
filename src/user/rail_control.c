@@ -98,15 +98,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     } else {
       if( cur_node->edge[DIR_STRAIGHT].dist >= mm_past_sensor ) {
         break;
-      }/*
-      if( cur_node->edge[DIR_STRAIGHT].middle_train_num == train->train_id ) {
-        cur_node->edge[DIR_STRAIGHT].middle_train_num = -1;
-        cur_node->edge[DIR_STRAIGHT].middle_train_rsv_start = -1;
       }
-      if( cur_node->edge[DIR_STRAIGHT].begin_train_num == train->train_id ) {
-        cur_node->edge[DIR_STRAIGHT].begin_train_num = -1;
-        cur_node->edge[DIR_STRAIGHT].begin_train_rsv_end = 0;
-      }*/
       mm_past_sensor -= cur_node->edge[DIR_STRAIGHT].dist;
       cur_node = cur_node->edge[DIR_STRAIGHT].dest;
     }
@@ -119,7 +111,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       branch_ind -= 134;
     }
     edge = &(cur_node->edge[train->switch_states[branch_ind]]);
-  } else if( cur_node -> type == NODE_EXIT ) {
+  } else if( cur_node->type == NODE_EXIT ) {
     return 0;
   } else {
     edge = &(cur_node->edge[DIR_STRAIGHT]);
@@ -247,7 +239,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         if( length_rsvd < orig_forward_dist ) {
           return -1;
         }
-        return 0;
+        return -1; // TODO: Switch this to 0
       }
       if( length_rsvd < 2 * train->length ) {
         if( cur_speed == 9 || cur_speed == 24 ) {

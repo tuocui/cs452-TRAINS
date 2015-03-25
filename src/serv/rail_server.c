@@ -439,6 +439,10 @@ void update_trains( ) {
         ((rail_msg.to_server_content).rail_cmds)->train_speed = -1;
         ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
         ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+        ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
+        ((rail_msg.to_server_content).rail_cmds)->train_speed = 10;
+        ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
+        ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
       } else if( ret_val == -2 ) {
         ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
         ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
@@ -481,7 +485,9 @@ void print_trains( ) {
         Printf( COM2, "\0337\033[15;%dH%d    \0338", ( i * 37 ) + 7, trains[i].cur_speed );
         Printf( COM2, "\0337\033[18;%dH%d    \0338", ( i * 37 ) + 9, trains[i].mm_past_landmark / 10 );
         Printf( COM2, "\0337\033[16;%dH%d    \0338", ( i * 37 ) + 9, trains[i].cur_vel );
-        print_rsv( &(trains[i]), trains );
+        if( cur_time % 50 < 10 ) {
+          print_rsv( &(trains[i]), trains );
+        }
       } else if( trains[i].state == INITIALIZING ) {
         Printf( COM2, "\0337\033[13;%dH===== TRAIN %d ====\0338", ( i * 37 ), trains[i].train_id );
         Printf( COM2, "\0337\033[15;%dHSpeed: N/A\0338", ( i * 37 ) );
