@@ -42,7 +42,7 @@ int get_rand_dest( int super_complicated_seed, track_node_t *graph, int cur_sens
     dest_node = &(graph[dest_id]);
     while( 1 ) {
       if( dest_node->type == NODE_BRANCH ) {
-        if( dest_id - cur_sensor_id <= -30 || dest_id - cur_sensor_id >= 30 ) { 
+        if( dest_id - cur_sensor_id <= -25 || dest_id - cur_sensor_id >= 25 ) { 
           front_good = 1;
         } else {
           dest_id = ( dest_id + totally_rand_num ) % 80;
