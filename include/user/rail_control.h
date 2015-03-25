@@ -177,6 +177,7 @@ typedef struct _train_state_ {
   int speed_change_time;
   int init_time;
   bool is_forward;
+  int rev_branch_ignore;
   int fallback_sensors[NUM_FALLBACK];
   int fallback_dist[NUM_FALLBACK];
   int time_to_fallback_sensor[NUM_FALLBACK];

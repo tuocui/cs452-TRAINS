@@ -55,7 +55,6 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
 // -1 if train needs to reverse
 // -2 if train needs to slow down/stop
 // TODO: Reserve based on where the train is going to go, not on current state
-// TODO: Need to start train back up again
 // TODO: shit, what if the train ahead is reversing????
 int update_track_reservation( train_state_t *train, train_state_t *all_trains ) {
   track_node_t *graph = train->track_graph;
@@ -78,7 +77,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   track_edge_t *prev_edge = cur_node->reverse->edge[DIR_AHEAD].reverse; // phew
   train_state_t *colliding_train;
   int colliding_train_state;
-  int can_exit = 0;
+  //int can_exit = 0;
 
   clear_reservations_by_train( graph, train );
   // just hit the last sensor, need to clear the sensor before it
@@ -102,7 +101,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       }
       if( cur_node->edge[train->switch_states[branch_ind]].dist >= mm_past_sensor ) {
         break;
-      }
+      }/*
       if( cur_node->edge[DIR_CURVED].middle_train_num == train->train_id ) {
         cur_node->edge[DIR_CURVED].middle_train_num = -1;
         cur_node->edge[DIR_CURVED].middle_train_rsv_start = -1;
@@ -122,13 +121,13 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       branch_ind = cur_node->num;
       if( branch_ind > 152 ) {
         branch_ind -= 134;
-      }
+      }*/
       mm_past_sensor -= cur_node->edge[train->switch_states[branch_ind]].dist;
       cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
     } else {
       if( cur_node->edge[DIR_STRAIGHT].dist >= mm_past_sensor ) {
         break;
-      }
+      }/*
       if( cur_node->edge[DIR_STRAIGHT].middle_train_num == train->train_id ) {
         cur_node->edge[DIR_STRAIGHT].middle_train_num = -1;
         cur_node->edge[DIR_STRAIGHT].middle_train_rsv_start = -1;
@@ -136,7 +135,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       if( cur_node->edge[DIR_STRAIGHT].begin_train_num == train->train_id ) {
         cur_node->edge[DIR_STRAIGHT].begin_train_num = -1;
         cur_node->edge[DIR_STRAIGHT].begin_train_rsv_end = 0;
-      }
+      }*/
       mm_past_sensor -= cur_node->edge[DIR_STRAIGHT].dist;
       cur_node = cur_node->edge[DIR_STRAIGHT].dest;
     }
@@ -299,7 +298,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     ++has_rsvd;
     cur_node = edge->dest;
   }
-
+/*
   while( !can_exit ) {
     //Printf( COM2, "third loop\r\n" );
     // If we are still reserving that track, make sure we don't reserve it any more
@@ -347,7 +346,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       }
       cur_node = cur_node->edge[DIR_STRAIGHT].dest;
     }
-  }
+  }*/
   return 0;
   // NOTE: Need to make sure that we release track in front of us after we have reached our limit.
 }
@@ -686,7 +685,13 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   debugu(1,  "TEST: total length: %d, should see -1 here: %d", train->all_dist[train->dest_path[train->dest_total_steps-1]], train->dest_path[train->dest_total_steps] );
   if( train->all_dist[train->dest_path[train->dest_total_steps-1]] >= DIST_MAX ) {
     debugu( 1, "all possible paths are reserved, we will just stop the train now" );
+    Printf( COM2, "WOOOAAHHHHH, COULDN'T FIND A PAAATTTTHHHH\r\n" );
+    Printf( COM2, "WOOOAAHHHHH, COULDN'T FIND A PAAATTTTHHHH\r\n" );
+    Printf( COM2, "WOOOAAHHHHH, COULDN'T FIND A PAAATTTTHHHH\r\n" );
+    Printf( COM2, "WOOOAAHHHHH, COULDN'T FIND A PAAATTTTHHHH\r\n" );
+    Printf( COM2, "WOOOAAHHHHH, COULDN'T FIND A PAAATTTTHHHH\r\n" );
     pack_train_cmd( cmds, train->train_id, TR_STOP, 0 );
+    train->train_reach_destination = true;
     return;
   }
 
@@ -749,9 +754,10 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
         int src2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[src_id];
         //int cur2dest_dist = src2reverse_dist + train_len_behind - train->mm_past_landmark / 10;
         //int reverse_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) : 0; 
-        int reverse_delay_time = ((( src2reverse_dist + train_len_behind - stop_dist > 0 ) && train->cur_vel > 0 ) ? 
-          (( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist ) * 10000 ) / train->cur_vel : 0 );// FIXME delay too short 
+        int reverse_delay_time = ((( src2reverse_dist + train_len_behind + (( 3 * STOP_BUFFER ) / 2) - stop_dist > 0 ) && train->cur_vel > 0 ) ? 
+          (( src2reverse_dist + train_len_behind + (( 3 * STOP_BUFFER ) / 2) - stop_dist ) * 10000 ) / train->cur_vel : 0 );// FIXME delay too short 
         debugu( 2, "calling pack_train_cmd on branch reverse" );
+        train->rev_branch_ignore = track_graph[cur_node_id].num;
         pack_train_cmd( cmds, train->train_id, TR_REVERSE, reverse_delay_time );
       }
     }

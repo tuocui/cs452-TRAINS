@@ -143,22 +143,24 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   int lowest_fallback_time = INT_MAX;
   for( cur_idx = 0; cur_idx < TR_MAX; ++cur_idx ) {
     //assertum( 1, trains[cur_idx].next_sensor_id != NONE || trains[cur_idx].state == INITIALIZING, "failure here indicates incorrect prediction functions" );
-    if( trains[cur_idx].next_sensor_id == sensor_num && trains[cur_idx].time_to_next_sensor < lowest_expected_time ) {
-      debugu( 4,  "found expected train: %d", cur_idx );
-      expected_train_idx = cur_idx;
-      lowest_expected_time = trains[cur_idx].time_to_next_sensor;
+    if( trains[cur_idx].state != INITIALIZING && trains[cur_idx].state != NOT_INITIALIZED ) {
+      if( trains[cur_idx].next_sensor_id == sensor_num && trains[cur_idx].time_to_next_sensor < lowest_expected_time ) {
+        debugu( 4,  "found expected train: %d", cur_idx );
+        expected_train_idx = cur_idx;
+        lowest_expected_time = trains[cur_idx].time_to_next_sensor;
+      }
+      for( i = 0; i < NUM_FALLBACK && trains[cur_idx].fallback_sensors[i] != -1; ++i ) {
+        if( trains[cur_idx].fallback_sensors[i] == sensor_num && trains[cur_idx].time_to_fallback_sensor[i] < lowest_fallback_time ) {
+          debugu( 1,  "found fallback train: %d", cur_idx );
+          fallback_train_idx = cur_idx;
+          lowest_fallback_time = trains[cur_idx].time_to_fallback_sensor[i];
+          break;
+        }
+      }
     }
     if( trains[cur_idx].state == INITIALIZING ) {
       debugu( 1,  "found initializing train: %d", cur_idx );
       initializing_train_idx = cur_idx;
-    }
-    for( i = 0; i < NUM_FALLBACK && trains[cur_idx].fallback_sensors[i] != -1; ++i ) {
-      if( trains[cur_idx].fallback_sensors[i] == sensor_num && trains[cur_idx].time_to_fallback_sensor[i] < lowest_fallback_time ) {
-        debugu( 1,  "found fallback train: %d", cur_idx );
-        fallback_train_idx = cur_idx;
-        lowest_fallback_time = trains[cur_idx].time_to_fallback_sensor[i];
-        break;
-      }
     }
   }
   if( expected_train_idx != NONE ) {
@@ -341,7 +343,7 @@ inline int get_len_train_behind( train_state_t *train ) {
 int get_delay_time_to_stop( train_state_t *train, int dist ) {
   int cur_vel = train->cur_vel;
   int cur_stopping_dist = get_cur_stopping_distance( train );
-  int cur_stopping_time = get_cur_stopping_time( train );
+  //int cur_stopping_time = get_cur_stopping_time( train );
   if( cur_stopping_dist <= dist || train->cur_speed == 0 ) {
     return 0;
   }
@@ -351,7 +353,7 @@ int get_delay_time_to_stop( train_state_t *train, int dist ) {
   int speed_finish_time = speed_change_time + accel_time;
   // if no longer accel/decel
   if( speed_finish_time <= cur_time ) {
-    return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
+    return ( 100000 * ( dist - cur_stopping_dist ) ) / cur_vel;
   }
 
   int cur_speed_normalized = train->cur_speed;
@@ -367,6 +369,10 @@ int get_delay_time_to_stop( train_state_t *train, int dist ) {
     prev_speed_normalized -= 15;
   }
 
+  if( get_cur_stopping_distance( train ) < dist ) {
+    return 0;
+  }
+
   // decelerating?
   if( cur_speed_normalized < prev_speed_normalized ) {
     int dist_to_stop_so_far = dist;
@@ -378,21 +384,22 @@ int get_delay_time_to_stop( train_state_t *train, int dist ) {
   // accelerating?
   if( cur_speed_normalized > prev_speed_normalized ) {
     int stopping_dist_if_immediate;
-    stopping_dist_if_immediate = (cur_vel * accel_finish_time_rel) + ( ( (finish_vel - cur_vel) * accel_finish_time_rel) / 2 ) + ( ( finish_vel * stopping_time_at_finish_vel ) / 2 );
-    stopping_dist_if_immediate = stopping_dist_if_immediate / 100000;
+    stopping_dist_if_immediate = ( ( (cur_vel * accel_finish_time_rel) + ( ( (finish_vel - cur_vel) * accel_finish_time_rel) / 2 ) ) / 100000 ) + finish_vel_stopping_dist;
     // need to find intersection
     //return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
     // TODO: Finish this off
     if( stopping_dist_if_immediate < dist ) {
       // TODO: Figure this out
-      return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( cur_vel );
+      // Currently, just assumes that we're running at the finish speed, which SHOULD require a longer time
+      return ( 200000 * ( dist - cur_stopping_dist ) ) / cur_vel;
     } else {
-      int num = ( (200000 * dist) + (finish_vel * stopping_time_at_finish_vel) ) - ( (finish_vel * accel_finish_time_rel) + (cur_vel * accel_finish_time_rel) );
-      return ( num / (2 * finish_vel) );
+      return ( 100000 * ( dist - cur_stopping_dist ) ) / cur_vel;
+      //int num = ( (200000 * dist) + (finish_vel * stopping_time_at_finish_vel) ) - ( (finish_vel * accel_finish_time_rel) + (cur_vel * accel_finish_time_rel) );
+      //return ( num / (2 * finish_vel) );
     }
   }
 
-  return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
+  return ( 100000 * ( dist - cur_stopping_dist ) ) / cur_vel;
 
   // if accel
 }
@@ -685,6 +692,7 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
     trains[i].mm_past_landmark = 0;
     trains[i].cur_speed = 0;
     trains[i].train_reach_destination = false;
+    trains[i].rev_branch_ignore = NONE;
 
     for( j = 0; j < NUM_SPEEDS; ++j ) {
       trains[i].speeds[j].speed = 0;
