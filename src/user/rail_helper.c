@@ -32,20 +32,38 @@ int get_train_idx( int train_num ) {
   }
 }
 
-int get_rand_dest( int super_complicated_seed, track_node_t *graph ) {
+int get_rand_dest( int super_complicated_seed, track_node_t *graph, int cur_sensor_id ) {
   int dest_id = super_complicated_seed % 80;
   int totally_rand_num = super_complicated_seed % 10;
+  int front_good;
   track_node_t *dest_node;
   while( 1 ) {
+    front_good = 0;
     dest_node = &(graph[dest_id]);
     while( 1 ) {
       if( dest_node->type == NODE_BRANCH ) {
-        return dest_id;
+        if( dest_id - cur_sensor_id >= -30 && dest_id - cur_sensor_id <= 30 ) { 
+          front_good = 1;
+        }
+        break;
       } else if (dest_node->type == NODE_EXIT ) {
         dest_id = ( dest_id + totally_rand_num ) % 80;
         break;
       } else {
         dest_node = dest_node->edge[DIR_AHEAD].dest;
+      }
+    }
+    if( front_good ) {
+      dest_node = (graph[dest_id]).reverse;
+      while( 1 ) {
+        if( dest_node->type == NODE_BRANCH ) {
+          return dest_id;
+        } else if (dest_node->type == NODE_EXIT ) {
+          dest_id = ( dest_id + totally_rand_num ) % 80;
+          break;
+        } else {
+          dest_node = dest_node->edge[DIR_AHEAD].dest;
+        }
       }
     }
   }
@@ -119,7 +137,7 @@ void print_rsv( train_state_t *train, train_state_t *trains ) {
       }
     }
   }
-  for( i = num_printed; i < TRACK_MAX / 10; ++i ) {
+  for( i = num_printed; i < 20; ++i ) {
     Printf( COM2, "\0337\033[?25l\033[%d;%dH               \0338", 2 + i, ( train_idx * 37 ) + 83 );
   }
 }
@@ -168,15 +186,15 @@ inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
     trains[expected_train_idx].fallback_sensor_hit = false;
     return expected_train_idx;
   }
-  /* if can't find matching train, assign the initializing train */ 
-  if( initializing_train_idx != NONE ) {
-    debugu( 1,  "returning initializing train: %d", cur_idx );
-    return initializing_train_idx;
-  }
   if( fallback_train_idx != NONE ) {
     debugu( 1,  "returning fallback train: %d", cur_idx );
     trains[fallback_train_idx].fallback_sensor_hit = true;
     return fallback_train_idx;
+  }
+  /* if can't find matching train, assign the initializing train */ 
+  if( initializing_train_idx != NONE ) {
+    debugu( 1,  "returning initializing train: %d", cur_idx );
+    return initializing_train_idx;
   }
   /* train is lost at this step */
   return NONE;
@@ -425,7 +443,7 @@ void init_58( train_state_t *train ) {
   train->speed_change_time = 0;
   train->is_forward = 1;
   train->state = NOT_INITIALIZED;
-  train->decel_rate = 119;
+  train->decel_rate = 125;
   train->accel_rate = 90;
   (train->speeds[14]).straight_vel = 50579; // 14 HIGH
   (train->speeds[14]).curved_vel = 50586;
@@ -559,7 +577,7 @@ void init_24( train_state_t *train ) {
   train->speed_change_time = 0;
   train->is_forward = 1;
   train->state = NOT_INITIALIZED;
-  train->decel_rate = 119;
+  train->decel_rate = 117;
   train->accel_rate = 90;
   (train->speeds[14]).straight_vel = 50579; // 14 HIGH
   (train->speeds[14]).curved_vel = 50586;
@@ -693,6 +711,7 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
     trains[i].cur_speed = 0;
     trains[i].train_reach_destination = false;
     trains[i].rev_branch_ignore = NONE;
+    trains[i].set_rand_dest = false;
 
     for( j = 0; j < NUM_SPEEDS; ++j ) {
       trains[i].speeds[j].speed = 0;
@@ -718,10 +737,10 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
 }
 
 void init_switches( int *switch_states ) {
-  switch_states[SW1] = SW_CURVED;
-  switch_states[SW2] = SW_CURVED;
+  switch_states[SW1] = SW_STRAIGHT;
+  switch_states[SW2] = SW_STRAIGHT;
   switch_states[SW3] = SW_CURVED;
-  switch_states[SW4] = SW_CURVED;
+  switch_states[SW4] = SW_STRAIGHT;
   switch_states[SW5] = SW_CURVED;
   switch_states[SW6] = SW_CURVED;
   switch_states[SW7] = SW_CURVED;

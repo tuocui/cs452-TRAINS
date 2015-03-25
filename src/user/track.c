@@ -97,7 +97,7 @@ int update_switch_output( short switch_num, char state ) {
     return 0;
   }
 
-  int line_num = 4 + ( switch_ind / 5 );
+  int line_num = 5 + ( switch_ind / 5 );
   int col_num = 20 + ( ( switch_ind % 5 ) * 11 );
   Printf( COM2, "\0337\033[%d;%dH sw%d: %c\0338", line_num, col_num, switch_num, state);
   return 0;
@@ -190,6 +190,8 @@ int initialize_track( ) {
     } else if ( switch_ind == 21 ) {
       set_switch_old( 156, STRAIGHT );
       initialized = 1;
+    } else if ( switch_ind == 0 || switch_ind == 1 || switch_ind == 3 ) {
+      set_switch_old( switch_ind + 1, STRAIGHT );
     } else {
       set_switch_old( switch_ind + 1, CURVED );
     }
@@ -259,7 +261,7 @@ void track_sensor_task( ) {
       if ( recent_sensor_ind == -1 ) recent_sensor_ind = NUM_RECENT_SENSORS - 1;
       recent_sensor = recent_sensors[recent_sensor_ind];
       sensor_id_to_name( recent_sensor, sensor_name );
-      Printf( COM2, "\0337\033[%d;0H     %c%c%c  \0338", j + 4, sensor_name[0], sensor_name[1], sensor_name[2] );
+      Printf( COM2, "\0337\033[%d;0H     %c%c%c  \0338", j + 5, sensor_name[0], sensor_name[1], sensor_name[2] );
       --recent_sensor_ind;
     }
     //Delay( 1 );

@@ -187,22 +187,35 @@ void train_exe_worker( ) {
     ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&train_cmd_args, sizeof(train_cmd_args) );
     rail_msg.general_val = NONE;
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+    // TODO: Make this better, serious race condition issue right now
     if( train_cmd_args.delay_time > 0 ) {
+      train->state = BUSY;
       Delay( train_cmd_args.delay_time );
+      train->state = READY;
     }
     switch( train_cmd_args.cmd ) {
     case TR_STOP:
-      train->state = STOPPING;
+      if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
+        train->state = STOPPING;
+      }
       set_train_speed( train, 0 );
-      train->state = READY;
+      if( train->train_reach_destination ) {
+        train->dest_id = NONE;
+        train->train_reach_destination = false;
+      }
+      if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
+        train->state = READY;
+      }
       break;
     case TR_REVERSE:
       {
         debugu( 4, "train_exe_worker received reverse request, reversing now ... " );
-        train->state = REVERSING;
+        if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
+          train->state = REVERSING;
+        }
         int prev_speed = train->cur_speed;
-        int stopping_time = get_cur_stopping_time( train ) / 10;
         set_train_speed( train, 0 );
+        int stopping_time = get_cur_stopping_time( train ) / 10;
         if( train->state != NOT_INITIALIZED && train->state != INITIALIZING ) {
           predict_next_sensor_dynamic( train );
           predict_next_fallback_sensors_static( train );
@@ -220,17 +233,17 @@ void train_exe_worker( ) {
               }
               next_node = cur_node->edge[train->switch_states[branch_ind]].dest;
               stopping_dist -= cur_node->edge[train->switch_states[branch_ind]].dist;
+            } else if( cur_node->type == NODE_EXIT ) {
+              break;
             } else {
               next_node = cur_node->edge[DIR_AHEAD].dest;
               stopping_dist -= cur_node->edge[DIR_AHEAD].dist;
             }
             if( next_node->type == NODE_MERGE && next_node->reverse->num != train->rev_branch_ignore ) {
               if( next_node->reverse->edge[DIR_STRAIGHT].dest == cur_node->reverse ) {
-                Printf( COM2, "Switching %d to %d \r\n", next_node->reverse->num, DIR_STRAIGHT );
                 assertu( 1, next_node->reverse->type == NODE_BRANCH );
                 set_switch( next_node->reverse->num, STRAIGHT, train->switch_states );
               } else {
-                Printf( COM2, "Switching %d to %d \r\n", next_node->reverse->num, DIR_CURVED );
                 assertu( 1, next_node->reverse->type == NODE_BRANCH );
                 set_switch( next_node->reverse->num, CURVED, train->switch_states );
               }
@@ -242,14 +255,20 @@ void train_exe_worker( ) {
         Delay( stopping_time + STOP_TIME_BUFFER ); // TODO: Change this to stopping time;
         set_train_speed( train, 15 );
         set_train_speed( train, prev_speed );
-        train->state = READY;
-        rail_msg.general_val = train->train_id;
+        if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
+          train->state = READY;
+          rail_msg.general_val = train->train_id;
+        }
         break;
       }
     case TR_CHANGE_SPEED:
-      train->state = BUSY;
+      if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
+        train->state = BUSY;
+      }
       set_train_speed( train, train_cmd_args.speed_num );
-      train->state = READY;
+      if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
+        train->state = READY;
+      }
       // rerun graph search / prediction
       break;
     case TR_INIT:
@@ -258,7 +277,9 @@ void train_exe_worker( ) {
       break;
     case TR_DEST:
       {
-        train->prev_dest_id = train->dest_id;
+        if( train->dest_id != NONE ) {
+          train->prev_dest_id = train->dest_id;
+        }
         train->dest_id = train_cmd_args.dest;
         train->mm_past_dest = train_cmd_args.mm_past_dest;
         char dest[3];
@@ -286,6 +307,13 @@ void train_exe_worker( ) {
         Printf( COM2, "\0337\033[1A\033[2K\rTrain %d now facing backwards\0338", train->train_id );
       }
       break;
+    case TR_RAND_DEST:
+      train->set_rand_dest ^= 1;
+      if( train->set_rand_dest ) {
+        Printf( COM2, "\0337\033[1A\033[2K\rTrain %d now going to random destinations\0338", train->train_id );
+      } else {
+        Printf( COM2, "\0337\033[1A\033[2K\rTrain %d now obeying orders\0338", train->train_id );
+      }
     default:
       break;
     }
@@ -368,7 +396,7 @@ void update_trains( ) {
         trains[i].vel_at_last_pos_update = trains[i].cur_vel;
         trains[i].time_to_next_sensor = time_to_node( &(trains[i]), trains[i].dist_to_next_sensor, cur_time );
         // If we haven't hit a landmark in 15s, reinitialize the train
-        if( cur_time - trains[i].time_at_last_landmark > 2500 && 
+        if( cur_time - trains[i].time_at_last_landmark > 1500 && 
             trains[i].cur_speed != 0 && 
             cur_time - trains[i].init_time > 2500 ) {
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
@@ -377,7 +405,7 @@ void update_trains( ) {
           Printf( COM2, "\0337\033[1A\033[2K\rUh oh... we lost Train %d. Reinitializing.\0338", trains[i].train_id );
         }
         if( trains[i].cur_speed == 0 &&
-            cur_time - trains[i].speed_change_time > 2500 ) {
+            cur_time - trains[i].speed_change_time > 500 ) {
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
           ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
           ((rail_msg.to_server_content).rail_cmds)->train_speed = 10;
@@ -386,17 +414,19 @@ void update_trains( ) {
         }
         /* clear destination if stopping flag is set */
         // TODO: Use cur_vel to know whe nthe train stops
-        if( trains[i].train_reach_destination && trains[i].cur_vel == 0 ) {
-          trains[i].train_reach_destination = false;
-          trains[i].prev_dest_id = trains[i].dest_id;
-          trains[i].dest_id = get_rand_dest( cur_time, trains[i].track_graph );
-          sensor_id_to_name( trains[i].dest_id, dest );
-          ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
-          ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
-          ((rail_msg.to_server_content).rail_cmds)->train_speed = 10;
-          ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
-          ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
-          Printf( COM2, "\0337\033[14;%dHCurrent destination: %c%c%c\0338", i * 37, dest[0], dest[1], dest[2] );
+        if( trains[i].dest_id == NONE && trains[i].prev_dest_id != NONE && trains[i].cur_vel == 0 ) {
+          if( trains[i].set_rand_dest ) {
+            trains[i].dest_id = get_rand_dest( cur_time, trains[i].track_graph, trains[i].prev_sensor_id );
+            sensor_id_to_name( trains[i].dest_id, dest );
+            ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
+            ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
+            ((rail_msg.to_server_content).rail_cmds)->train_speed = 10;
+            ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
+            ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+            Printf( COM2, "\0337\033[14;%dHCurrent destination: %c%c%c\0338", i * 37, dest[0], dest[1], dest[2] );
+          } else {
+            Printf( COM2, "\0337\033[14;%dHCurrent destination: N/A\0338", i * 37 );
+          }
         }
       }
     }
@@ -412,7 +442,7 @@ void update_trains( ) {
       } else if( ret_val == -2 ) {
         ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
         ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
-        ((rail_msg.to_server_content).rail_cmds)->train_speed = 8;
+        ((rail_msg.to_server_content).rail_cmds)->train_speed = 9;
         ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
         ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
       } else if( ret_val == -3 ) {
@@ -424,7 +454,7 @@ void update_trains( ) {
       } else if( ret_val > 0 ) {
         ((rail_msg.to_server_content).rail_cmds)->train_id = ret_val;
         ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
-        ((rail_msg.to_server_content).rail_cmds)->train_speed = 12;
+        ((rail_msg.to_server_content).rail_cmds)->train_speed = 11;
         ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
         ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
       }
@@ -448,9 +478,9 @@ void print_trains( ) {
     cur_time = Delay( 10 );
     for( i = 0; i < TR_MAX; ++i ) {
       if( trains[i].state != NOT_INITIALIZED && trains[i].state != INITIALIZING ) {
-        Printf( COM2, "\0337\033[15;%dH%d    \0338", ( i * 37 ) + 8, trains[i].cur_speed );
-        Printf( COM2, "\0337\033[18;%dH%d    \0338", ( i * 37 ) + 10, trains[i].mm_past_landmark / 10 );
-        Printf( COM2, "\0337\033[16;%dH%d    \0338", ( i * 37 ) + 10, trains[i].cur_vel );
+        Printf( COM2, "\0337\033[15;%dH%d    \0338", ( i * 37 ) + 7, trains[i].cur_speed );
+        Printf( COM2, "\0337\033[18;%dH%d    \0338", ( i * 37 ) + 9, trains[i].mm_past_landmark / 10 );
+        Printf( COM2, "\0337\033[16;%dH%d    \0338", ( i * 37 ) + 9, trains[i].cur_vel );
         print_rsv( &(trains[i]), trains );
       } else if( trains[i].state == INITIALIZING ) {
         Printf( COM2, "\0337\033[13;%dH===== TRAIN %d ====\0338", ( i * 37 ), trains[i].train_id );
@@ -604,7 +634,7 @@ void rail_server( ) {
             train_cmd_args.decel_rate = (receive_msg.to_server_content.rail_cmds)->train_decel;
             ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
             //FIXME: if the train_exe_worker_tid is not ready, should not Reply, or add a secretary
-            assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
+            //assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
           }
         } else if ( receive_msg.to_server_content.rail_cmds->switch_idx != NONE ) {
           assertum( 1, receive_msg.to_server_content.rail_cmds->switch_idx == 0, 
@@ -682,7 +712,7 @@ void rail_server( ) {
           train_cmd_args.speed_num = recved_cmds->train_speed;
           train_cmd_args.delay_time = recved_cmds->train_delay;
           ret_val = Reply( train_exe_worker_tid, (char*)&train_cmd_args, sizeof( train_cmd_args ));
-          assertum( 1, ret_val >= 0, "retval: %d", ret_val ); //asdasdasdasd
+          assertum( 1, ret_val >= 0, "retval: %d, cmd: %d", ret_val, recved_cmds->train_action ); //asdasdasdasd
         }
         /* get and send switch cmds */
         for( i = 0; i <= recved_cmds->switch_idx; ++i ) {
@@ -692,8 +722,8 @@ void rail_server( ) {
           switch_cmd_args.delay_time = recved_cmds->switch_cmds[i].switch_delay;
           ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
           debugu( 4, "after reply to switch_exe_worker" );
-          assertum( 1, ret_val >= 0, "retval: %d, switch_worker_tid: %d, switch_id: %d", ret_val, 
-              switch_exe_worker_tid, recved_cmds->switch_cmds[i].switch_id );
+          //assertum( 1, ret_val >= 0, "retval: %d, switch_worker_tid: %d, switch_id: %d", ret_val, 
+          //    switch_exe_worker_tid, recved_cmds->switch_cmds[i].switch_id );
           int other_switch_id = NONE;
           if( recved_cmds->switch_cmds[i].switch_action == SW_CURVED ) {
             switch( recved_cmds->switch_cmds[i].switch_id ) {
@@ -716,7 +746,8 @@ void rail_server( ) {
             switch_cmd_args.state = SW_STRAIGHT;
             switch_cmd_args.delay_time = 0;
             ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-            assertum( 1, ret_val >= 0, "retval: %d", ret_val ); //sdfsdfsdf
+            // It can actually fail here, since the previous iteration could have sent off the worker
+            // We don't actually give a shit about that case
           }
         }
         break;
@@ -758,7 +789,7 @@ void rail_server( ) {
           // NOTE: Does the above matter? Reply is non-blocking. We're saving only a few nanoseconds by doing so.
           int i = 0;
           for( ;  i < TR_MAX ; ++i ) {
-            if( trains[i].dest_id != NONE && trains[i].state != REVERSING ) {
+            if( trains[i].dest_id != NONE && trains[i].state == READY ) {
               train_state_t * train_to_send = &(trains[i]);
               ret_val = Reply( rail_graph_worker_tids[i], (char*)&( train_to_send ), sizeof( train_to_send ));
               assertum( 1, ret_val == 0, "ret_val: %d, tid: %d", ret_val, rail_graph_worker_tids[i] );

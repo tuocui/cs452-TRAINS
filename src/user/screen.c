@@ -60,6 +60,9 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 'r' && cmd2 == 's' ) {
     return RSV_CMD;  
   }
+  if ( cmd1 == 'r' && cmd2 == 'd' ) {
+    return RAND_CMD;  
+  }
   
   return -1;
 }
@@ -324,6 +327,21 @@ int handle_ch_dir( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  
   return 0;
 }
 
+int handle_rand_dest( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+
+  if ( train <= 0 ){
+    output_invalid( );
+    return -1;
+  }
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_RAND_DEST;
+  
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  return 0;
+}
+
 int handle_rsv( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
   int buf_ind = 3;
   int node_id = parse_node_name( cmd_buffer, &buf_ind );
@@ -390,6 +408,9 @@ int process_buffer( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg,
   case RSV_CMD:
     handle_rsv( cmd_buffer, rail_msg, rail_server_tid );
     break;
+  case RAND_CMD:
+    handle_rand_dest( cmd_buffer, rail_msg, rail_server_tid );
+    break;
   case GO_CMD:
     handle_go( );
     break;
@@ -454,7 +475,7 @@ void parse_user_input( ) {
       rail_cmds.train_accel = 100;
       rail_cmds.train_accel = 120;
       rail_cmds.rsv_node_id = -1;
-      rail_cmds.rsv_node_dir = -1;
+      rail_cmds.rsv_node_dir = 0;
       //rail_cmds.switch_id0 = 0;
       //rail_cmds.switch_action0 = -1;
       //rail_cmds.switch_delay0 = 0;

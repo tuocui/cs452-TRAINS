@@ -3,14 +3,14 @@
 
 #include "global.h"
 
-#define SWITCH_BUFFER 200 // 10cm buffer
+#define SWITCH_BUFFER 150 // 10cm buffer
 #define STOP_BUFFER 100 // 10cm buffer
 #define STOP_TIME_BUFFER 2
 
 struct _train_state_;
 struct _track_node_;
 
-int get_rand_dest( int super_complicated_seed, struct _track_node_ *graph );
+int get_rand_dest( int super_complicated_seed, struct _track_node_ *graph, int cur_sensor_id );
 
 void clear_reservations( struct _track_node_ *graph );
 

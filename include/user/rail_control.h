@@ -7,6 +7,7 @@
 #define DIST_MAX    200000
 
 #define TR_MAX 4
+#define TR_PREF_SPEED 10
 
 #define TRAIN_58_NUM 58
 #define TRAIN_45_NUM 45
@@ -72,6 +73,7 @@
 #define TR_DECEL        6
 #define TR_CH_DIR       7
 #define TRACK_RSV       8
+#define TR_RAND_DEST    9
 
 #define NUM_FALLBACK 5
 #define SENSOR_STACK_MAX 10 
@@ -181,6 +183,7 @@ typedef struct _train_state_ {
   int fallback_sensors[NUM_FALLBACK];
   int fallback_dist[NUM_FALLBACK];
   int time_to_fallback_sensor[NUM_FALLBACK];
+  bool set_rand_dest;
   speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
 } train_state_t;
 
