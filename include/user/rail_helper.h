@@ -3,7 +3,7 @@
 
 #include "global.h"
 
-#define SWITCH_BUFFER 150 // 10cm buffer
+#define SWITCH_BUFFER 100 // 10cm buffer
 #define STOP_BUFFER 100 // 10cm buffer
 #define STOP_TIME_BUFFER 2
 
@@ -26,6 +26,8 @@ int get_train_idx( int train_num );
 int safe_distance_to_branch( struct _train_state_ *train );
 
 int safe_distance_to_sensor( );
+
+int get_stopping_dist_at_const_vel( struct _train_state_ *train );
 
 // does NOT take into reverse/speed changes
 int time_to_node( struct _train_state_ *train, int dist_to_node, int cur_time );

@@ -54,7 +54,6 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
 // returns 0 on safe allocation
 // -1 if train needs to reverse
 // -2 if train needs to slow down/stop
-// TODO: Reserve based on where the train is going to go, not on current state
 // TODO: shit, what if the train ahead is reversing????
 int update_track_reservation( train_state_t *train, train_state_t *all_trains ) {
   track_node_t *graph = train->track_graph;
@@ -611,6 +610,9 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   int prev_sensor_id = train->prev_sensor_id;
   int second_sensor_id = NONE;
   int stop_dist = get_cur_stopping_distance( train );
+  // using stopping distance at constant velocity for stop/reverse checks
+  // in case the train is accelerating
+  int stop_dist_at_const_vel = get_stopping_dist_at_const_vel( train );
   int train_len_ahead = get_len_train_ahead( train );
   int train_len_behind = get_len_train_behind( train );
   int cur_node_id = NONE;
@@ -652,14 +654,16 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
       /* if we are the last sensor or the dest and second sensor is too close */
       debugu( 4,  "prev_sensor_id: %d, src_id: %d, second_sensor_id: %d, stop_dist: %d, sensor2dest_dist: %d",
               prev_sensor_id, src_id, second_sensor_id, stop_dist, sensor2dest_dist );
-      if( prev_sensor_id == src_id || ( prev_sensor_id == second_sensor_id && stop_dist > sensor2dest_dist )) {
+      if( prev_sensor_id == src_id || ( prev_sensor_id == second_sensor_id && stop_dist_at_const_vel > sensor2dest_dist - train_len_ahead )) {
         debugu( 4,  "computing stop command" );
         int src2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[src_id] ) + train->mm_past_dest;
-        //int cur2dest_dist = src2dest_dist - train->mm_past_landmark / 10 - train_len_ahead;
+        int cur2dest_dist = src2dest_dist - train_len_ahead;
         //int stop_delay_time = src2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) : 0;
-        int stop_delay_time = ((( src2dest_dist - stop_dist - train_len_ahead > 0 ) && train->cur_vel ) > 0 ? 
-                          (( src2dest_dist - stop_dist - train_len_ahead ) * 10000 ) / (( train->cur_vel + constant_cur_vel) / 2) : 0 );
-        debugu( 4,  "( %d - %d - %d) * 10000 / %d ", src2dest_dist, stop_dist, train_len_ahead, train->cur_vel );
+        //int stop_delay_time = ((( src2dest_dist - stop_dist - train_len_ahead > 0 ) && train->cur_vel ) > 0 ? 
+        //                  (( src2dest_dist - stop_dist - train_len_ahead ) * 10000 ) / (( train->cur_vel + constant_cur_vel) / 2) : 0 );
+        //Printf( COM2, "Original stop_delay_time: %d\r\n", stop_delay_time );
+        int stop_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) / 10 : 0;
+        //Printf( COM2, "New stop_delay_time: %d\r\n", stop_delay_time );
         pack_train_cmd( cmds, train->train_id, TR_STOP, stop_delay_time );
         train->train_reach_destination = true;
         /* clear train destination */
@@ -686,13 +690,13 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
       
       int sensor2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id];
       if( track_graph[cur_node_id].type == NODE_BRANCH && ( prev_sensor_id == src_id || 
-             ( prev_sensor_id  == second_sensor_id && stop_dist > sensor2reverse_dist + train_len_behind ))) {
+             ( prev_sensor_id  == second_sensor_id && stop_dist_at_const_vel > sensor2reverse_dist + train_len_behind - train_len_ahead ))) {
         assertu( 1, track_graph[train->dest_path[traverse_cur_idx-1]].type == NODE_MERGE );
         int src2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[src_id];
-        //int cur2dest_dist = src2reverse_dist + train_len_behind - train->mm_past_landmark / 10;
-        //int reverse_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) : 0; 
-        int reverse_delay_time = ((( src2reverse_dist + train_len_behind + (( 3 * STOP_BUFFER ) / 2) - stop_dist > 0 ) && train->cur_vel > 0 ) ? 
-          (( src2reverse_dist + train_len_behind + (( 3 * STOP_BUFFER ) / 2) - stop_dist ) * 10000 ) / (( train->cur_vel + constant_cur_vel) / 2) : 0 );// FIXME delay too short 
+        int cur2dest_dist = src2reverse_dist + train_len_behind + STOP_BUFFER;
+        int reverse_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) / 10 : 0; 
+        //int reverse_delay_time = ((( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist > 0 ) && train->cur_vel > 0 ) ? 
+        //  (( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist ) * 10000 ) / (( train->cur_vel + constant_cur_vel) / 2) : 0 );// FIXME delay too short 
         debugu( 2, "calling pack_train_cmd on branch reverse" );
         train->rev_branch_ignore = track_graph[cur_node_id].num;
         pack_train_cmd( cmds, train->train_id, TR_REVERSE, reverse_delay_time );
@@ -708,8 +712,8 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
       int sensor2branch_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id]; 
       int src2branch_dist = train->all_dist[cur_node_id] - train->all_dist[src_id];
       int branch_delay_time = train->cur_vel > 0 ? \
-          (((( src2branch_dist - safe_branch_dist ) * 10000 ) / train->cur_vel - SW_TIME / 10 ) > 0 ? \
-          (( src2branch_dist - safe_branch_dist ) * 10000 ) / train->cur_vel - SW_TIME / 10 : 0 ) : 0;
+          (((( src2branch_dist - safe_branch_dist - train_len_ahead ) * 10000 ) / train->cur_vel - SW_TIME / 10 ) > 0 ? \
+          (( src2branch_dist - safe_branch_dist - train_len_ahead ) * 10000 ) / train->cur_vel - SW_TIME / 10 : 0 ) : 0;
       debugu( 4,  "( %d - %d ) * 1000 / %d - %d", src2branch_dist, safe_branch_dist, train->cur_vel, SW_TIME/10 );
 
       /* issue switch commands */

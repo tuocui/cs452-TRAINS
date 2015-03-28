@@ -34,22 +34,23 @@ int get_train_idx( int train_num ) {
 
 int get_rand_dest( int super_complicated_seed, track_node_t *graph, int cur_sensor_id ) {
   int dest_id = super_complicated_seed % 80;
-  int totally_rand_num = super_complicated_seed % 10;
+  int totally_rand_num = super_complicated_seed % 20;
   int front_good;
+  int i = 0;
   track_node_t *dest_node;
   while( 1 ) {
     front_good = 0;
     dest_node = &(graph[dest_id]);
     while( 1 ) {
       if( dest_node->type == NODE_BRANCH ) {
-        if( dest_id - cur_sensor_id <= -25 || dest_id - cur_sensor_id >= 25 ) { 
+        if( dest_id - cur_sensor_id <= ( -30 + i ) || dest_id - cur_sensor_id >= ( 30 - i ) ) { 
           front_good = 1;
         } else {
-          dest_id = ( dest_id + totally_rand_num ) % 80;
+          dest_id = ( dest_id + totally_rand_num + super_complicated_seed ) % 80;
         }
         break;
       } else if (dest_node->type == NODE_EXIT ) {
-        dest_id = ( dest_id + totally_rand_num ) % 80;
+        dest_id = ( dest_id + totally_rand_num + super_complicated_seed ) % 80;
         break;
       } else {
         dest_node = dest_node->edge[DIR_AHEAD].dest;
@@ -61,13 +62,14 @@ int get_rand_dest( int super_complicated_seed, track_node_t *graph, int cur_sens
         if( dest_node->type == NODE_BRANCH ) {
           return dest_id;
         } else if (dest_node->type == NODE_EXIT ) {
-          dest_id = ( dest_id + totally_rand_num ) % 80;
+          dest_id = ( dest_id + totally_rand_num + super_complicated_seed ) % 80;
           break;
         } else {
           dest_node = dest_node->edge[DIR_AHEAD].dest;
         }
       }
     }
+    ++i;
   }
 }
 
@@ -328,6 +330,11 @@ int time_to_node( train_state_t *train, int dist_to_node, int cur_time ) {
   }
 }
 
+int get_stopping_dist_at_const_vel( train_state_t *train ) {
+  int const_vel = (train->speeds[train->cur_speed]).straight_vel;
+  return ( (const_vel / 10) * (const_vel / 10) ) / ( 200 * train->decel_rate );
+}
+
 // returns stopping distance in mm;
 int get_cur_stopping_distance( train_state_t *train ) {
   //if( train->cur_vel != (train->speeds[train->cur_speed]).straight_vel ) {
@@ -364,7 +371,7 @@ int get_delay_time_to_stop( train_state_t *train, int dist ) {
   int cur_vel = train->cur_vel;
   int cur_stopping_dist = get_cur_stopping_distance( train );
   //int cur_stopping_time = get_cur_stopping_time( train );
-  if( cur_stopping_dist <= dist || train->cur_speed == 0 ) {
+  if( cur_stopping_dist >= dist || train->cur_speed == 0 ) {
     return 0;
   }
   int cur_time = train->time_since_last_pos_update * 10;
@@ -389,12 +396,9 @@ int get_delay_time_to_stop( train_state_t *train, int dist ) {
     prev_speed_normalized -= 15;
   }
 
-  if( get_cur_stopping_distance( train ) < dist ) {
-    return 0;
-  }
-
   // decelerating?
   if( cur_speed_normalized < prev_speed_normalized ) {
+    Printf( COM2, "Decelerating\r\n" );
     int dist_to_stop_so_far = dist;
     dist_to_stop_so_far -= ( ( ( ( cur_vel - finish_vel ) * accel_finish_time_rel ) / 2 ) + ( finish_vel * accel_finish_time_rel ) ) / 100000;
     assertu( 1, dist_to_stop_so_far >= 0 );
@@ -403,19 +407,22 @@ int get_delay_time_to_stop( train_state_t *train, int dist ) {
 
   // accelerating?
   if( cur_speed_normalized > prev_speed_normalized ) {
+    //Printf( COM2, "Accelerating\r\n" );
     int stopping_dist_if_immediate;
     stopping_dist_if_immediate = ( ( (cur_vel * accel_finish_time_rel) + ( ( (finish_vel - cur_vel) * accel_finish_time_rel) / 2 ) ) / 100000 ) + finish_vel_stopping_dist;
     // need to find intersection
     //return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
     // TODO: Finish this off
     if( stopping_dist_if_immediate < dist ) {
+      //Printf( COM2, "Fucking stupid fucking case fuck\r\n" );
       // TODO: Figure this out
-      // Currently, just assumes that we're running at the finish speed, which SHOULD require a longer time
-      return ( 200000 * ( dist - cur_stopping_dist ) ) / cur_vel;
+      return ( 100000 * ( dist - ( ( cur_stopping_dist + finish_vel_stopping_dist ) / 2 ) ) ) / ( ( cur_vel + finish_vel ) / 2 );
     } else {
-      return ( 100000 * ( dist - cur_stopping_dist ) ) / cur_vel;
+      //Printf( COM2, "Actually plateaus\r\n" );
+      //return ( 100000 * ( dist - cur_stopping_dist ) ) / cur_vel;
       //int num = ( (200000 * dist) + (finish_vel * stopping_time_at_finish_vel) ) - ( (finish_vel * accel_finish_time_rel) + (cur_vel * accel_finish_time_rel) );
       //return ( num / (2 * finish_vel) );
+      return ( 100000 * ( dist - ( ( cur_stopping_dist + finish_vel_stopping_dist ) / 2 ) ) ) / ( ( cur_vel + finish_vel ) / 2 );
     }
   }
 
