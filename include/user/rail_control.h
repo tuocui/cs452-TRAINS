@@ -129,13 +129,13 @@ typedef struct _train_state_ {
   int * switch_states;
 
   enum {
+    NOT_INITIALIZED = -1,
     READY = 0,
     BUSY,
     STOPPING,
     ACCELERATING,
     REVERSING,
     INITIALIZING,
-    NOT_INITIALIZED,
     HANDLING_COLLISION,
   } state;
 

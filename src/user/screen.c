@@ -446,7 +446,7 @@ void parse_user_input( ) {
   rail_msg.request_type = USER_INPUT;
   rail_msg.to_server_content.rail_cmds = &rail_cmds;
   rail_msg.from_server_content.nullptr = NULL;
-  int rail_server_tid = WhoIs( (char*) RAIL_SERVER );
+  int cmd_server_tid = WhoIs( (char*)CMD_SERVER);
 
   FOREVER {
     c = (char)Getc( COM2 );
@@ -464,7 +464,7 @@ void parse_user_input( ) {
       cmd_ind = 0;
       Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
       init_rail_cmds( &rail_cmds );
-      status = process_buffer( cmd_buffer, train_speeds, &rail_msg, rail_server_tid );
+      status = process_buffer( cmd_buffer, train_speeds, &rail_msg, cmd_server_tid );
       init_rail_cmds( &rail_cmds );
       //rail_cmds.train_id = 0;
       //rail_cmds.train_action = -1;

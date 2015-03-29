@@ -413,7 +413,8 @@ void predict_next_sensor_dynamic( train_state_t* train_state ) {
 
 void predict_next_sensor_static( train_state_t *train_state ) {
   track_node_t* cur_node = &(train_state->track_graph[train_state->prev_sensor_id]);
-  assertu( 1, cur_node && cur_node->type == NODE_SENSOR );
+  assertum( 1, cur_node, "cur_node is NULL" );
+  assertum( 1, cur_node->type == NODE_SENSOR, "cur_node type is not a sensor" );
   int next_sensor_id = NONE; // might be an Exit node
   int ret_node_dist = cur_node->edge[DIR_AHEAD].dist;
   int branch_ind;
@@ -446,8 +447,8 @@ void predict_next_sensor_static( train_state_t *train_state ) {
     }
   }
   
-  debugu( 4,  "dist_to_next_sensor: %d", ret_node_dist );
-  debugu( 4,  "next_sensor_id: %d", next_sensor_id );
+  debugu( 1,  "dist_to_next_sensor: %d", ret_node_dist );
+  debugu( 1,  "next_sensor_id: %d", next_sensor_id );
   train_state->dist_to_next_sensor = ret_node_dist;
   train_state->next_sensor_id = next_sensor_id; 
 }
