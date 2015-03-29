@@ -466,9 +466,6 @@ void parse_user_input( ) {
       init_rail_cmds( &rail_cmds );
       status = process_buffer( cmd_buffer, train_speeds, &rail_msg, cmd_server_tid );
       init_rail_cmds( &rail_cmds );
-      //rail_cmds.train_id = 0;
-      //rail_cmds.train_action = -1;
-      //rail_cmds.train_delay = 0;
       rail_cmds.train_speed = 0;
       rail_cmds.train_dest = -1;
       rail_cmds.train_mm_past_dest = 0;
@@ -476,9 +473,6 @@ void parse_user_input( ) {
       rail_cmds.train_accel = 120;
       rail_cmds.rsv_node_id = -1;
       rail_cmds.rsv_node_dir = 0;
-      //rail_cmds.switch_id0 = 0;
-      //rail_cmds.switch_action0 = -1;
-      //rail_cmds.switch_delay0 = 0;
       if( status == QUIT_CMD ) {
         Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
         for( i = 12; i < NUM_TRAINS; ++i ) {
