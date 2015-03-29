@@ -501,10 +501,6 @@ void print_trains( ) {
 }
 
 void cmd_server( ) {
-  if( RegisterAs(( char* )CMD_SERVER ) == -1 ) {
-    bwputstr( COM2, "ERROR: failed to register cmd_server, aborting ...\n\r" );
-    Exit( );
-  }
   //switch_cmd_t * switch_cmds[SW_MAX]; // idx 0 - 22, 1-22 are used, 0 is empty
   //switch_cmd_t switch1_cmds[CMD_QUEUE_MAX];
   //switch_cmd_t switch2_cmds[CMD_QUEUE_MAX];
@@ -575,8 +571,6 @@ void cmd_server( ) {
   assertum( 1, rail_server_tid == client_tid && ret_val >= 0, "retval: %d", ret_val );
   switch_states = trains[0].switch_states;
   track_graph = trains[0].track_graph;
-  ret_val = Reply( rail_server_tid, (char *)&client_tid, 0 );
-  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
 
   /* Train exe workers */
   int train_exe_worker_tids[TR_MAX];
@@ -623,6 +617,14 @@ void cmd_server( ) {
   ////TODO: refactor, create another struct for cmd_msg_t for this server
   rail_msg_t receive_msg;
   rail_cmds_t* receive_cmds; 
+
+  if( RegisterAs(( char* )CMD_SERVER ) == -1 ) {
+    bwputstr( COM2, "ERROR: failed to register cmd_server, aborting ...\n\r" );
+    Exit( );
+  }
+  ret_val = Reply( rail_server_tid, (char *)&client_tid, 0 );
+  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+
   FOREVER { 
     ret_val = Receive( &client_tid, (char *)&receive_msg, sizeof( receive_msg ));
     debugu( 1, "cmd_server received client_tid: %d, request_type: %d", client_tid, receive_msg.request_type );
@@ -804,8 +806,8 @@ void cmd_server( ) {
               predict_next_sensor_static( &(trains[i]) );
             }
             predict_next_fallback_sensors_static( &(trains[i]) );
-            //sensor_id_to_name( trains[i].next_sensor_id, sensor_name );
-            //Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", i * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
+            sensor_id_to_name( trains[i].next_sensor_id, sensor_name );
+            Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", i * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
           }
         }
         break;
@@ -847,8 +849,6 @@ void rail_server( ) {
     rail_graph_worker_tids[i] = Create( 11, &rail_graph_worker );
     assertu( 1, rail_graph_worker_tids[i] > 0 );
   }
-
-  
 
   /* Sensor worker and courier declarations */
   int worker_tid;
