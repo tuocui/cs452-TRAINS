@@ -446,7 +446,7 @@ void parse_user_input( ) {
   rail_msg.request_type = USER_INPUT;
   rail_msg.to_server_content.rail_cmds = &rail_cmds;
   rail_msg.from_server_content.nullptr = NULL;
-  int rail_server_tid = WhoIs( (char*) RAIL_SERVER );
+  int cmd_server_tid = WhoIs( (char*)CMD_SERVER);
 
   FOREVER {
     c = (char)Getc( COM2 );
@@ -464,11 +464,8 @@ void parse_user_input( ) {
       cmd_ind = 0;
       Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
       init_rail_cmds( &rail_cmds );
-      status = process_buffer( cmd_buffer, train_speeds, &rail_msg, rail_server_tid );
+      status = process_buffer( cmd_buffer, train_speeds, &rail_msg, cmd_server_tid );
       init_rail_cmds( &rail_cmds );
-      //rail_cmds.train_id = 0;
-      //rail_cmds.train_action = -1;
-      //rail_cmds.train_delay = 0;
       rail_cmds.train_speed = 0;
       rail_cmds.train_dest = -1;
       rail_cmds.train_mm_past_dest = 0;
@@ -476,9 +473,6 @@ void parse_user_input( ) {
       rail_cmds.train_accel = 120;
       rail_cmds.rsv_node_id = -1;
       rail_cmds.rsv_node_dir = 0;
-      //rail_cmds.switch_id0 = 0;
-      //rail_cmds.switch_action0 = -1;
-      //rail_cmds.switch_delay0 = 0;
       if( status == QUIT_CMD ) {
         Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
         for( i = 12; i < NUM_TRAINS; ++i ) {

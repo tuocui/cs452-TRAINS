@@ -708,8 +708,10 @@ inline void reset_rv_sensor_stack( train_state_t *train ) {
 }
 
 void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_states ) {
+  debugu( 1, "init_trains" );
   int i, j;
   for( i = 0; i < TR_MAX; ++i ) {
+    trains[i].state = NOT_INITIALIZED;
     trains[i].track_graph = track_graph;
     trains[i].switch_states = switch_states;
     trains[i].prev_sensor_id= NONE;

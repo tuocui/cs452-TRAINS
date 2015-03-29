@@ -412,7 +412,8 @@ void predict_next_sensor_dynamic( train_state_t* train_state ) {
 
 void predict_next_sensor_static( train_state_t *train_state ) {
   track_node_t* cur_node = &(train_state->track_graph[train_state->prev_sensor_id]);
-  assertu( 1, cur_node && cur_node->type == NODE_SENSOR );
+  assertum( 1, cur_node, "cur_node is NULL" );
+  assertum( 1, cur_node->type == NODE_SENSOR, "cur_node type is not a sensor" );
   int next_sensor_id = NONE; // might be an Exit node
   int ret_node_dist = cur_node->edge[DIR_AHEAD].dist;
   int branch_ind;
@@ -445,8 +446,8 @@ void predict_next_sensor_static( train_state_t *train_state ) {
     }
   }
   
-  debugu( 4,  "dist_to_next_sensor: %d", ret_node_dist );
-  debugu( 4,  "next_sensor_id: %d", next_sensor_id );
+  debugu( 3,  "dist_to_next_sensor: %d", ret_node_dist );
+  debugu( 3,  "next_sensor_id: %d", next_sensor_id );
   train_state->dist_to_next_sensor = ret_node_dist;
   train_state->next_sensor_id = next_sensor_id; 
 }
@@ -534,14 +535,14 @@ inline void get_shortest_path( train_state_t *train ) {
   //TODO: handle it differently for reversing
   //
 
-  debugu( 1, "searching in old path ... " );
+  debugu( 3, "searching in old path ... " );
   int i;
   for( i = train->dest_path_cur_idx; i < train->dest_total_steps; ++i ) {
-    assertu( 1, train->dest_path[i] != NONE );
+    assertu( 3, train->dest_path[i] != NONE );
     debugu( 4, "prev_sensor_id: %d, dest_path: %d, node: %s", 
         train->prev_sensor_id, train->dest_path[i], train->track_graph[train->dest_path[i]].name );
     if( train->track_graph[train->dest_path[i]].type == NODE_SENSOR ) {
-      debugu( 1, "traversing history path: cur_idx: %d, node: %s", i, train->track_graph[train->dest_path[i]].name );
+      debugu( 3, "traversing history path: cur_idx: %d, node: %s", i, train->track_graph[train->dest_path[i]].name );
       if( train->prev_sensor_id == train->dest_path[i] ) {
         train->dest_path_cur_idx = i + 1;
         debugu( 1, "sensor foun in old path" );
@@ -554,7 +555,7 @@ inline void get_shortest_path( train_state_t *train ) {
   //TODO: handle train run out of graph case
   
   debugu( 1, "sensor not found in old path, running dijkstra now ... " );
-  debugu( 1, "train->cur_idx: %d, train->dest_total_steps: %d", train->dest_path_cur_idx, train->dest_total_steps );
+  debugu( 3, "train->cur_idx: %d, train->dest_total_steps: %d", train->dest_path_cur_idx, train->dest_total_steps );
   assertu( 1, train->dest_path_cur_idx >= 0 );
 
   /* we run dijstra only if we did not find the sensor in history path */
@@ -626,9 +627,9 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   assertum( 1, ( train->cur_speed >= 8 && train->cur_speed <= 14 ) || ( train->cur_speed >= 23 || train->cur_speed <= 29 ), "cur_speed: %d", train->cur_speed );
   //print_train_path( train );
 
-  debugu(1,  "TEST: total length: %d, should see -1 here: %d", train->all_dist[train->dest_path[train->dest_total_steps-1]], train->dest_path[train->dest_total_steps] );
+  debugu( 4,  "TEST: total length: %d, should see -1 here: %d", train->all_dist[train->dest_path[train->dest_total_steps-1]], train->dest_path[train->dest_total_steps] );
   if( train->all_dist[train->dest_path[train->dest_total_steps-1]] >= DIST_MAX ) {
-    debugu( 1, "all possible paths are reserved, we will just stop the train now" );
+    debugu( 4, "all possible paths are reserved, we will just stop the train now" );
     pack_train_cmd( cmds, train->train_id, TR_STOP, 0 );
     train->train_reach_destination = true;
     return;
@@ -636,7 +637,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
 
   for( ; traverse_cur_idx < train->dest_total_steps; ++traverse_cur_idx ) {
     cur_node_id = train->dest_path[traverse_cur_idx];
-    debugu( 2, "traverse_cur_idx: %d, cur_node_name: %s", traverse_cur_idx, track_graph[cur_node_id].name );
+    debugu( 3, "traverse_cur_idx: %d, cur_node_name: %s", traverse_cur_idx, track_graph[cur_node_id].name );
 
     /* update prev_sensor iff cur_sensor is the sensor immediately after src */
     if( track_graph[cur_node_id].type == NODE_SENSOR && second_sensor_id == -1 ) {
@@ -705,7 +706,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
     }
     /* finally, branching case, only if we actually have a destination after the branch node */
     if( track_graph[cur_node_id].type == NODE_BRANCH && traverse_cur_idx + 1 < train->dest_total_steps ) {
-      debugu( 2,  "BRANCH: %d: %s, node after branch: %d: %s", cur_node_id, track_graph[cur_node_id].name,
+      debugu( 3,  "BRANCH: %d: %s, node after branch: %d: %s", cur_node_id, track_graph[cur_node_id].name,
           train->dest_path[traverse_cur_idx+1], track_graph[train->dest_path[traverse_cur_idx+1]].name );
 
       /* get dist between sensor and branch*/  
