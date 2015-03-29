@@ -623,7 +623,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   debugu( 4, "src_id: %d, dest_id: %d, compute_next_command: traverse_cur_idx: %d, total_dest_total_steps: %d", src_id, train->dest_path[traverse_cur_idx], traverse_cur_idx, train->dest_total_steps );
   debugu( 4,  "safe_branch_dist: %d", safe_branch_dist );
   assertum( 1, ( train->cur_speed >= 8 && train->cur_speed <= 14 ) || ( train->cur_speed >= 23 || train->cur_speed <= 29 ), "cur_speed: %d", train->cur_speed );
-  //print_train_path( train );
+  print_train_path( train );
 
   debugu( 4,  "TEST: total length: %d, should see -1 here: %d", train->all_dist[train->dest_path[train->dest_total_steps-1]], train->dest_path[train->dest_total_steps] );
   if( train->all_dist[train->dest_path[train->dest_total_steps-1]] >= DIST_MAX ) {
