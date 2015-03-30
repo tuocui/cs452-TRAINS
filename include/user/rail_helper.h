@@ -64,6 +64,6 @@ void init_45( struct _train_state_ *train );
 
 void init_24( struct _train_state_ *train );
 
-void init_12( struct _train_state_ *train );
+void init_63( struct _train_state_ *train );
 
 #endif

@@ -399,8 +399,6 @@ void a4_test_task5( ) {
   debug( 2,  "Track Sensor task tid: %d", track_sensor_task_tid );
   int rail_server_tid = Create( 3, &rail_server ); // 43
   debug( 2,  "Rail Server tid: %d", rail_server_tid );
-  int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
-  debug( 2,  "User input task tid: %d", parse_user_input_tid );
   int clock_user_tid = Create( 10, &clock_user_task ); // 46
   debug( 2,  "Clock user task tid: %d", clock_user_tid );
   int idle_percent_task_tid = Create( PRIORITY_MAX - 1, &idle_percent_task );

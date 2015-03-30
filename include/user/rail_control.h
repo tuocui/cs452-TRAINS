@@ -12,11 +12,11 @@
 #define TRAIN_58_NUM 58
 #define TRAIN_45_NUM 45
 #define TRAIN_24_NUM 24
-#define TRAIN_12_NUM 12
+#define TRAIN_63_NUM 63
 #define TRAIN_58_IDX 0
-#define TRAIN_45_IDX 2
+#define TRAIN_45_IDX 3
 #define TRAIN_24_IDX 1
-#define TRAIN_12_IDX 3
+#define TRAIN_63_IDX 2
 
 #define NONE      -1
 #define TR_STOP   0
@@ -80,6 +80,7 @@
 #define SW_CMD_MAX   4
 
 #define USER_INPUT_NUM  99
+#define DEFAULT_TRAIN_LEN 210
 
 #define CONVERT_SWITCH_ID( _switch_num ) \
   if( _switch_num > 18 ) { \

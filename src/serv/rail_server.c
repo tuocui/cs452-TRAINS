@@ -11,6 +11,7 @@
 #include "io.h"
 #include "clock_server.h"
 #include "ring_buf.h"
+#include "screen.h"
 
 #include "track_data_new.h"
 #include "track_node.h"
@@ -116,8 +117,8 @@ void sensor_worker( ) {
       case TRAIN_24_NUM:
         init_24( train );
         break;
-      case TRAIN_12_NUM:
-        init_12( train );
+      case TRAIN_63_NUM:
+        init_63( train );
         break;
       default:
         break;
@@ -176,17 +177,17 @@ void train_exe_worker( ) {
   rail_msg.from_server_content.nullptr = NULL;
   rail_msg.general_val = NONE;
   int ret_val;
-  int rail_server_tid;
+  int cmd_server_tid;
   train_state_t *train;
   char sensor_name[4];
   train_cmd_args_t train_cmd_args;
-  ret_val = Receive( &rail_server_tid, (char *)&train, sizeof( train ) );
+  ret_val = Receive( &cmd_server_tid, (char *)&train, sizeof( train ) );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-  ret_val = Reply( rail_server_tid, (char *)&rail_msg, 0 );
+  ret_val = Reply( cmd_server_tid, (char *)&rail_msg, 0 );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
 
   FOREVER {
-    ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&train_cmd_args, sizeof(train_cmd_args) );
+    ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&train_cmd_args, sizeof(train_cmd_args) );
     rail_msg.general_val = NONE;
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     // TODO: Make this better, serious race condition issue right now
@@ -329,19 +330,19 @@ void switch_exe_worker( ) {
   rail_msg.to_server_content.nullptr = NULL;
   rail_msg.from_server_content.nullptr = NULL;
   int ret_val;
-  int rail_server_tid;
+  int cmd_server_tid;
   int switch_num;
   int state;
   int *switch_states;
   track_node_t *graph;
   switch_cmd_args_t switch_cmd_args;
-  ret_val = Receive( &rail_server_tid, (char *)&switch_num, sizeof( switch_num ) );
+  ret_val = Receive( &cmd_server_tid, (char *)&switch_num, sizeof( switch_num ) );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-  ret_val = Reply( rail_server_tid, (char *)&rail_msg, 0 );
+  ret_val = Reply( cmd_server_tid, (char *)&rail_msg, 0 );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
 
   FOREVER {
-    ret_val = Send( rail_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&switch_cmd_args, sizeof(switch_cmd_args) );
+    ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&switch_cmd_args, sizeof(switch_cmd_args) );
     debugu( 4, "SWITCH_EXE_WORKER AFTER SEND: %d received request to change to: %d ", switch_num, switch_cmd_args.state );
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     if( switch_cmd_args.delay_time > 0 ) {
@@ -380,9 +381,9 @@ void update_trains( ) {
   update_train_args_t update_train_args;
   ret_val = Receive( &cmd_server_tid, (char *)&update_train_args, sizeof( update_train_args ) );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+  trains = update_train_args.trains;
   ret_val = Reply( cmd_server_tid, (char *)&trains, 0 );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-  trains = update_train_args.trains;
   FOREVER {
     cur_time = Delay( 1 );
     //all_stopped = 1;
@@ -477,9 +478,9 @@ void print_trains( ) {
   update_train_args_t update_train_args;
   ret_val = Receive( &rail_server_tid, (char *)&update_train_args, sizeof( update_train_args ) );
   assertm( 1, ret_val >= 0, "retval: %d", ret_val );
+  trains = update_train_args.trains;
   ret_val = Reply( rail_server_tid, (char *)&trains, 0 );
   assertm( 1, ret_val >= 0, "retval: %d", ret_val );
-  trains = update_train_args.trains;
   FOREVER {
     cur_time = Delay( 10 );
     for( i = 0; i < TR_MAX; ++i ) {
@@ -561,6 +562,7 @@ void cmd_server( ) {
   train_state_t * trains = NULL;
   int * switch_states;
   track_node_t * track_graph;
+  char sensor_name[4];
   i = ret_val = client_tid = rail_server_tid = 0;//TODO: delete this
   rail_server_tid = MyParentTid( );
   assertu( 1, rail_server_tid > 0 );
@@ -647,8 +649,8 @@ void cmd_server( ) {
           case TRAIN_24_NUM:
             train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
             break;
-          case TRAIN_12_NUM:
-            train_exe_worker_tid = train_exe_worker_tids[TRAIN_12_IDX];
+          case TRAIN_63_NUM:
+            train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
             break;
           default:
             train_exe_worker_tid = -1;
@@ -733,8 +735,8 @@ void cmd_server( ) {
         case TRAIN_24_NUM:
           train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
           break;
-        case TRAIN_12_NUM:
-          train_exe_worker_tid = train_exe_worker_tids[TRAIN_12_IDX];
+        case TRAIN_63_NUM:
+          train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
           break;
         default:
           train_exe_worker_tid = -1;
@@ -842,6 +844,9 @@ void rail_server( ) {
   assertu( 1, cmd_server_tid > 0 );
   ret_val = Send( cmd_server_tid, (char *)&p_trains, sizeof( train_state_t* ), (char *)&cmd_server_tid, 0 );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+
+  int parse_user_input_tid = Create( 6, &parse_user_input ); // 45
+  debug( 2,  "User input task tid: %d", parse_user_input_tid );
 
   /* graph_search_workers */
   int rail_graph_worker_tids[TR_MAX]; 
@@ -1040,8 +1045,8 @@ void rail_server( ) {
 //          case TRAIN_24_NUM:
 //            train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
 //            break;
-//          case TRAIN_12_NUM:
-//            train_exe_worker_tid = train_exe_worker_tids[TRAIN_12_IDX];
+//          case TRAIN_63_NUM:
+//            train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
 //            break;
 //          default:
 //            train_exe_worker_tid = -1;
@@ -1122,8 +1127,8 @@ void rail_server( ) {
 //        case TRAIN_24_NUM:
 //          train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
 //          break;
-//        case TRAIN_12_NUM:
-//          train_exe_worker_tid = train_exe_worker_tids[TRAIN_12_IDX];
+//        case TRAIN_63_NUM:
+//          train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
 //          break;
 //        default:
 //          train_exe_worker_tid = -1;

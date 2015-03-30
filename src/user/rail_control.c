@@ -620,7 +620,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   int action = NONE;
   int safe_branch_dist = safe_distance_to_branch( train );//train->speeds[train->cur_speed].safe_branch_distance;  
   int branch_to_switch_immediately = NONE;
-  int constant_cur_vel = train->speeds[train->cur_speed].straight_vel;
+  //int constant_cur_vel = train->speeds[train->cur_speed].straight_vel;
 
   debugu( 4, "src_id: %d, dest_id: %d, compute_next_command: traverse_cur_idx: %d, total_dest_total_steps: %d", src_id, train->dest_path[traverse_cur_idx], traverse_cur_idx, train->dest_total_steps );
   debugu( 4,  "safe_branch_dist: %d", safe_branch_dist );
@@ -989,7 +989,7 @@ void dijkstra( struct _track_node_* track_graph, int train_id, int src_id, int* 
     update_backward( ) {
       track_nbr_id = track_node->reverse - track_graph;
       assertu( 1, track_nbr_id >= 0 );
-      test_dist = dist[track_id];// + 1000000; // to disable reverse 
+      test_dist = dist[track_id] + ( 2 * DEFAULT_TRAIN_LEN ) + ( 2 * STOP_BUFFER );// + 1000000; // to disable reverse 
       assertum( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
       test_step = step[track_id] + 1;
       update_info( );

@@ -20,8 +20,8 @@ int get_train_idx( int train_num ) {
   case TRAIN_45_NUM:
     return TRAIN_45_IDX;
     break;
-  case TRAIN_12_NUM:
-    return TRAIN_12_IDX;
+  case TRAIN_63_NUM:
+    return TRAIN_63_IDX;
     break;
   case TRAIN_24_NUM:
     return TRAIN_24_IDX;
@@ -632,7 +632,7 @@ void init_24( train_state_t *train ) {
   (train->speeds[29]).stopping_distance = 2158;
 }
 
-void init_12( train_state_t *train ) {
+void init_63( train_state_t *train ) {
   /* Copypasta calibration output here */
   // Velocity in mm/100s, divide by 1000 to get cm/s
   // Stopping distance in mm
@@ -641,7 +641,7 @@ void init_12( train_state_t *train ) {
   train->pickup_len = 50;
   train->front_len = 25;
   train->back_len = 145;
-  train->train_id = 12;
+  train->train_id = 63;
   train->prev_sensor_id = NONE;
   train->next_sensor_id = NONE;
   train->dest_id = NONE;
@@ -653,50 +653,50 @@ void init_12( train_state_t *train ) {
   train->speed_change_time = 0;
   train->is_forward = 1;
   train->state = NOT_INITIALIZED;
-  train->decel_rate = 119;
-  train->accel_rate = 90;
-  (train->speeds[14]).straight_vel = 83579; // 14 HIGH
-  (train->speeds[14]).curved_vel = 83586;
-  (train->speeds[14]).stopping_distance = 4158;
-  (train->speeds[13]).straight_vel = 79092; // 13 HIGH
-  (train->speeds[13]).curved_vel = 79083;
-  (train->speeds[13]).stopping_distance = 1875;
-  (train->speeds[12]).straight_vel = 73798; // 12 HIGH
-  (train->speeds[12]).curved_vel = 73517;
-  (train->speeds[12]).stopping_distance = 1602;
-  (train->speeds[11]).straight_vel = 63440; // 11 HIGH
-  (train->speeds[11]).curved_vel = 63749;
-  (train->speeds[11]).stopping_distance = 1278;
-  (train->speeds[10]).straight_vel = 51814; // 10 HIGH
-  (train->speeds[10]).curved_vel = 51627;
-  (train->speeds[10]).stopping_distance = 920;
-  (train->speeds[9]).straight_vel = 46004; // 9 HIGH
-  (train->speeds[9]).curved_vel = 46860;
-  (train->speeds[9]).stopping_distance = 666;
-  (train->speeds[8]).straight_vel = 36633; // 8 HIGH
-  (train->speeds[8]).curved_vel = 36670;
-  (train->speeds[8]).stopping_distance = 461;
-  (train->speeds[23]).straight_vel = 34907; // 8 LOW
-  (train->speeds[23]).curved_vel = 34127;
-  (train->speeds[23]).stopping_distance = 346;
-  (train->speeds[24]).straight_vel = 44765; // 9 LOW
-  (train->speeds[24]).curved_vel = 44770;
-  (train->speeds[24]).stopping_distance = 565;
-  (train->speeds[25]).straight_vel = 49219; // 10 LOW
-  (train->speeds[25]).curved_vel = 49030;
-  (train->speeds[25]).stopping_distance = 812;
-  (train->speeds[26]).straight_vel = 61021; // 11 LOW
-  (train->speeds[26]).curved_vel = 61043;
-  (train->speeds[26]).stopping_distance = 1060;
-  (train->speeds[27]).straight_vel = 71551; // 12 LOW
-  (train->speeds[27]).curved_vel = 71540;
-  (train->speeds[27]).stopping_distance = 1264;
-  (train->speeds[28]).straight_vel = 77030; // 13 LOW
-  (train->speeds[28]).curved_vel = 77056;
-  (train->speeds[28]).stopping_distance = 1816;
-  (train->speeds[29]).straight_vel = 83344; // 14 LOW
-  (train->speeds[29]).curved_vel = 83635;
-  (train->speeds[29]).stopping_distance = 4158;
+  train->decel_rate = 155;
+  train->accel_rate = 125;
+  (train->speeds[14]).straight_vel = 50579; // 14 HIGH
+  (train->speeds[14]).curved_vel = 50586;
+  (train->speeds[14]).stopping_distance = 2158;
+  (train->speeds[13]).straight_vel = 50092; // 13 HIGH
+  (train->speeds[13]).curved_vel = 50083;
+  (train->speeds[13]).stopping_distance = 975;
+  (train->speeds[12]).straight_vel = 48798; // 12 HIGH
+  (train->speeds[12]).curved_vel = 48517;
+  (train->speeds[12]).stopping_distance = 802;
+  (train->speeds[11]).straight_vel = 41440; // 11 HIGH
+  (train->speeds[11]).curved_vel = 41749;
+  (train->speeds[11]).stopping_distance = 678;
+  (train->speeds[10]).straight_vel = 33814; // 10 HIGH
+  (train->speeds[10]).curved_vel = 34627;
+  (train->speeds[10]).stopping_distance = 460;
+  (train->speeds[9]).straight_vel = 28004; // 9 HIGH
+  (train->speeds[9]).curved_vel = 27860;
+  (train->speeds[9]).stopping_distance = 336;
+  (train->speeds[8]).straight_vel = 22133; // 8 HIGH
+  (train->speeds[8]).curved_vel = 22370;
+  (train->speeds[8]).stopping_distance = 231;
+  (train->speeds[23]).straight_vel = 18907; // 8 LOW
+  (train->speeds[23]).curved_vel = 19127;
+  (train->speeds[23]).stopping_distance = 176;
+  (train->speeds[24]).straight_vel = 24765; // 9 LOW
+  (train->speeds[24]).curved_vel = 24770;
+  (train->speeds[24]).stopping_distance = 285;
+  (train->speeds[25]).straight_vel = 46750; // 10 LOW
+  (train->speeds[25]).curved_vel = 46750;
+  (train->speeds[25]).stopping_distance = 712;
+  (train->speeds[26]).straight_vel = 37021; // 11 LOW
+  (train->speeds[26]).curved_vel = 37043;
+  (train->speeds[26]).stopping_distance = 580;
+  (train->speeds[27]).straight_vel = 45551; // 12 LOW
+  (train->speeds[27]).curved_vel = 44540;
+  (train->speeds[27]).stopping_distance = 664;
+  (train->speeds[28]).straight_vel = 49030; // 13 LOW
+  (train->speeds[28]).curved_vel = 49056;
+  (train->speeds[28]).stopping_distance = 916;
+  (train->speeds[29]).straight_vel = 51344; // 14 LOW
+  (train->speeds[29]).curved_vel = 51635;
+  (train->speeds[29]).stopping_distance = 2158;
 }
 
 inline void reset_rv_sensor_stack( train_state_t *train ) {
@@ -744,7 +744,7 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
   init_58( &(trains[TRAIN_58_IDX]) );
   init_45( &(trains[TRAIN_45_IDX]) );
   init_24( &(trains[TRAIN_24_IDX]) );
-  init_12( &(trains[TRAIN_12_IDX]) );
+  init_63( &(trains[TRAIN_63_IDX]) );
 }
 
 void init_switches( int *switch_states ) {
