@@ -8,6 +8,8 @@
 #include "ring_buf.h"
 #include "rail_helper.h"
 #include "syscall.h"
+
+#define REVERSE_BUFFER (( 2 * DEFAULT_TRAIN_LEN ) + ( 2 * STOP_BUFFER ))
 /* get_next_command calls graph search to get the shortest path,
  * for now, if the path only has length of one, the we issue stop command.
  * if there are more than one node, it finds out if there needs reverse/switch
@@ -681,23 +683,24 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
 
     /* handle reverse on branch */
     debugu( 3, "before reverse, train_id: %d", cmds->train_id );
-    if(( traverse_cur_idx - 1 ) >= train->dest_path_cur_idx && cmds->train_id == NONE && // have previous node and nothing issued 
+    if(( traverse_cur_idx - 1 ) >= train->dest_path_cur_idx && cmds->train_id == NONE && // previous node and nothing issued 
          track_graph[cur_node_id].reverse == &track_graph[train->dest_path[traverse_cur_idx-1]] && // reverse 
          cmds->train_action != TR_REVERSE && train->state == READY ) { // train is not currently reversing, this condition will be unnecessary
-                                              // once we have the trains to memorize the path
       assertu( 1, cmds->train_action == NONE );
       debugu( 2,  "reverse on branch: cur_node_id: %d, node_name: %s", cur_node_id, track_graph[cur_node_id].name );
       assertu( 1, traverse_cur_idx - 1 >= train->dest_path_cur_idx && traverse_cur_idx < train->dest_total_steps );
       
-      int sensor2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id];
+      int sensor2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id] - REVERSE_BUFFER;
       if( track_graph[cur_node_id].type == NODE_BRANCH && ( prev_sensor_id == src_id || 
-             ( prev_sensor_id  == second_sensor_id && stop_dist_at_const_vel > sensor2reverse_dist + train_len_behind - train_len_ahead ))) {
+          ( prev_sensor_id  == second_sensor_id 
+            && stop_dist_at_const_vel > sensor2reverse_dist + train_len_behind - train_len_ahead ))) {
         assertu( 1, track_graph[train->dest_path[traverse_cur_idx-1]].type == NODE_MERGE );
-        int src2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[src_id];
+        int src2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[src_id] - REVERSE_BUFFER;
+        Printf( COM2, "src2reverse_dist = all_dist[cur_node_id] - all_dist[src_id] - REVERSE_BUFFER = %d - %d - %d\n\r", 
+            train->all_dist[cur_node_id], train->all_dist[src_id], REVERSE_BUFFER );
         int cur2dest_dist = src2reverse_dist + train_len_behind + STOP_BUFFER;
         int reverse_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) / 10 : 0; 
-        //int reverse_delay_time = ((( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist > 0 ) && train->cur_vel > 0 ) ? 
-        //  (( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist ) * 10000 ) / (( train->cur_vel + constant_cur_vel) / 2) : 0 );// FIXME delay too short 
+        //int reverse_delay_time = ((( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist > 0 ) && train->cur_vel > 0 ) ? (( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist ) * 10000 ) / (( train->cur_vel) / 2) : 0 );// FIXME delay too short 
         debugu( 2, "calling pack_train_cmd on branch reverse" );
         train->rev_branch_ignore = track_graph[cur_node_id].num;
         pack_train_cmd( cmds, train->train_id, TR_REVERSE, reverse_delay_time );
@@ -764,8 +767,10 @@ void request_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   get_shortest_path( train );
   //Printf( COM2, "get_next_command with: train_id: %d, src_id: %d, dest_id: %d, train->cur_speed: %d, train->cur_vel: %d, stop_dist: %d, safe_branch_dist: %d\n\r", train_id, src_id, dest_id, train->cur_speed, train->cur_vel, stop_dist, safe_branch_dist );
 
+  Printf( COM2, "NEXT COMMAND: \n\r" ); 
   compute_next_command( train, cmds );
-  //print_cmds( cmds );
+  print_shortest_dist( train );
+  print_cmds( cmds );
 }
 
 inline void init_node( min_heap_node_t * node, int id, int dist ) {
@@ -972,12 +977,10 @@ void dijkstra( struct _track_node_* track_graph, int train_id, int src_id, int* 
       track_nbr_id = track_node->edge[direction].dest - track_graph;
       assertu( 1, track_nbr_id >= 0 );
       bool is_reserved = ( // iff the edge AND the reversed edge is reserved by someone else
-        ( track_node->edge[direction].middle_train_num != NONE && track_node->edge[direction].middle_train_num != train_id )
-     || ( track_node->edge[direction].begin_train_num != NONE  && track_node->edge[direction].begin_train_num != train_id )
-     || ( track_node->edge[direction].reverse->middle_train_num != NONE 
-       && track_node->edge[direction].reverse->middle_train_num != train_id )
+        ( track_node->edge[direction].reverse->middle_train_num != NONE 
+          && track_node->edge[direction].reverse->middle_train_num != train_id )
      || ( track_node->edge[direction].reverse->begin_train_num != NONE 
-       && track_node->edge[direction].reverse->begin_train_num != train_id ));
+          && track_node->edge[direction].reverse->begin_train_num != train_id ));
       test_dist = is_reserved? dist[track_id] + DIST_MAX : dist[track_id] + track_node->edge[direction].dist;
       assertum( 1, test_dist >= 0, "failure indicates test_dist overflows int size" );
       assertum( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d\n\r\n\r\n\r", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
@@ -989,7 +992,7 @@ void dijkstra( struct _track_node_* track_graph, int train_id, int src_id, int* 
     update_backward( ) {
       track_nbr_id = track_node->reverse - track_graph;
       assertu( 1, track_nbr_id >= 0 );
-      test_dist = dist[track_id] + ( 2 * DEFAULT_TRAIN_LEN ) + ( 2 * STOP_BUFFER );// + 1000000; // to disable reverse 
+      test_dist = dist[track_id] + REVERSE_BUFFER; // + 1000000; // to disable reverse 
       assertum( 1, dist[track_nbr_id] == min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist, "dist: %d, heap_dist: %d", dist[track_nbr_id], min_heap.nodes[min_heap.node_id2idx[track_nbr_id]].dist );
       test_step = step[track_id] + 1;
       update_info( );
@@ -997,32 +1000,23 @@ void dijkstra( struct _track_node_* track_graph, int train_id, int src_id, int* 
 
     switch( track_node->type ) {
       case NODE_ENTER:
-        /* forward */
         update_forward( DIR_AHEAD ); 
-        /* backward */
         update_backward( );
         break;
       case NODE_SENSOR:
-        /* forward */
         update_forward( DIR_AHEAD ); 
-        /* backward */
         update_backward( );
         break;
       case NODE_MERGE:
-        /* forward */
         update_forward( DIR_AHEAD ); 
-        /* backward */
         update_backward( );
         break;
       case NODE_BRANCH:
-        /* forward */
         update_forward( DIR_AHEAD );
         update_forward( DIR_CURVED );
-        /* backward */
         update_backward( );
         break;
       case NODE_EXIT:
-        /* backward */
         update_backward( );
         break;
       default:
@@ -1053,6 +1047,21 @@ void extract_shortest_path( int* all_path, int* all_step, int src_id, int dest_i
   
 }
 
+void print_shortest_dist( train_state_t * train) {
+  int i;
+  Printf( COM2, "Print TRAIN DIST.................: total_steps: %d, cur_idx: %d \n\r", 
+      train->dest_total_steps, train->dest_path_cur_idx ); 
+  int steps2dest = train->dest_total_steps - train->dest_path_cur_idx;
+  Printf( COM2, "%d steps from %s to %s: ", steps2dest, train->track_graph[train->prev_sensor_id].name,
+      train->track_graph[train->dest_id].name );
+  for( i = train->dest_path_cur_idx; i < steps2dest + train->dest_path_cur_idx; ++i ) {
+    assertu( 1, train->dest_path[i] != NONE );
+    Printf( COM2, "%d:%d,  ", i, train->all_dist[i] );
+  }
+  Printf( COM2, "\r\n" );
+
+}
+
 void print_train_path( train_state_t * train ) {
   int i;
 #if( BWAIT == 1 )
@@ -1068,7 +1077,7 @@ void print_train_path( train_state_t * train ) {
   bwprintf( COM2, "\r\n" );
 
 #else 
-  Printf( COM2, "Print OLD TRAIN PATH.................: total_steps: %d, cur_idx: %d \n\r", 
+  Printf( COM2, "Print TRAIN PATH.................: total_steps: %d, cur_idx: %d \n\r", 
       train->dest_total_steps, train->dest_path_cur_idx ); 
   int steps2dest = train->dest_total_steps - train->dest_path_cur_idx;
   Printf( COM2, "%d steps from %s to %s:\t%s", steps2dest, train->track_graph[train->prev_sensor_id].name,

@@ -705,14 +705,14 @@ void dijkstra_test( ) {
   request_next_command( &train, &cmds );
   print_cmds( &cmds );
 
-  debugu( 1, "should see reverse path because another train reserves the edge" );
+  debugu( 1, "should NOT see reverse path because another train reserves the edge in the same direction" );
   init_rail_cmds( &cmds );
   train.prev_sensor_id = src_id;
   train.track_graph[70].edge[DIR_AHEAD].begin_train_num = 1000;
   request_next_command( &train, &cmds );
   print_cmds( &cmds );
 
-  debugu( 1, "should see reverse path because another train also reserves the edge " );
+  debugu( 1, "should NOT see reverse path because another train also reserves the edge " );
   init_rail_cmds( &cmds );
   train.prev_sensor_id = src_id;
   train.track_graph[70].edge[DIR_AHEAD].begin_train_num = 58;

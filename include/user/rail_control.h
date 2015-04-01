@@ -240,6 +240,8 @@ inline void get_shortest_path( train_state_t *train );
 
 void print_shortest_path( struct _track_node_ * track_graph, int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
 
+void print_shortest_dist( struct _train_state_ * train);
+
 void print_train_path( struct _train_state_ * train );
 
 void print_cmds( struct _rail_cmds_ * cmds );
