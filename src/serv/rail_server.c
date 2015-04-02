@@ -577,15 +577,15 @@ inline void init_generic_cmds_lists( generic_cmds_list_t** array_of_cmds_list, i
     array_of_cmds_list[i]->count = 0;
     int j = 0;
     for( ; j < CMD_QUEUE_MAX; ++j ) {
-      array_of_cmds_list[i]->cmds[j].id = NONE;
-      array_of_cmds_list[i]->cmds[j].action = NONE;
-      array_of_cmds_list[i]->cmds[j].delay = NONE;
+      ((array_of_cmds_list[i])->cmds)[j].id = NONE;
+      ((array_of_cmds_list[i])->cmds)[j].action = NONE;
+      ((array_of_cmds_list[i])->cmds)[j].delay = NONE;
 
-      array_of_cmds_list[i]->cmds[j].train_speed = NONE;
-      array_of_cmds_list[i]->cmds[j].train_dest = NONE;
-      array_of_cmds_list[i]->cmds[j].train_mm_past_dest = NONE;
-      array_of_cmds_list[i]->cmds[j].train_accel = NONE;
-      array_of_cmds_list[i]->cmds[j].train_decel = NONE;
+      ((array_of_cmds_list[i])->cmds)[j].train_speed = NONE;
+      ((array_of_cmds_list[i])->cmds)[j].train_dest = NONE;
+      ((array_of_cmds_list[i])->cmds)[j].train_mm_past_dest = NONE;
+      ((array_of_cmds_list[i])->cmds)[j].train_accel = NONE;
+      ((array_of_cmds_list[i])->cmds)[j].train_decel = NONE;
     }
   }
 }
@@ -622,6 +622,7 @@ void cmd_server( ) {
   generic_cmds_list_t switch154_cmds;
   generic_cmds_list_t switch155_cmds;
   generic_cmds_list_t switch156_cmds;
+  switch_cmds[0] = &switch1_cmds;
   switch_cmds[1] = &switch1_cmds;
   switch_cmds[2] = &switch2_cmds;
   switch_cmds[3] = &switch3_cmds;
@@ -661,7 +662,6 @@ void cmd_server( ) {
   init_generic_cmds_lists( train_cmds, TRAIN_MAX );
   init_bool_array( switch_exe_busy, SW_MAX );
   init_bool_array( train_exe_busy, TRAIN_MAX );
-  bwprintf( COM2, "I'm HERE\n\r" );
   
   int i, ret_val, client_tid, rail_server_tid;
   i = ret_val = client_tid = rail_server_tid = 0;
@@ -670,6 +670,8 @@ void cmd_server( ) {
   track_node_t * track_graph;
   char sensor_name[4];
   bwprintf( COM2, "I'm HERE1\n\r" );
+  Pass( );
+  bwprintf( COM2, "I'm HERE123\n\r" );
   rail_server_tid = MyParentTid( );
   assertu( 1, rail_server_tid > 0 );
   bwprintf( COM2, "I'm HERE2\n\r" );
@@ -769,7 +771,6 @@ void cmd_server( ) {
     debugu( 1, "cmd_server received client_tid: %d, request_type: %d", client_tid, receive_msg.request_type );
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     receive_cmds = receive_msg.to_server_content.rail_cmds;
-    assertu( 1, receive_cmds );
 
     switch( receive_msg.request_type ) {
       case COLLISION_CMDS:
@@ -955,7 +956,8 @@ void cmd_server( ) {
         break;
       case SWITCH_EXE_READY: {
         int switch_idx = receive_msg.train_or_switch_id;
-        assertu( 1, switch_idx > 0 && switch_idx < SW_MAX );
+        CONVERT_SWITCH_ID( switch_idx );
+        assertu( 1, switch_idx > 0 && switch_idx < SW_MAX ); //153-156
         switch_exe_busy[switch_idx] = false;
         for( i = 0; i < TR_MAX; ++i ) {
           if( trains[i].state != NOT_INITIALIZED && trains[i].state != INITIALIZING ) {

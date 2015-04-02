@@ -100,7 +100,7 @@
 
 #define CONVERT_SWITCH_ID( _switch_num ) \
   if( _switch_num > 18 ) { \
-    switch_id -= 134; \
+    _switch_num -= 134; \
   } else { ; }
 
 struct _track_node_;
