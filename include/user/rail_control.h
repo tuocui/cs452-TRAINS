@@ -20,6 +20,12 @@
 #define TRAIN_63_NUM 63
 #define TRAIN_45_NUM 45
 
+#define convert_train_num2idx( _train_num ) \
+  ( _train_num == TRAIN_58_NUM ? TRAIN_58_IDX : \
+    _train_num == TRAIN_24_NUM ? TRAIN_24_IDX : \
+    _train_num == TRAIN_63_NUM ? TRAIN_63_IDX : \
+    _train_num == TRAIN_45_NUM ? TRAIN_45_IDX : NONE )
+
 #define NONE      -1
 #define TR_STOP   0
 #define TR_SPD_1  1 
@@ -64,6 +70,12 @@
 #define SW155  21 
 #define SW156  22 
 
+#define get_switch_twin( _switch_id ) \
+  ( _switch_id == SW153 ? SW154 : \
+    _switch_id == SW154 ? SW153 : \
+    _switch_id == SW155 ? SW156 : \
+    _switch_id == SW156 ? SW155 : NONE )
+
 #define SW_TIME     100 // in ms
 
 #define TR_STOP         0
@@ -89,7 +101,7 @@
 #define CONVERT_SWITCH_ID( _switch_num ) \
   if( _switch_num > 18 ) { \
     switch_id -= 134; \
-  }
+  } else { ; }
 
 struct _track_node_;
 
@@ -97,6 +109,12 @@ typedef struct _generic_cmd_{
   int id;
   int action;
   int delay;
+  
+  int train_speed;
+  int train_dest;
+  int train_mm_past_dest;
+  int train_accel;
+  int train_decel;
 } generic_cmd_t;
 
 typedef struct _generic_cmds_list_ {

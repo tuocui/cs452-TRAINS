@@ -502,7 +502,7 @@ void print_trains( ) {
 }
 
 /* return inserted idx, if empty spot not found, return NONE */
-inline int insert_cmd( generic_cmds_list_t * cmds_list, int id, int action, int delay ) {
+inline int insert_cmd( generic_cmds_list_t * cmds_list, int id, int action, int delay, int train_speed, int train_dest, int train_mm_past_dest, int train_accel, int train_decel ) {
   if( cmds_list->count >= CMD_QUEUE_MAX )
     return NONE;
 
@@ -513,6 +513,11 @@ inline int insert_cmd( generic_cmds_list_t * cmds_list, int id, int action, int 
       cmds_list->cmds[idx].id = id;
       cmds_list->cmds[idx].action = action;
       cmds_list->cmds[idx].delay = delay;
+      cmds_list->cmds[idx].train_speed = train_speed;
+      cmds_list->cmds[idx].train_dest = train_dest;
+      cmds_list->cmds[idx].train_mm_past_dest = train_accel;
+      cmds_list->cmds[idx].train_accel = train_accel;
+      cmds_list->cmds[idx].train_decel = train_decel;
       ++( cmds_list->count );
       assertu( 1, cmds_list->count <= CMD_QUEUE_MAX && cmds_list->count >= 0 );
       return idx;
@@ -523,8 +528,8 @@ inline int insert_cmd( generic_cmds_list_t * cmds_list, int id, int action, int 
 }
 
 /* return the idx of item with the smallest delay, NONE of empty list */
-inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, int* delay ) {
-  *id = *action = *delay = NONE;
+inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, int* delay, int* train_speed, int* train_dest, int* train_mm_past_dest, int* train_accel, int* train_decel ) {
+  *id = *action = *delay = *train_speed = *train_dest = *train_mm_past_dest = *train_accel = *train_decel = NONE;
   int idx = 0;
   int smallest_delay_so_far = INT_MAX;
   int ret_idx = NONE;
@@ -535,6 +540,12 @@ inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, in
       *id = cmds_list->cmds[idx].id;
       *action = cmds_list->cmds[idx].action;
       *delay = cmds_list->cmds[idx].delay;
+
+      *train_speed = cmds_list->cmds[idx].train_speed;
+      *train_dest = cmds_list->cmds[idx].train_dest;
+      *train_mm_past_dest = cmds_list->cmds[idx].train_mm_past_dest;
+      *train_accel = cmds_list->cmds[idx].train_accel;
+      *train_decel = cmds_list->cmds[idx].train_decel;
       ret_idx = idx;
     }
   }
@@ -543,6 +554,13 @@ inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, in
     cmds_list->cmds[ret_idx].id = NONE;
     cmds_list->cmds[ret_idx].action = NONE;
     cmds_list->cmds[ret_idx].delay = NONE;
+
+    cmds_list->cmds[ret_idx].train_speed = NONE;
+    cmds_list->cmds[ret_idx].train_dest = NONE;
+    cmds_list->cmds[ret_idx].train_mm_past_dest = NONE;
+    cmds_list->cmds[ret_idx].train_accel = NONE;
+    cmds_list->cmds[ret_idx].train_decel = NONE;
+
     --( cmds_list->count );
   }
   assertu( 1, cmds_list->count <= CMD_QUEUE_MAX && cmds_list->count >= 0 );
@@ -560,6 +578,12 @@ inline void init_generic_cmds_lists( generic_cmds_list_t** array_of_cmds_list, i
       array_of_cmds_list[i]->cmds[j].id = NONE;
       array_of_cmds_list[i]->cmds[j].action = NONE;
       array_of_cmds_list[i]->cmds[j].delay = NONE;
+
+      array_of_cmds_list[i]->cmds[j].train_speed = NONE;
+      array_of_cmds_list[i]->cmds[j].train_dest = NONE;
+      array_of_cmds_list[i]->cmds[j].train_mm_past_dest = NONE;
+      array_of_cmds_list[i]->cmds[j].train_accel = NONE;
+      array_of_cmds_list[i]->cmds[j].train_decel = NONE;
     }
   }
 }
@@ -697,6 +721,32 @@ void cmd_server( ) {
     ret_val = Receive( &client_tid, (char *)&receive_msg, sizeof( receive_msg ));
     debugu( 1, "cmd_server received client_tid: %d, request_type: %d", client_tid, receive_msg.request_type );
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+    receive_cmds = receive_msg.to_server_content.rail_cmds;
+    assertu( 1, receive_cmds );
+
+    inline void insert_train_cmd( ) {
+      int train_idx = convert_train_num2idx( receive_cmds->train_id );
+      assertum( 1, train_idx != NONE, "failure here means a train num is not given/mapped with an idx" );
+      train_exe_worker_tid = train_exe_worker_tids[train_idx];
+      insert_cmd( train_cmds[train_idx], 
+          receive_cmds->train_id,    receive_cmds->train_action,
+          receive_cmds->train_delay, receive_cmds->train_speed,
+          receive_cmds->train_dest,  receive_cmds->train_mm_past_dest,
+          receive_cmds->train_accel, receive_cmds->train_decel );
+    }
+
+    inline void insert_switch_cmd( int switch_idx, bool user_command ) {
+      int switch_id = receive_cmds->switch_cmds[0].switch_id;
+      assertu( 1, switch_id > 0 && switch_id < SW_MAX );
+      insert_cmd( switch_cmds[switch_id], switch_id, 
+          receive_cmds->switch_cmds[0].switch_action, 0, NONE, NONE, NONE, NONE, NONE );
+
+      int other_switch_id = get_switch_twin( switch_id );
+      assertu( 1, other_switch_id > 0 && other_switch_id < SW_MAX );
+      if( user_command && other_switch_id != NONE && receive_cmds->switch_cmds[0].switch_action == SW_CURVED ) {
+        insert_cmd( switch_cmds[other_switch_id], other_switch_id, SW_STRAIGHT, 0, NONE, NONE, NONE, NONE, NONE );
+    }
+
     switch( receive_msg.request_type ) {
       case COLLISION_CMDS:
       case USER_INPUT:
@@ -704,70 +754,71 @@ void cmd_server( ) {
         // TODO: If user/collision reverse, make sure we properly set switches ahead so we don't derail
         ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
         assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-        if( (receive_msg.to_server_content.rail_cmds)->train_id != NONE ) {
-          switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
-          case TRAIN_58_NUM:
-            train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
-            break;
-          case TRAIN_45_NUM:
-            train_exe_worker_tid = train_exe_worker_tids[TRAIN_45_IDX];
-            break;
-          case TRAIN_24_NUM:
-            train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
-            break;
-          case TRAIN_63_NUM:
-            train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
-            break;
-          default:
-            train_exe_worker_tid = -1;
-            break;
-          }
-          if( train_exe_worker_tid > 0 ) {
-            train_cmd_args.cmd = (receive_msg.to_server_content.rail_cmds)->train_action;
-            train_cmd_args.speed_num = (receive_msg.to_server_content.rail_cmds)->train_speed;
-            train_cmd_args.delay_time = (receive_msg.to_server_content.rail_cmds)->train_delay;
-            train_cmd_args.dest = (receive_msg.to_server_content.rail_cmds)->train_dest;
-            train_cmd_args.mm_past_dest = (receive_msg.to_server_content.rail_cmds)->train_mm_past_dest;
-            train_cmd_args.accel_rate = (receive_msg.to_server_content.rail_cmds)->train_accel;
-            train_cmd_args.decel_rate = (receive_msg.to_server_content.rail_cmds)->train_decel;
-            ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
-            //FIXME: if the train_exe_worker_tid is not ready, should not Reply, or add a secretary
-            assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
-          }
-        } else if ( receive_msg.to_server_content.rail_cmds->switch_idx != NONE ) {
-          assertum( 1, receive_msg.to_server_content.rail_cmds->switch_idx == 0, 
-              "user packed %d sw_cmds, should it?", receive_msg.to_server_content.rail_cmds->switch_idx + 1 );
-          int switch_id = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_id;
-          switch_exe_worker_tid = switch_exe_worker_tids[switch_id];
-          switch_cmd_args.state = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action;
-          switch_cmd_args.delay_time = 0;
-          ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-          assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-          //FIXME: do NOT need to handle this for path finding commands
-          int other_switch_id = NONE;
-          if( receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action == SW_CURVED ) {
-            switch( switch_id ) {
-            case SW153:
-              other_switch_id = SW154;
-              break;
-            case SW154:
-              other_switch_id = SW153;
-              break;
-            case SW155:
-              other_switch_id = SW156;
-              break;
-            case SW156:
-              other_switch_id = SW155;
-              break;
-            }
-          }
-          if( other_switch_id != NONE ) {
-            switch_exe_worker_tid = switch_exe_worker_tids[other_switch_id];
-            switch_cmd_args.state = SW_STRAIGHT;
-            switch_cmd_args.delay_time = 0;
-            ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-            assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-          }
+        if( receive_cmds->train_id != NONE ) {
+          insert_train_cmd( );
+
+          //switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
+          //case TRAIN_58_NUM:
+          //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
+          //  break;
+          //case TRAIN_45_NUM:
+          //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_45_IDX];
+          //  break;
+          //case TRAIN_24_NUM:
+          //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
+          //  break;
+          //case TRAIN_63_NUM:
+          //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
+          //  break;
+          //default:
+          //  train_exe_worker_tid = -1;
+          //  break;
+          //}
+          //if( train_exe_worker_tid > 0 ) {
+          //  train_cmd_args.cmd = (receive_msg.to_server_content.rail_cmds)->train_action;
+          //  train_cmd_args.speed_num = (receive_msg.to_server_content.rail_cmds)->train_speed;
+          //  train_cmd_args.delay_time = (receive_msg.to_server_content.rail_cmds)->train_delay;
+          //  train_cmd_args.dest = (receive_msg.to_server_content.rail_cmds)->train_dest;
+          //  train_cmd_args.mm_past_dest = (receive_msg.to_server_content.rail_cmds)->train_mm_past_dest;
+          //  train_cmd_args.accel_rate = (receive_msg.to_server_content.rail_cmds)->train_accel;
+          //  train_cmd_args.decel_rate = (receive_msg.to_server_content.rail_cmds)->train_decel;
+          //  ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
+          //  //FIXME: if the train_exe_worker_tid is not ready, should not Reply, or add a secretary
+          //  assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
+          //}
+        } else if ( receive_cmds->switch_idx != NONE ) {
+            assertum( 1, receive_cmds->switch_idx == 0, "user packed %d sw_cmds, should it?", receive_cmds->switch_idx + 1 );
+            insert_switch_cmd( 0, true );
+
+          //switch_exe_worker_tid = switch_exe_worker_tids[switch_id];
+          //switch_cmd_args.state = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action;
+          //switch_cmd_args.delay_time = 0;
+          //ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
+          //assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+          //int other_switch_id = NONE;
+          //if( receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action == SW_CURVED ) {
+          //  switch( switch_id ) {
+          //  case SW153:
+          //    other_switch_id = SW154;
+          //    break;
+          //  case SW154:
+          //    other_switch_id = SW153;
+          //    break;
+          //  case SW155:
+          //    other_switch_id = SW156;
+          //    break;
+          //  case SW156:
+          //    other_switch_id = SW155;
+          //    break;
+          //  }
+          //}
+          //if( other_switch_id != NONE ) {
+          //  switch_exe_worker_tid = switch_exe_worker_tids[other_switch_id];
+          //  switch_cmd_args.state = SW_STRAIGHT;
+          //  switch_cmd_args.delay_time = 0;
+          //  ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
+          //  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+          //}
         } else if ( receive_msg.to_server_content.rail_cmds->rsv_node_id != NONE ) {
           int rsv_node_id = receive_msg.to_server_content.rail_cmds->rsv_node_id;
           int rsv_node_dir = receive_msg.to_server_content.rail_cmds->rsv_node_dir;
@@ -790,68 +841,75 @@ void cmd_server( ) {
         break;
 
       case RAIL_CMDS:
-        /* get and send train cmds */
-        receive_cmds = receive_msg.to_server_content.rail_cmds;
-        switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
-        case TRAIN_58_NUM:
-          train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
-          break;
-        case TRAIN_45_NUM:
-          train_exe_worker_tid = train_exe_worker_tids[TRAIN_45_IDX];
-          break;
-        case TRAIN_24_NUM:
-          train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
-          break;
-        case TRAIN_63_NUM:
-          train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
-          break;
-        default:
-          train_exe_worker_tid = -1;
-          break;
+        /* get and store train cmds */
+        if( receive_cmds->train_id != NONE ) {
+          insert_train_cmd( );
+
+        //receive_cmds = receive_msg.to_server_content.rail_cmds;
+        //
+        //switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
+        //case TRAIN_58_NUM:
+        //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
+        //  break;
+        //case TRAIN_45_NUM:
+        //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_45_IDX];
+        //  break;
+        //case TRAIN_24_NUM:
+        //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
+        //  break;
+        //case TRAIN_63_NUM:
+        //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
+        //  break;
+        //default:
+        //  train_exe_worker_tid = -1;
+        //  break;
+        //}
+        //if( train_exe_worker_tid != NONE ) {
+        //  debugu( 4, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
+        //  train_cmd_args.cmd = receive_cmds->train_action;
+        //  train_cmd_args.speed_num = receive_cmds->train_speed;
+        //  train_cmd_args.delay_time = receive_cmds->train_delay;
+        //  ret_val = Reply( train_exe_worker_tid, (char*)&train_cmd_args, sizeof( train_cmd_args ));
+        //  assertum( 1, ret_val >= 0, "retval: %d, cmd: %d", ret_val, receive_cmds->train_action ); //asdasdasdasd
         }
-        if( train_exe_worker_tid != NONE ) {
-          debugu( 4, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
-          train_cmd_args.cmd = receive_cmds->train_action;
-          train_cmd_args.speed_num = receive_cmds->train_speed;
-          train_cmd_args.delay_time = receive_cmds->train_delay;
-          ret_val = Reply( train_exe_worker_tid, (char*)&train_cmd_args, sizeof( train_cmd_args ));
-          assertum( 1, ret_val >= 0, "retval: %d, cmd: %d", ret_val, receive_cmds->train_action ); //asdasdasdasd
-        }
-        /* get and send switch cmds */
+        /* get and store switch cmds */
         for( i = 0; i <= receive_cmds->switch_idx; ++i ) {
           debugu( 4, "before reply to switch_exe_worker: switch_idx: %d, i: %d", receive_cmds->switch_idx, i );
-          switch_exe_worker_tid = switch_exe_worker_tids[receive_cmds->switch_cmds[i].switch_id];
-          switch_cmd_args.state = receive_cmds->switch_cmds[i].switch_action;
-          switch_cmd_args.delay_time = receive_cmds->switch_cmds[i].switch_delay;
-          ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
-          debugu( 4, "after reply to switch_exe_worker" );
-          assertum( 1, ret_val >= 0, "retval: %d, switch_worker_tid: %d, switch_id: %d", ret_val, 
-              switch_exe_worker_tid, receive_cmds->switch_cmds[i].switch_id );
-          int other_switch_id = NONE;
-          if( receive_cmds->switch_cmds[i].switch_action == SW_CURVED ) {
-            switch( receive_cmds->switch_cmds[i].switch_id ) {
-            case SW153:
-              other_switch_id = SW154;
-              break;
-            case SW154:
-              other_switch_id = SW153;
-              break;
-            case SW155:
-              other_switch_id = SW156;
-              break;
-            case SW156:
-              other_switch_id = SW155;
-              break;
-            }
-          }
-          if( other_switch_id != NONE ) {
-            switch_exe_worker_tid = switch_exe_worker_tids[other_switch_id];
-            switch_cmd_args.state = SW_STRAIGHT;
-            switch_cmd_args.delay_time = 0;
-            ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-            // It can actually fail here, since the previous iteration could have sent off the worker
-            // We don't actually give a shit about that case
-          }
+          insert_switch_cmd( i, false );
+          
+          //switch_exe_worker_tid = switch_exe_worker_tids[receive_cmds->switch_cmds[i].switch_id];
+          //switch_cmd_args.state = receive_cmds->switch_cmds[i].switch_action;
+          //switch_cmd_args.delay_time = receive_cmds->switch_cmds[i].switch_delay;
+          //ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
+          //debugu( 4, "after reply to switch_exe_worker" );
+          //assertum( 1, ret_val >= 0, "retval: %d, switch_worker_tid: %d, switch_id: %d", ret_val, 
+          //    switch_exe_worker_tid, receive_cmds->switch_cmds[i].switch_id );
+          //////FIXME: do NOT need to handle this for path finding commands
+          //int other_switch_id = NONE;
+          //if( receive_cmds->switch_cmds[i].switch_action == SW_CURVED ) {
+          //  switch( receive_cmds->switch_cmds[i].switch_id ) {
+          //  case SW153:
+          //    other_switch_id = SW154;
+          //    break;
+          //  case SW154:
+          //    other_switch_id = SW153;
+          //    break;
+          //  case SW155:
+          //    other_switch_id = SW156;
+          //    break;
+          //  case SW156:
+          //    other_switch_id = SW155;
+          //    break;
+          //  }
+          //}
+          //if( other_switch_id != NONE ) {
+          //  switch_exe_worker_tid = switch_exe_worker_tids[other_switch_id];
+          //  switch_cmd_args.state = SW_STRAIGHT;
+          //  switch_cmd_args.delay_time = 0;
+          //  ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
+          //  // It can actually fail here, since the previous iteration could have sent off the worker
+          //  // We don't actually give a shit about that case
+          //}
         }
         break;
 
