@@ -707,6 +707,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
         branch_to_switch_immediately = cur_node_id;
       }
     }
+
     /* finally, branching case, only if we actually have a destination after the branch node */
     if( track_graph[cur_node_id].type == NODE_BRANCH && traverse_cur_idx + 1 < train->dest_total_steps ) {
       debugu( 3,  "BRANCH: %d: %s, node after branch: %d: %s", cur_node_id, track_graph[cur_node_id].name,

@@ -501,69 +501,135 @@ void print_trains( ) {
   }
 }
 
-void cmd_server( ) {
-  //switch_cmd_t * switch_cmds[SW_MAX]; // idx 0 - 22, 1-22 are used, 0 is empty
-  //switch_cmd_t switch1_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch2_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch3_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch4_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch5_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch6_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch7_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch8_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch9_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch10_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch11_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch12_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch13_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch14_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch15_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch16_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch17_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch18_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch153_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch154_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch155_cmds[CMD_QUEUE_MAX];
-  //switch_cmd_t switch156_cmds[CMD_QUEUE_MAX];
-  //switch_cmds[1] = switch1_cmds;
-  //switch_cmds[2] = switch2_cmds;
-  //switch_cmds[3] = switch3_cmds;
-  //switch_cmds[4] = switch4_cmds;
-  //switch_cmds[5] = switch5_cmds;
-  //switch_cmds[6] = switch6_cmds;
-  //switch_cmds[7] = switch7_cmds;
-  //switch_cmds[8] = switch8_cmds;
-  //switch_cmds[9] = switch9_cmds;
-  //switch_cmds[10] = switch10_cmds;
-  //switch_cmds[11] = switch11_cmds;
-  //switch_cmds[12] = switch12_cmds;
-  //switch_cmds[13] = switch13_cmds;
-  //switch_cmds[14] = switch14_cmds;
-  //switch_cmds[15] = switch15_cmds;
-  //switch_cmds[16] = switch16_cmds;
-  //switch_cmds[17] = switch17_cmds;
-  //switch_cmds[18] = switch18_cmds;
-  //switch_cmds[19] = switch153_cmds;
-  //switch_cmds[20] = switch154_cmds;
-  //switch_cmds[21] = switch155_cmds;
-  //switch_cmds[22] = switch156_cmds;
+/* return inserted idx, if empty spot not found, return NONE */
+inline int insert_cmd( generic_cmds_list_t * cmds_list, int id, int action, int delay ) {
+  if( cmds_list->count >= CMD_QUEUE_MAX )
+    return NONE;
 
-  //train_cmd_t * train_cmds[TRAIN_MAX];
-  //train_cmd_t train0_cmds[CMD_QUEUE_MAX];
-  //train_cmd_t train1_cmds[CMD_QUEUE_MAX];
-  //train_cmd_t train2_cmds[CMD_QUEUE_MAX];
-  //train_cmd_t train3_cmds[CMD_QUEUE_MAX];
-  //train_cmds[0] = train0_cmds;
-  //train_cmds[1] = train0_cmds;
-  //train_cmds[2] = train0_cmds;
-  //train_cmds[3] = train0_cmds;
+  int idx = 0;
+  for( ; idx < CMD_QUEUE_MAX; ++idx ) {
+    if( cmds_list->cmds[idx].id == NONE ) {
+      assertu( 1, cmds_list->cmds[idx].action == NONE && cmds_list->cmds[idx].delay == NONE );
+      cmds_list->cmds[idx].id = id;
+      cmds_list->cmds[idx].action = action;
+      cmds_list->cmds[idx].delay = delay;
+      ++( cmds_list->count );
+      assertu( 1, cmds_list->count <= CMD_QUEUE_MAX && cmds_list->count >= 0 );
+      return idx;
+    }
+  }
+  assertum( 1, false, "BUG: should not comd to here, this indicates cmds_list counter is wrong" );
+  return NONE;
+}
+
+/* return the idx of item with the smallest delay, NONE of empty list */
+inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, int* delay ) {
+  *id = *action = *delay = NONE;
+  int idx = 0;
+  int smallest_delay_so_far = INT_MAX;
+  int ret_idx = NONE;
+  for( ; idx < CMD_QUEUE_MAX; ++idx ) {
+    if( cmds_list->cmds[idx].id != NONE && cmds_list->cmds[idx].delay < smallest_delay_so_far ) {
+      assertu( 1, cmds_list->cmds[idx].action != NONE && cmds_list->cmds[idx].delay != NONE );
+      smallest_delay_so_far = cmds_list->cmds[idx].delay;
+      *id = cmds_list->cmds[idx].id;
+      *action = cmds_list->cmds[idx].action;
+      *delay = cmds_list->cmds[idx].delay;
+      ret_idx = idx;
+    }
+  }
+
+  if( ret_idx != NONE ) {
+    cmds_list->cmds[ret_idx].id = NONE;
+    cmds_list->cmds[ret_idx].action = NONE;
+    cmds_list->cmds[ret_idx].delay = NONE;
+    --( cmds_list->count );
+  }
+  assertu( 1, cmds_list->count <= CMD_QUEUE_MAX && cmds_list->count >= 0 );
+  assertu( 1, ( ret_idx == NONE && *id == NONE && *action == NONE && *delay == NONE ) 
+          || ( ret_idx != NONE && *id != NONE && *action != NONE && *delay != NONE ));
+  return ret_idx;
+}
+
+inline void init_generic_cmds_lists( generic_cmds_list_t** array_of_cmds_list, int num_max ) {
+  int i = 0;
+  for( ; i < num_max; ++i ) {
+    array_of_cmds_list[i]->count = 0;
+    int j = 0;
+    for( ; j < CMD_QUEUE_MAX; ++j ) {
+      array_of_cmds_list[i]->cmds[j].id = NONE;
+      array_of_cmds_list[i]->cmds[j].action = NONE;
+      array_of_cmds_list[i]->cmds[j].delay = NONE;
+    }
+  }
+}
+
+void cmd_server( ) {
+  generic_cmds_list_t* switch_cmds[SW_MAX]; // idx 0 - 22, 1-22 are used, 0 is empty
+  generic_cmds_list_t switch1_cmds;
+  generic_cmds_list_t switch2_cmds;
+  generic_cmds_list_t switch3_cmds;
+  generic_cmds_list_t switch4_cmds;
+  generic_cmds_list_t switch5_cmds;
+  generic_cmds_list_t switch6_cmds;
+  generic_cmds_list_t switch7_cmds;
+  generic_cmds_list_t switch8_cmds;
+  generic_cmds_list_t switch9_cmds;
+  generic_cmds_list_t switch10_cmds;
+  generic_cmds_list_t switch11_cmds;
+  generic_cmds_list_t switch12_cmds;
+  generic_cmds_list_t switch13_cmds;
+  generic_cmds_list_t switch14_cmds;
+  generic_cmds_list_t switch15_cmds;
+  generic_cmds_list_t switch16_cmds;
+  generic_cmds_list_t switch17_cmds;
+  generic_cmds_list_t switch18_cmds;
+  generic_cmds_list_t switch153_cmds;
+  generic_cmds_list_t switch154_cmds;
+  generic_cmds_list_t switch155_cmds;
+  generic_cmds_list_t switch156_cmds;
+  switch_cmds[1] = &switch1_cmds;
+  switch_cmds[2] = &switch2_cmds;
+  switch_cmds[3] = &switch3_cmds;
+  switch_cmds[4] = &switch4_cmds;
+  switch_cmds[5] = &switch5_cmds;
+  switch_cmds[6] = &switch6_cmds;
+  switch_cmds[7] = &switch7_cmds;
+  switch_cmds[8] = &switch8_cmds;
+  switch_cmds[9] = &switch9_cmds;
+  switch_cmds[10] = &switch10_cmds;
+  switch_cmds[11] = &switch11_cmds;
+  switch_cmds[12] = &switch12_cmds;
+  switch_cmds[13] = &switch13_cmds;
+  switch_cmds[14] = &switch14_cmds;
+  switch_cmds[15] = &switch15_cmds;
+  switch_cmds[16] = &switch16_cmds;
+  switch_cmds[17] = &switch17_cmds;
+  switch_cmds[18] = &switch18_cmds;
+  switch_cmds[19] = &switch153_cmds;
+  switch_cmds[20] = &switch154_cmds;
+  switch_cmds[21] = &switch155_cmds;
+  switch_cmds[22] = &switch156_cmds;
+
+  generic_cmds_list_t* train_cmds[TRAIN_MAX];
+  generic_cmds_list_t train0_cmds;
+  generic_cmds_list_t train1_cmds;
+  generic_cmds_list_t train2_cmds;
+  generic_cmds_list_t train3_cmds;
+  train_cmds[0] = &train0_cmds;
+  train_cmds[1] = &train1_cmds;
+  train_cmds[2] = &train2_cmds;
+  train_cmds[3] = &train3_cmds;
+
+  init_generic_cmds_lists( switch_cmds, SW_MAX );
+  init_generic_cmds_lists( train_cmds, TRAIN_MAX );
   
   int i, ret_val, client_tid, rail_server_tid;
+  i = ret_val = client_tid = rail_server_tid = 0;
   train_state_t * trains = NULL;
   int * switch_states;
   track_node_t * track_graph;
   char sensor_name[4];
-  i = ret_val = client_tid = rail_server_tid = 0;//TODO: delete this
   rail_server_tid = MyParentTid( );
   assertu( 1, rail_server_tid > 0 );
 
@@ -677,6 +743,7 @@ void cmd_server( ) {
           switch_cmd_args.delay_time = 0;
           ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
           assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+          //FIXME: do NOT need to handle this for path finding commands
           int other_switch_id = NONE;
           if( receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action == SW_CURVED ) {
             switch( switch_id ) {
@@ -897,6 +964,7 @@ void rail_server( ) {
         if( receive_msg.to_server_content.train_state != NULL ) {
           // FIXME: reply to the trigger the first
           // NOTE: Does the above matter? Reply is non-blocking. We're saving only a few nanoseconds by doing so.
+          // TODO: ARE YOU TALKING TO YOURSELF?
           int i = 0;
           for( ;  i < TR_MAX ; ++i ) {
             if( trains[i].dest_id != NONE && trains[i].state == READY ) {
@@ -917,318 +985,3 @@ void rail_server( ) {
   }
 }
 
-//void rail_server( ) {
-//  if( RegisterAs( (char*)RAIL_SERVER ) == -1 ) {
-//    bwputstr( COM2, "ERROR: failed to register rail_server, aborting ...\n\r" );
-//    Exit( );
-//  }
-//  int client_tid, ret_val, i;
-//  
-//  /* track and trainx initialization */
-//  track_node_t track_graph[TRACK_MAX];
-//  //init_tracka( (track_node_t*)track_graph );
-//  init_trackb( (track_node_t*)track_graph );
-//  int switch_states[SW_MAX];
-//  rail_msg_t receive_msg;
-//
-//  train_state_t trains[TR_MAX];
-//  init_trains( trains, (track_node_t*)track_graph, switch_states );
-//  init_switches( switch_states );
-//
-//  /* create cmd_server, other workers will need to know cmd_server_tid */
-//  int cmd_server_tid = Create( 3, &cmd_server );
-//  assertu( 1, cmd_server_tid > 0 );
-//  ret_val = Send( cmd_server_tid, (char *)&trains, sizeof( trains ), (char *)&cmd_server_tid, 0 );
-//  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//
-//  /* graph_search_workers */
-//  int rail_graph_worker_tids[TR_MAX]; 
-//  for( i = 0; i < TR_MAX; ++i ) {
-//    rail_graph_worker_tids[i] = Create( 11, &rail_graph_worker );
-//    assertu( 1, rail_graph_worker_tids[i] > 0 );
-//  }
-//  rail_cmds_t* recved_cmds; 
-//
-//  /* update_trains woker */
-//  int update_trains_tid = Create( 13, &update_trains );
-//  update_train_args_t update_train_args;
-//  update_train_args.trains = trains;
-//  ret_val = Send( update_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
-//  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//
-//  /* print_trains worker */
-//  int print_trains_tid = Create( 14, &print_trains );
-//  ret_val = Send( print_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
-//  assertm( 1, ret_val >= 0, "retval: %d", ret_val );
-//
-//
-//  /* Sensor worker and courier declarations */
-//  int worker_tid;
-//  int sensor_courier_tid = Create( 2, &sensor_data_courier );
-//  assertu( 1, sensor_courier_tid > 0 );
-//
-//  declare_ring_queue( int, sensor_workers, SENSOR_WORKER_MAX );
-//  int sensor_worker_tids[SENSOR_WORKER_MAX];
-//  char sensor_name[4];
-//  for( i = 0; i < SENSOR_WORKER_MAX; ++i ) {
-//    sensor_worker_tids[i] = Create( 10, &sensor_worker );
-//    assertu( 1, sensor_worker_tids[i] > 0 );
-//    ret_val = Send( sensor_worker_tids[i], (char *)&client_tid, 0, (char *)&client_tid, 0 );
-//    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//  }
-//  sensor_args_t sensor_args;
-//  sensor_args.trains = trains;
-//
-//  /* Train exe workers */
-//  int train_exe_worker_tids[TR_MAX];
-//  int train_exe_worker_tid = NONE;
-//  for( i = 0; i < TR_MAX; ++i ) {
-//    train_exe_worker_tids[i] = Create( 10, &train_exe_worker );
-//    assertu( 1, train_exe_worker_tids[i] > 0 );
-//    train_state_t *train = &(trains[i]);
-//    ret_val = Send( train_exe_worker_tids[i], (char *)&train, sizeof( train ), (char *)&client_tid, 0 );
-//    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//  }
-//  train_cmd_args_t train_cmd_args;
-//
-//  /* Switch exe workers */
-//  int switch_exe_worker_tid = NONE;
-//  int switch_exe_worker_tids[SW_MAX];
-//  int switch_num;
-//  for( i = 1; i < SW_MAX; ++i ) {
-//    switch_exe_worker_tids[i] = Create( 10, &switch_exe_worker );
-//    assertu( 1, switch_exe_worker_tids[i] > 0 );
-//    switch_num = i;
-//    if( switch_num > 18 ) {
-//      switch_num += 134;
-//    }
-//    ret_val = Send( switch_exe_worker_tids[i], (char *)&switch_num, sizeof( switch_num ), (char *)&client_tid, 0 );
-//    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//  }
-//  switch_cmd_args_t switch_cmd_args;
-//  switch_cmd_args.switch_states = switch_states;
-//  switch_cmd_args.graph = track_graph;
-//
-//  FOREVER { 
-//    ret_val = Receive( &client_tid, (char *)&receive_msg, sizeof( rail_msg_t ));
-//    assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//    switch( receive_msg.request_type ) {
-//      case SENSOR_DATA:
-//        {
-//        //DEBUG
-//          /* retrieve data, find sensor number and corresponding train, set ready */
-//          ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
-//          assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//          if( !sensor_workers_empty( ) ) {
-//            int sensor_num = (receive_msg.to_server_content.sensor_data)->sensor_num;
-//            worker_tid = sensor_workers_pop_front( );
-//            sensor_args.sensor_num = sensor_num;
-//            ret_val = Reply( worker_tid, (char *)&sensor_args, sizeof(sensor_args) );
-//            assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//          }
-//        }
-//        break;
-//      case collision_cmds:
-//        // just fall through to user input, same diff
-//      case USER_INPUT:
-//        // TODO: If user/collision reverse, make sure we properly set switches ahead so we don't derail
-//        ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
-//        assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//        if( (receive_msg.to_server_content.rail_cmds)->train_id != NONE ) {
-//          switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
-//          case TRAIN_58_NUM:
-//            train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
-//            break;
-//          case TRAIN_45_NUM:
-//            train_exe_worker_tid = train_exe_worker_tids[TRAIN_45_IDX];
-//            break;
-//          case TRAIN_24_NUM:
-//            train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
-//            break;
-//          case TRAIN_63_NUM:
-//            train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
-//            break;
-//          default:
-//            train_exe_worker_tid = -1;
-//            break;
-//          }
-//          if( train_exe_worker_tid > 0 ) {
-//            train_cmd_args.cmd = (receive_msg.to_server_content.rail_cmds)->train_action;
-//            train_cmd_args.speed_num = (receive_msg.to_server_content.rail_cmds)->train_speed;
-//            train_cmd_args.delay_time = (receive_msg.to_server_content.rail_cmds)->train_delay;
-//            train_cmd_args.dest = (receive_msg.to_server_content.rail_cmds)->train_dest;
-//            train_cmd_args.mm_past_dest = (receive_msg.to_server_content.rail_cmds)->train_mm_past_dest;
-//            train_cmd_args.accel_rate = (receive_msg.to_server_content.rail_cmds)->train_accel;
-//            train_cmd_args.decel_rate = (receive_msg.to_server_content.rail_cmds)->train_decel;
-//            ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
-//            //FIXME: if the train_exe_worker_tid is not ready, should not Reply, or add a secretary
-//            //assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
-//          }
-//        } else if ( receive_msg.to_server_content.rail_cmds->switch_idx != NONE ) {
-//          assertum( 1, receive_msg.to_server_content.rail_cmds->switch_idx == 0, 
-//              "user packed %d sw_cmds, should it?", receive_msg.to_server_content.rail_cmds->switch_idx + 1 );
-//          int switch_id = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_id;
-//          switch_exe_worker_tid = switch_exe_worker_tids[switch_id];
-//          switch_cmd_args.state = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action;
-//          switch_cmd_args.delay_time = 0;
-//          ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-//          assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//          int other_switch_id = NONE;
-//          if( receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action == SW_CURVED ) {
-//            switch( switch_id ) {
-//            case SW153:
-//              other_switch_id = SW154;
-//              break;
-//            case SW154:
-//              other_switch_id = SW153;
-//              break;
-//            case SW155:
-//              other_switch_id = SW156;
-//              break;
-//            case SW156:
-//              other_switch_id = SW155;
-//              break;
-//            }
-//          }
-//          if( other_switch_id != NONE ) {
-//            switch_exe_worker_tid = switch_exe_worker_tids[other_switch_id];
-//            switch_cmd_args.state = SW_STRAIGHT;
-//            switch_cmd_args.delay_time = 0;
-//            ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-//            assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-//          }
-//        } else if ( receive_msg.to_server_content.rail_cmds->rsv_node_id != NONE ) {
-//          int rsv_node_id = receive_msg.to_server_content.rail_cmds->rsv_node_id;
-//          int rsv_node_dir = receive_msg.to_server_content.rail_cmds->rsv_node_dir;
-//          track_edge_t *edge = &(track_graph[rsv_node_id].edge[rsv_node_dir]);
-//          if( edge->middle_train_num == USER_INPUT_NUM || edge->begin_train_num == USER_INPUT_NUM ) {
-//            edge->middle_train_num = NONE;
-//            edge->begin_train_num = NONE;
-//            Printf( COM2, "\0337\033[1A\033[2K\rUnreserved track from %s, direction %d\0338", track_graph[rsv_node_id].name, rsv_node_dir );
-//          } else if( edge->middle_train_num == NONE && edge->begin_train_num == NONE ) {
-//            edge->middle_train_num = USER_INPUT_NUM;
-//            edge->begin_train_num = USER_INPUT_NUM;
-//            Printf( COM2, "\0337\033[1A\033[2K\rReserved track from %s, direction %d\0338", track_graph[rsv_node_id].name, rsv_node_dir );
-//          } else {
-//            Printf( COM2, "\0337\033[1A\033[2K\rCould not reserve track from %s, direction %d\0338", track_graph[rsv_node_id].name, rsv_node_dir );
-//          }
-//        }
-//        break;
-//      case RAIL_CMDS:
-//        /* get and send train cmds */
-//        recved_cmds = receive_msg.to_server_content.rail_cmds;
-//        switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
-//        case TRAIN_58_NUM:
-//          train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
-//          break;
-//        case TRAIN_45_NUM:
-//          train_exe_worker_tid = train_exe_worker_tids[TRAIN_45_IDX];
-//          break;
-//        case TRAIN_24_NUM:
-//          train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
-//          break;
-//        case TRAIN_63_NUM:
-//          train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
-//          break;
-//        default:
-//          train_exe_worker_tid = -1;
-//          break;
-//        }
-//        if( train_exe_worker_tid != NONE ) {
-//          debugu( 4, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
-//          train_cmd_args.cmd = recved_cmds->train_action;
-//          train_cmd_args.speed_num = recved_cmds->train_speed;
-//          train_cmd_args.delay_time = recved_cmds->train_delay;
-//          ret_val = Reply( train_exe_worker_tid, (char*)&train_cmd_args, sizeof( train_cmd_args ));
-//          assertum( 1, ret_val >= 0, "retval: %d, cmd: %d", ret_val, recved_cmds->train_action ); //asdasdasdasd
-//        }
-//        /* get and send switch cmds */
-//        for( i = 0; i <= recved_cmds->switch_idx; ++i ) {
-//          debugu( 4, "before reply to switch_exe_worker: switch_idx: %d, i: %d", recved_cmds->switch_idx, i );
-//          switch_exe_worker_tid = switch_exe_worker_tids[recved_cmds->switch_cmds[i].switch_id];
-//          switch_cmd_args.state = recved_cmds->switch_cmds[i].switch_action;
-//          switch_cmd_args.delay_time = recved_cmds->switch_cmds[i].switch_delay;
-//          ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
-//          debugu( 4, "after reply to switch_exe_worker" );
-//          //assertum( 1, ret_val >= 0, "retval: %d, switch_worker_tid: %d, switch_id: %d", ret_val, 
-//          //    switch_exe_worker_tid, recved_cmds->switch_cmds[i].switch_id );
-//          int other_switch_id = NONE;
-//          if( recved_cmds->switch_cmds[i].switch_action == SW_CURVED ) {
-//            switch( recved_cmds->switch_cmds[i].switch_id ) {
-//            case SW153:
-//              other_switch_id = SW154;
-//              break;
-//            case SW154:
-//              other_switch_id = SW153;
-//              break;
-//            case SW155:
-//              other_switch_id = SW156;
-//              break;
-//            case SW156:
-//              other_switch_id = SW155;
-//              break;
-//            }
-//          }
-//          if( other_switch_id != NONE ) {
-//            switch_exe_worker_tid = switch_exe_worker_tids[other_switch_id];
-//            switch_cmd_args.state = SW_STRAIGHT;
-//            switch_cmd_args.delay_time = 0;
-//            ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-//            // It can actually fail here, since the previous iteration could have sent off the worker
-//            // We don't actually give a shit about that case
-//          }
-//        }
-//        break;
-//      case TRAIN_EXE_READY:
-//        {
-//          if( receive_msg.general_val != NONE ) {
-//            train_state_t *train = &(trains[get_train_idx( receive_msg.general_val )]);
-//            if( train->state != NOT_INITIALIZED && train->state != INITIALIZING ) {
-//              update_prev_sensor_id_for_rev( train );
-//              train->rev_branch_ignore = NONE;
-//            }
-//          }
-//        }
-//        //DEBUG
-//        // rerun graph search only if command was given by user AND if command is reverse or change speed
-//        // Don't run graph search if train state is busy, or reversing
-//        // Update train direction if reverse is given
-//        break;
-//      case SWITCH_EXE_READY:
-//        //DEBUG
-//        for( i = 0; i < TR_MAX; ++i ) {
-//          if( trains[i].state != NOT_INITIALIZED && trains[i].state != INITIALIZING ) {
-//            if( trains[i].state == REVERSING ) {
-//              predict_next_sensor_dynamic( &(trains[i]) );
-//            } else {
-//              predict_next_sensor_static( &(trains[i]) );
-//            }
-//            predict_next_fallback_sensors_static( &(trains[i]) );
-//            sensor_id_to_name( trains[i].next_sensor_id, sensor_name );
-//            Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", i * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
-//          }
-//        }
-//        break;
-//      case SENSOR_WORKER_READY: // worker responds with the train that hit the sensor
-//        // get train, graph search
-//        sensor_workers_push_back( client_tid );
-//        if( receive_msg.to_server_content.train_state != NULL ) {
-//          // FIXME: reply to the trigger the first
-//          // NOTE: Does the above matter? Reply is non-blocking. We're saving only a few nanoseconds by doing so.
-//          int i = 0;
-//          for( ;  i < TR_MAX ; ++i ) {
-//            if( trains[i].dest_id != NONE && trains[i].state == READY ) {
-//              train_state_t * train_to_send = &(trains[i]);
-//              ret_val = Reply( rail_graph_worker_tids[i], (char*)&( train_to_send ), sizeof( train_to_send ));
-//              assertum( 1, ret_val == 0, "ret_val: %d, tid: %d", ret_val, rail_graph_worker_tids[i] );
-//            }
-//          }
-//        }
-//        //TODO: run dynamic graph search
-//        break;
-//      default:
-//        assertum( 1, false, "ERROR: unrecognized request: %d", receive_msg.request_type );
-//        break;
-//    }
-//  }
-//}

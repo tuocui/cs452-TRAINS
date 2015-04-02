@@ -9,14 +9,16 @@
 #define TR_MAX 4
 #define TR_PREF_SPEED 10
 
-#define TRAIN_58_NUM 58
-#define TRAIN_45_NUM 45
-#define TRAIN_24_NUM 24
-#define TRAIN_63_NUM 63
+#define TRAIN_MAX   4
 #define TRAIN_58_IDX 0
-#define TRAIN_45_IDX 3
 #define TRAIN_24_IDX 1
 #define TRAIN_63_IDX 2
+#define TRAIN_45_IDX 3
+
+#define TRAIN_58_NUM 58
+#define TRAIN_24_NUM 24
+#define TRAIN_63_NUM 63
+#define TRAIN_45_NUM 45
 
 #define NONE      -1
 #define TR_STOP   0
@@ -82,12 +84,25 @@
 #define USER_INPUT_NUM  99
 #define DEFAULT_TRAIN_LEN 210
 
+#define CMD_QUEUE_MAX 5
+
 #define CONVERT_SWITCH_ID( _switch_num ) \
   if( _switch_num > 18 ) { \
     switch_id -= 134; \
   }
 
 struct _track_node_;
+
+typedef struct _generic_cmd_{
+  int id;
+  int action;
+  int delay;
+} generic_cmd_t;
+
+typedef struct _generic_cmds_list_ {
+  int count;
+  struct _generic_cmd_ cmds[CMD_QUEUE_MAX];
+} generic_cmds_list_t;
 
 typedef struct _switch_cmd_ {
   int switch_id;
