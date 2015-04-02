@@ -63,6 +63,9 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 'r' && cmd2 == 'd' ) {
     return RAND_CMD;  
   }
+  if ( cmd1 == 'c' && cmd2 == 't' ) {
+    return CTRL_CMD;  
+  }
   
   return -1;
 }
@@ -142,7 +145,7 @@ short parse_node_name( char *cmd_buffer, int *buf_ind_ptr ) {
   return parse_sensor_name( cmd_buffer, buf_ind_ptr );
 }
 
-int handle_move( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg, int rail_server_tid ) {
+int handle_move( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid ) {
   int buf_ind = 3;
   short train = parse_short( cmd_buffer, &buf_ind );
   ++buf_ind;
@@ -167,7 +170,7 @@ int handle_move( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg, in
   return 0;
 }
 
-int handle_rev( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg, int rail_server_tid ) {
+int handle_rev( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid ) {
   int buf_ind = 3;
   short train = parse_short( cmd_buffer, &buf_ind );
   //short prev_speed;
@@ -356,6 +359,18 @@ int handle_rsv( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid  ) {
   return 0;
 }
 
+short handle_ctrl( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_USER_CTRL;
+  
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  Printf( COM2, "\0337\033[1A\033[2K\rTrain %d is now user controlled!!!!.\0338", train );
+
+  return train;
+}
+
 int handle_go( ) {
   track_go( );
   Putstr( COM2, "\0337\033[1A\033[2K\rTrack ON\0338", 21 );
@@ -377,15 +392,15 @@ int handle_clear( ) {
   return 0;
 }
 
-int process_buffer( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg, int rail_server_tid ) {
+int process_buffer( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid ) {
   int cmd = get_cmd( cmd_buffer );
 
   switch( cmd ) {
   case MOVE_CMD:
-    handle_move( cmd_buffer, train_speeds, rail_msg, rail_server_tid );
+    handle_move( cmd_buffer, rail_msg, rail_server_tid );
     break;
   case REV_CMD:
-    handle_rev( cmd_buffer, train_speeds, rail_msg, rail_server_tid );
+    handle_rev( cmd_buffer, rail_msg, rail_server_tid );
     break;
   case SWITCH_CMD:
     handle_switch( cmd_buffer, rail_msg, rail_server_tid );
@@ -411,6 +426,9 @@ int process_buffer( char *cmd_buffer, short *train_speeds, rail_msg_t *rail_msg,
   case RAND_CMD:
     handle_rand_dest( cmd_buffer, rail_msg, rail_server_tid );
     break;
+  case CTRL_CMD:
+    return ( int )handle_ctrl( cmd_buffer, rail_msg, rail_server_tid );
+    break;
   case GO_CMD:
     handle_go( );
     break;
@@ -435,11 +453,7 @@ void parse_user_input( ) {
   int cmd_ind = 0;
   char cmd_buffer[CMD_BUF_SIZE];
   int status;
-  short train_speeds[NUM_TRAINS];
   int i;
-  for( i = 0; i < NUM_TRAINS; ++i ) {
-    train_speeds[i] = 0;
-  }
   rail_cmds_t rail_cmds;
   init_rail_cmds( &rail_cmds );
   rail_msg_t rail_msg;
@@ -447,24 +461,118 @@ void parse_user_input( ) {
   rail_msg.to_server_content.rail_cmds = &rail_cmds;
   rail_msg.from_server_content.nullptr = NULL;
   int cmd_server_tid = WhoIs( (char*)CMD_SERVER);
+  int mode = CMD_LINE;
+  int train_ctrl_num = 0;
 
   FOREVER {
     c = (char)Getc( COM2 );
-    // backspace char?
-    if ( c == 8 && cmd_ind > 0 ) {
-      --cmd_ind;
-      cmd_buffer[cmd_ind] = 0;
-      // Remove char from screen
-      Putstr( COM2, "\033[1D \033[1D", 9 );
-    }
+    if( mode == CMD_LINE ) {
+      // backspace char?
+      if ( c == 8 && cmd_ind > 0 ) {
+        --cmd_ind;
+        cmd_buffer[cmd_ind] = 0;
+        // Remove char from screen
+        Putstr( COM2, "\033[1D \033[1D", 9 );
+      }
 
-    // enter char?
-    if ( c == 13 ) {
-      cmd_buffer[cmd_ind] = 0;
-      cmd_ind = 0;
-      Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
-      init_rail_cmds( &rail_cmds );
-      status = process_buffer( cmd_buffer, train_speeds, &rail_msg, cmd_server_tid );
+      // enter char?
+      if ( c == 13 ) {
+        cmd_buffer[cmd_ind] = 0;
+        cmd_ind = 0;
+        Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
+        init_rail_cmds( &rail_cmds );
+        status = process_buffer( cmd_buffer, &rail_msg, cmd_server_tid );
+        init_rail_cmds( &rail_cmds );
+        rail_cmds.train_speed = 0;
+        rail_cmds.train_dest = -1;
+        rail_cmds.train_mm_past_dest = 0;
+        rail_cmds.train_accel = 100;
+        rail_cmds.train_accel = 120;
+        rail_cmds.rsv_node_id = -1;
+        rail_cmds.rsv_node_dir = 0;
+        if( status == QUIT_CMD ) {
+          Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
+          for( i = 12; i < NUM_TRAINS; ++i ) {
+            set_train_speed_old( i, 0 );
+          }
+          Delay( 500 );
+          Kill_the_system( 0xdeadbeef );
+        } else if( status > 0 ) {
+          mode = TRAIN_CTRL;
+          train_ctrl_num = status;
+        }
+      }
+
+      // buffer too full?
+      if ( cmd_ind >= 80 ) {
+        continue;
+      }
+
+      // alphanumeric or space? Just throw it in the buffer
+      if ( ( c >= 65 && c <= 90 ) ||
+           ( c >= 97 && c <= 122 ) ||
+           ( c >= 48 && c <= 57 ) ||
+           ( c == 32 ) ) {
+        cmd_buffer[cmd_ind] = c;
+        ++cmd_ind;
+        Putc( COM2, c );
+      }
+    } else {
+      switch( c ) {
+      case 'A':
+        ((rail_msg.to_server_content).rail_cmds)->train_id = train_ctrl_num;
+        ((rail_msg.to_server_content).rail_cmds)->train_action = TR_SPEED_UP;
+        Send( cmd_server_tid, (char *)&rail_msg, sizeof( rail_msg ), (char *)&i, 0 );
+        break;
+      case 'B':
+        ((rail_msg.to_server_content).rail_cmds)->train_id = train_ctrl_num;
+        ((rail_msg.to_server_content).rail_cmds)->train_action = TR_SLOW_DOWN;
+        Send( cmd_server_tid, (char *)&rail_msg, sizeof( rail_msg ), (char *)&i, 0 );
+        break;
+      case 'C':
+        ((rail_msg.to_server_content).rail_cmds)->train_id = train_ctrl_num;
+        ((rail_msg.to_server_content).rail_cmds)->train_action = TR_SWITCH_RIGHT;
+        Send( cmd_server_tid, (char *)&rail_msg, sizeof( rail_msg ), (char *)&i, 0 );
+        break;
+      case 'D':
+        ((rail_msg.to_server_content).rail_cmds)->train_id = train_ctrl_num;
+        ((rail_msg.to_server_content).rail_cmds)->train_action = TR_SWITCH_LEFT;
+        Send( cmd_server_tid, (char *)&rail_msg, sizeof( rail_msg ), (char *)&i, 0 );
+        break;
+      case 'r':
+        ((rail_msg.to_server_content).rail_cmds)->train_id = train_ctrl_num;
+        ((rail_msg.to_server_content).rail_cmds)->train_action = TR_REVERSE;
+        Send( cmd_server_tid, (char *)&rail_msg, sizeof( rail_msg ), (char *)&i, 0 );
+        break;
+      case 's':
+        ((rail_msg.to_server_content).rail_cmds)->train_id = train_ctrl_num;
+        ((rail_msg.to_server_content).rail_cmds)->train_action = TR_STOP;
+        Send( cmd_server_tid, (char *)&rail_msg, sizeof( rail_msg ), (char *)&i, 0 );
+        break;
+      case 'd':
+        ((rail_msg.to_server_content).rail_cmds)->train_id = train_ctrl_num;
+        ((rail_msg.to_server_content).rail_cmds)->train_action = TR_SET_RAND_DEST;
+        Send( cmd_server_tid, (char *)&rail_msg, sizeof( rail_msg ), (char *)&i, 0 );
+        break;
+      case 'i':
+        ((rail_msg.to_server_content).rail_cmds)->train_id = train_ctrl_num;
+        ((rail_msg.to_server_content).rail_cmds)->train_action = TR_INIT;
+        ((rail_msg.to_server_content).rail_cmds)->train_speed = -1;
+        ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
+        Send( cmd_server_tid, (char *)&rail_msg, sizeof( rail_msg ), (char *)&i, 0 );
+        break;
+      case 'q':
+        ((rail_msg.to_server_content).rail_cmds)->train_id = train_ctrl_num;
+        ((rail_msg.to_server_content).rail_cmds)->train_action = TR_STOP_USER_CTRL;
+        Send( cmd_server_tid, (char *)&rail_msg, sizeof( rail_msg ), (char *)&i, 0 );
+        Printf( COM2, "\0337\033[1A\033[2K\rTrain %d is no longer user controlled =(((.\0338", train_ctrl_num );
+        train_ctrl_num = 0;
+        mode = CMD_LINE;
+        Putstr( COM2, "\033[24;0H\033[2K\033[24;0H>", 19 );
+        break;
+      default:
+        break;
+      }
       init_rail_cmds( &rail_cmds );
       rail_cmds.train_speed = 0;
       rail_cmds.train_dest = -1;
@@ -473,30 +581,6 @@ void parse_user_input( ) {
       rail_cmds.train_accel = 120;
       rail_cmds.rsv_node_id = -1;
       rail_cmds.rsv_node_dir = 0;
-      if( status == QUIT_CMD ) {
-        Putstr( COM2, "\0337\033[1A\033[2K\rShutting down. Goodbye!\033[24;0H\033[2K", 45 );
-        for( i = 12; i < NUM_TRAINS; ++i ) {
-          train_speeds[i] = 0;
-          set_train_speed_old( i, 0 );
-        }
-        Delay( 500 );
-        Kill_the_system( 0xdeadbeef );
-      }
-    }
-
-    // buffer too full?
-    if ( cmd_ind >= 80 ) {
-      continue;
-    }
-
-    // alphanumeric or space? Just throw it in the buffer
-    if ( ( c >= 65 && c <= 90 ) ||
-         ( c >= 97 && c <= 122 ) ||
-         ( c >= 48 && c <= 57 ) ||
-         ( c == 32 ) ) {
-      cmd_buffer[cmd_ind] = c;
-      ++cmd_ind;
-      Putc( COM2, c );
     }
   }
 }

@@ -61,7 +61,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   int mm_past_sensor = train->mm_past_landmark / 10;
   int cur_speed = train->cur_speed;
   int train_state = train->state;
-  int forward_dist = ( safe_distance_to_stop( train ) * 3 ) / 2; // 1.25x the safe distance to stop
+  int forward_dist = ( safe_distance_to_stop( train ) * 5 ) / 4; // 1.25x the safe distance to stop
   int orig_forward_dist = forward_dist;
   //Printf( COM2, "forward_dist: %d\r\n", forward_dist );
   int branch_ind;
@@ -178,6 +178,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     // check to see if our reservations overlap
     if( rev_edge->begin_train_num != -1 && forward_dist + rev_edge->begin_train_rsv_end >= edge_dist ) {
       //Printf( COM2, "slightly less major collision\r\n" );
+      // WAIIIT, it might just actually loop around
       assert( 1, rev_edge->begin_train_num != train->train_id );
       // possibly it
       if( forward_dist > ( edge_dist - rev_edge->begin_train_rsv_end ) ) {
@@ -691,7 +692,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
       
       int sensor2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id];
       if( track_graph[cur_node_id].type == NODE_BRANCH && ( prev_sensor_id == src_id || 
-             ( prev_sensor_id  == second_sensor_id && stop_dist_at_const_vel > sensor2reverse_dist + train_len_behind - train_len_ahead ))) {
+             ( prev_sensor_id  == second_sensor_id && stop_dist_at_const_vel > ( sensor2reverse_dist + train_len_behind + STOP_BUFFER ) - train_len_ahead ))) {
         assertu( 1, track_graph[train->dest_path[traverse_cur_idx-1]].type == NODE_MERGE );
         int src2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[src_id];
         int cur2dest_dist = src2reverse_dist + train_len_behind + STOP_BUFFER;

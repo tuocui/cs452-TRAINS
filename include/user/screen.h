@@ -16,8 +16,12 @@
 #define CH_DIR_CMD 9
 #define RSV_CMD 10
 #define RAND_CMD 11
+#define CTRL_CMD 12
 #define CLEAR_CMD 98
 #define QUIT_CMD 99
+
+#define TRAIN_CTRL 0
+#define CMD_LINE 1
 
 void parse_user_input( );
 short parse_sensor_name( char *cmd_buffer, int *buf_ind_ptr );

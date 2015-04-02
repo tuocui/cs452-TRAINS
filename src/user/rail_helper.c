@@ -32,6 +32,84 @@ int get_train_idx( int train_num ) {
   }
 }
 
+bool reached_dest( train_state_t *train ) {
+  int dest_id = train->dest_id;
+  int next_sensor_id = train->next_sensor_id;
+  int next_sensor_id_rev = ((train->track_graph[train->next_sensor_id]).reverse)->num;
+  int prev_sensor_id = train->prev_sensor_id;
+  int prev_sensor_id_rev = ((train->track_graph[train->prev_sensor_id]).reverse)->num;
+  int dist_past_prev_sensor = train->mm_past_landmark / 10;
+  if( dest_id == prev_sensor_id || dest_id == prev_sensor_id_rev ) {
+    Printf( COM2, "wat" );
+    if( dist_past_prev_sensor < train->length ) {
+      return true;
+    }
+  } else if( dest_id == next_sensor_id || dest_id == next_sensor_id_rev ) {
+    Printf( COM2, "pls" );
+    int dist_between_sensors = 0;
+    track_node_t *cur_node = &(train->track_graph[train->prev_sensor_id]);
+    int i;
+    for(i = 0; i < 10 && cur_node->num != next_sensor_id; ++i ) {
+      if( cur_node->type == NODE_BRANCH ) {
+        int branch_ind = cur_node->num;
+        if( branch_ind > 152 ) {
+          branch_ind -= 134;
+        }
+        dist_between_sensors += cur_node->edge[train->switch_states[branch_ind]].dist;
+        cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
+      } else if( cur_node->type == NODE_EXIT ) {
+        break;
+      } else {
+        dist_between_sensors += cur_node->edge[DIR_AHEAD].dist;
+        cur_node = cur_node->edge[DIR_AHEAD].dest;
+      }
+    }
+    if( dist_between_sensors - dist_past_prev_sensor < train->length && dist_between_sensors - dist_past_prev_sensor > (-1 * train->length) ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+int get_next_branch_num( train_state_t *train ) {
+  int branch_ind;
+  int mm_past_sensor = ( train->mm_past_landmark / 10 ) + get_len_train_ahead( train );
+  track_node_t *cur_node = &((train->track_graph)[train->prev_sensor_id]);
+  while( 1 ) {
+    if( cur_node->type == NODE_BRANCH ) {
+      branch_ind = cur_node->num;
+      if( branch_ind > 152 ) {
+        branch_ind -= 134;
+      }
+      if( cur_node->edge[train->switch_states[branch_ind]].dist >= mm_past_sensor ) {
+        cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
+        break;
+      }
+      mm_past_sensor -= cur_node->edge[train->switch_states[branch_ind]].dist;
+      cur_node = cur_node->edge[train->switch_states[branch_ind]].dest;
+    } else if ( cur_node->type == NODE_EXIT ) {
+      return NONE;
+    } else {
+      if( cur_node->edge[DIR_STRAIGHT].dist >= mm_past_sensor ) {
+        cur_node = cur_node->edge[DIR_STRAIGHT].dest;
+        break;
+      }
+      mm_past_sensor -= cur_node->edge[DIR_STRAIGHT].dist;
+      cur_node = cur_node->edge[DIR_STRAIGHT].dest;
+    }
+  }
+
+  while( 1 ) {
+    if( cur_node->type == NODE_BRANCH ) {
+      return cur_node->num;
+    } else if ( cur_node->type == NODE_EXIT ) {
+      return NONE;
+    } else {
+      cur_node = cur_node->edge[DIR_AHEAD].dest;
+    }
+  }
+}
+
 int get_rand_dest( int super_complicated_seed, track_node_t *graph, int cur_sensor_id ) {
   int dest_id = super_complicated_seed % 80;
   int totally_rand_num = super_complicated_seed % 20;
@@ -398,7 +476,6 @@ int get_delay_time_to_stop( train_state_t *train, int dist ) {
 
   // decelerating?
   if( cur_speed_normalized < prev_speed_normalized ) {
-    Printf( COM2, "Decelerating\r\n" );
     int dist_to_stop_so_far = dist;
     dist_to_stop_so_far -= ( ( ( ( cur_vel - finish_vel ) * accel_finish_time_rel ) / 2 ) + ( finish_vel * accel_finish_time_rel ) ) / 100000;
     assertu( 1, dist_to_stop_so_far >= 0 );
@@ -723,6 +800,7 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
     trains[i].train_reach_destination = false;
     trains[i].rev_branch_ignore = NONE;
     trains[i].set_rand_dest = false;
+    trains[i].user_controlled = false;
 
     for( j = 0; j < NUM_SPEEDS; ++j ) {
       trains[i].speeds[j].speed = 0;

@@ -10,6 +10,10 @@
 struct _train_state_;
 struct _track_node_;
 
+int get_next_branch_num( struct _train_state_ *train );
+
+bool reached_dest( struct _train_state_ *train );
+
 int get_rand_dest( int super_complicated_seed, struct _track_node_ *graph, int cur_sensor_id );
 
 void clear_reservations( struct _track_node_ *graph );
