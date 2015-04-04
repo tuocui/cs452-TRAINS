@@ -669,12 +669,8 @@ void cmd_server( ) {
   int * switch_states;
   track_node_t * track_graph;
   char sensor_name[4];
-  bwprintf( COM2, "I'm HERE1\n\r" );
-  Pass( );
-  bwprintf( COM2, "I'm HERE123\n\r" );
   rail_server_tid = MyParentTid( );
   assertu( 1, rail_server_tid > 0 );
-  bwprintf( COM2, "I'm HERE2\n\r" );
 
   /* get trains, switches and graph from rail_server */
   ret_val = Receive( &client_tid, (char *)&trains, sizeof( train_state_t* ));
@@ -683,7 +679,6 @@ void cmd_server( ) {
   switch_states = trains[0].switch_states;
   track_graph = trains[0].track_graph;
 
-  bwprintf( COM2, "I'm HERE3\n\r" );
   /* Train exe workers */
   int train_exe_worker_tids[TR_MAX];
   int train_exe_worker_tid = NONE;
@@ -696,7 +691,6 @@ void cmd_server( ) {
   }
   train_cmd_args_t train_cmd_args;
 
-  bwprintf( COM2, "I'm HERE4\n\r" );
   /* Switch exe workers */
   int switch_exe_worker_tid = NONE;
   int switch_exe_worker_tids[SW_MAX];
@@ -715,7 +709,6 @@ void cmd_server( ) {
   switch_cmd_args.switch_states = switch_states;
   switch_cmd_args.graph = track_graph;
 
-  bwprintf( COM2, "I'm HERE5\n\r" );
   /* update_trains woker */
   int update_trains_tid = Create( 13, &update_trains );
   update_train_args_t update_train_args;
@@ -723,7 +716,6 @@ void cmd_server( ) {
   ret_val = Send( update_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
 
-  bwprintf( COM2, "I'm HERE6\n\r" );
   /* print_trains worker */
   int print_trains_tid = Create( 14, &print_trains );
   ret_val = Send( print_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
@@ -740,7 +732,7 @@ void cmd_server( ) {
   ret_val = Reply( rail_server_tid, (char *)&client_tid, 0 );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
 
-  bwprintf( COM2, "I'm HERE7\n\r" );
+
   inline void insert_train_cmd( ) {
       int train_idx = convert_train_num2idx( receive_cmds->train_id );
       assertum( 1, train_idx != NONE, "failure here means a train num is not given/mapped with an idx" );
@@ -751,22 +743,23 @@ void cmd_server( ) {
           receive_cmds->train_dest,  receive_cmds->train_mm_past_dest,
           receive_cmds->train_accel, receive_cmds->train_decel );
   }
-  bwprintf( COM2, "I'm HERE8\n\r" );
+
   inline void insert_switch_cmd( int switch_idx, bool user_command ) {
-    int switch_id = receive_cmds->switch_cmds[0].switch_id;
+    int switch_id = receive_cmds->switch_cmds[switch_idx].switch_id;
     assertu( 1, switch_id > 0 && switch_id < SW_MAX );
     insert_cmd( switch_cmds[switch_id], switch_id, 
-        receive_cmds->switch_cmds[0].switch_action, 0, NONE, NONE, NONE, NONE, NONE );
+        receive_cmds->switch_cmds[switch_idx].switch_action, 0, NONE, NONE, NONE, NONE, NONE );
 
     int other_switch_id = get_switch_twin( switch_id );
-    assertu( 1, other_switch_id > 0 && other_switch_id < SW_MAX );
-    if( user_command && other_switch_id != NONE && receive_cmds->switch_cmds[0].switch_action == SW_CURVED )
+    CONVERT_SWITCH_ID( other_switch_id );
+    if( user_command && other_switch_id != NONE && receive_cmds->switch_cmds[switch_idx].switch_action == SW_CURVED ) {
+      assertum( 1, other_switch_id > 0 && other_switch_id < SW_MAX, "other switch_id: %d", other_switch_id );
       insert_cmd( switch_cmds[other_switch_id], other_switch_id, SW_STRAIGHT, 0, NONE, NONE, NONE, NONE, NONE );
+    }
   }
 
-  bwprintf( COM2, "I'm HERE9\n\r" );
+
   FOREVER { 
-    bwprintf( COM2, "inside FOREVER" );
     ret_val = Receive( &client_tid, (char *)&receive_msg, sizeof( receive_msg ));
     debugu( 1, "cmd_server received client_tid: %d, request_type: %d", client_tid, receive_msg.request_type );
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
