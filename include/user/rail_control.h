@@ -99,7 +99,7 @@
 #define CMD_QUEUE_MAX 5
 
 #define CONVERT_SWITCH_ID( _switch_num ) \
-  if( _switch_num > 18 ) { \
+  if( _switch_num > 152 ) { \
     _switch_num -= 134; \
   } else { ; }
 
@@ -142,7 +142,7 @@ typedef struct _rail_cmds_ {
   int rsv_node_id;
   int rsv_node_dir;
   
-  int switch_idx;
+  int rail_cmd_switch_idx;
   switch_cmd_t switch_cmds[SW_CMD_MAX];
 } rail_cmds_t;
 
@@ -182,8 +182,6 @@ typedef struct _train_state_ {
   /* used as a stack */
   int rv_sensor_stack[SENSOR_STACK_MAX];
   int rv_sensor_stack_idx;
-
-  int rv_expected_branches[5];
 
   bool fallback_sensor_hit;
   bool train_reach_destination;

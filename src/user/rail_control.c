@@ -43,8 +43,17 @@
 
 
 inline void init_rail_cmds( rail_cmds_t* cmds ) {
-  cmds->switch_idx = NONE;
-  cmds->train_id = cmds->train_action = cmds->train_delay = cmds->train_speed = NONE;
+  cmds->rail_cmd_switch_idx = NONE;
+  cmds->train_id = NONE;
+  cmds->train_action = NONE;
+  cmds->train_delay = NONE;
+  cmds->train_speed = NONE;
+  cmds->train_mm_past_dest = NONE;
+  cmds->train_accel = NONE;
+  cmds->train_decel = NONE;
+  cmds->rsv_node_id = NONE;
+  cmds->rsv_node_dir = NONE;
+
   int i = 0;
   for( ; i < SW_CMD_MAX; ++i ) {
     cmds->switch_cmds[i].switch_id = NONE;
@@ -587,7 +596,6 @@ inline void get_shortest_path( train_state_t *train ) {
 }
 
 inline void pack_train_cmd( rail_cmds_t *cmds, int train_id, int ACTION, int delay ) {
-  debugu( 4, "NEWNEW TRAIN_CMD: train_id: %d, ACTION: %d, delay: %d", train_id, ACTION, delay );
   cmds->train_id = train_id;
   cmds->train_action = ACTION;
   cmds->train_delay = delay;
@@ -595,18 +603,18 @@ inline void pack_train_cmd( rail_cmds_t *cmds, int train_id, int ACTION, int del
 
 inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int delay ) {
   CONVERT_SWITCH_ID( switch_id );
-  assertum( 1, cmds->switch_idx < SW_CMD_MAX, "failure here means we need more switch_cmd_t in rail_cmds" );
+  assertum( 1, cmds->rail_cmd_switch_idx < SW_CMD_MAX, "failure here means we need more switch_cmd_t in rail_cmds" );
   assertum( 1, switch_id >= SW1 && switch_id <= SW156, "switch_id: %d", switch_id );
-  debugu( 4, "NEWNEW SW_CMD: switch_id: %d, ACTION: %d, delay: %d", switch_id, ACTION, delay );
-  ++( cmds->switch_idx );
-  cmds->switch_cmds[cmds->switch_idx].switch_id = switch_id;
-  cmds->switch_cmds[cmds->switch_idx].switch_action = ACTION;
-  cmds->switch_cmds[cmds->switch_idx].switch_delay= delay;
+  ++( cmds->rail_cmd_switch_idx );
+  cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_id = switch_id;
+  cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_action = ACTION;
+  cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_delay= delay;
+  Printf( COM2, "packed new swith cmd: id: %d, aciton: %d, delay: %d, new idx: %d", switch_id, ACTION, delay, cmds->rail_cmd_switch_idx );
 }
 
 
 inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
-  assertu( 1, cmds->train_id == NONE && cmds->switch_idx == NONE );
+  assertu( 1, cmds->train_id == NONE && cmds->rail_cmd_switch_idx == NONE );
   track_node_t *track_graph = train->track_graph;
   int src_id = train->prev_sensor_id;
   int traverse_cur_idx = train->dest_path_cur_idx;
@@ -1131,6 +1139,7 @@ void print_cmds( struct _rail_cmds_ * cmds ) {
 #if( BWAIT == 1 )
   bwprintf( COM2, "PRINTING NEW COMMANDS .............. \n\r" );
   bwprintf( COM2, "train_id: %d, train_action: %d, tarin_delay: %d\n\r", cmds->train_id, cmds->train_action, cmds->train_delay );
+  bwprintf( COM2, "switch_idx: %d", cmds->rail_cmd_switch_idx );
   int i;
   for( i = 0; i < SW_CMD_MAX; ++i ) {
     bwprintf( COM2, "sw_id: %d, sw_action: %d, sw_delay: %d\n\r", 
@@ -1139,10 +1148,13 @@ void print_cmds( struct _rail_cmds_ * cmds ) {
 #else 
   Printf( COM2, "PRINTING NEW COMMANDS .............. \n\r" );
   Printf( COM2, "train_id: %d, train_action: %d, tarin_delay: %d\n\r", cmds->train_id, cmds->train_action, cmds->train_delay );
+  Printf( COM2, "switch_idx: %d\n\r", cmds->rail_cmd_switch_idx );
+
   int i;
   for( i = 0; i < SW_CMD_MAX; ++i ) {
     Printf( COM2, "sw_id: %d, sw_action: %d, sw_delay: %d\n\r", 
         cmds->switch_cmds[i].switch_id, cmds->switch_cmds[i].switch_action, cmds->switch_cmds[i].switch_delay );
   }
+  Printf( COM2, "END OF PRINT\n\r" );
 #endif
 }

@@ -505,8 +505,10 @@ void print_trains( ) {
 
 /* return inserted idx, if empty spot not found, return NONE */
 inline int insert_cmd( generic_cmds_list_t * cmds_list, int id, int action, int delay, int train_speed, int train_dest, int train_mm_past_dest, int train_accel, int train_decel ) {
-  if( cmds_list->count >= CMD_QUEUE_MAX )
+  if( cmds_list->count >= CMD_QUEUE_MAX ) {
+    assertum( 1, false, "ERROR: don't panic, this indicates exe worker queues are overrun, just increase the cmd queue size" );
     return NONE;
+  }
 
   int idx = 0;
   for( ; idx < CMD_QUEUE_MAX; ++idx ) {
@@ -525,7 +527,7 @@ inline int insert_cmd( generic_cmds_list_t * cmds_list, int id, int action, int 
       return idx;
     }
   }
-  assertum( 1, false, "BUG: should not comd to here, this indicates cmds_list counter is wrong" );
+  assertum( 1, false, "BUG: should not reach here, this indicates cmds_list counter is wrong" );
   return NONE;
 }
 
@@ -537,7 +539,7 @@ inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, in
   int ret_idx = NONE;
   for( ; idx < CMD_QUEUE_MAX; ++idx ) {
     if( cmds_list->cmds[idx].id != NONE && cmds_list->cmds[idx].delay < smallest_delay_so_far ) {
-      assertu( 1, cmds_list->cmds[idx].action != NONE && cmds_list->cmds[idx].delay != NONE );
+      assert( 1, cmds_list->cmds[idx].action != NONE && cmds_list->cmds[idx].delay != NONE );
       smallest_delay_so_far = cmds_list->cmds[idx].delay;
       *id = cmds_list->cmds[idx].id;
       *action = cmds_list->cmds[idx].action;
@@ -565,8 +567,8 @@ inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, in
 
     --( cmds_list->count );
   }
-  assertu( 1, cmds_list->count <= CMD_QUEUE_MAX && cmds_list->count >= 0 );
-  assertu( 1, ( ret_idx == NONE && *id == NONE && *action == NONE && *delay == NONE ) 
+  assert( 1, cmds_list->count <= CMD_QUEUE_MAX && cmds_list->count >= 0 );
+  assert( 1, ( ret_idx == NONE && *id == NONE && *action == NONE && *delay == NONE ) 
           || ( ret_idx != NONE && *id != NONE && *action != NONE && *delay != NONE ));
   return ret_idx;
 }
@@ -598,8 +600,10 @@ inline void init_bool_array( bool* bool_array, int size ) {
 }
 
 void cmd_server( ) {
+  /* initialize workers queue */
   bool switch_exe_busy[SW_MAX];
   generic_cmds_list_t* switch_cmds[SW_MAX]; // idx 0 - 22, 1-22 are used, 0 is empty
+  generic_cmds_list_t switch0_cmds; // this is never used;
   generic_cmds_list_t switch1_cmds;
   generic_cmds_list_t switch2_cmds;
   generic_cmds_list_t switch3_cmds;
@@ -622,7 +626,7 @@ void cmd_server( ) {
   generic_cmds_list_t switch154_cmds;
   generic_cmds_list_t switch155_cmds;
   generic_cmds_list_t switch156_cmds;
-  switch_cmds[0] = &switch1_cmds;
+  switch_cmds[0] = &switch0_cmds;
   switch_cmds[1] = &switch1_cmds;
   switch_cmds[2] = &switch2_cmds;
   switch_cmds[3] = &switch3_cmds;
@@ -657,12 +661,12 @@ void cmd_server( ) {
   train_cmds[2] = &train2_cmds;
   train_cmds[3] = &train3_cmds;
 
-  //FIXME TODO: something breaks here, try them one by one
   init_generic_cmds_lists( switch_cmds, SW_MAX );
   init_generic_cmds_lists( train_cmds, TRAIN_MAX );
   init_bool_array( switch_exe_busy, SW_MAX );
   init_bool_array( train_exe_busy, TRAIN_MAX );
   
+  /* initialize fundamental variables */
   int i, ret_val, client_tid, rail_server_tid;
   i = ret_val = client_tid = rail_server_tid = 0;
   train_state_t * trains = NULL;
@@ -721,10 +725,10 @@ void cmd_server( ) {
   ret_val = Send( print_trains_tid, (char *)&update_train_args, sizeof( update_train_args ), (char *)&client_tid, 0 );
   assertm( 1, ret_val >= 0, "retval: %d", ret_val );
 
-  ////TODO: refactor, create another struct for cmd_msg_t for this server
   rail_msg_t receive_msg;
   rail_cmds_t* receive_cmds; 
 
+  /* register self as cmd_server*/
   if( RegisterAs(( char* )CMD_SERVER ) == -1 ) {
     bwputstr( COM2, "ERROR: failed to register cmd_server, aborting ...\n\r" );
     Exit( );
@@ -732,32 +736,35 @@ void cmd_server( ) {
   ret_val = Reply( rail_server_tid, (char *)&client_tid, 0 );
   assertum( 1, ret_val >= 0, "retval: %d", ret_val );
 
-
+  /* helper functions for the cmds waiting queue */
   inline void insert_train_cmd( ) {
-      int train_idx = convert_train_num2idx( receive_cmds->train_id );
-      assertum( 1, train_idx != NONE, "failure here means a train num is not given/mapped with an idx" );
-      train_exe_worker_tid = train_exe_worker_tids[train_idx];
-      insert_cmd( train_cmds[train_idx], 
-          receive_cmds->train_id,    receive_cmds->train_action,
-          receive_cmds->train_delay, receive_cmds->train_speed,
-          receive_cmds->train_dest,  receive_cmds->train_mm_past_dest,
-          receive_cmds->train_accel, receive_cmds->train_decel );
+    assert( 1, receive_cmds );
+    int train_idx = convert_train_num2idx( receive_cmds->train_id );
+    assertum( 1, train_idx != NONE, "failure here means a train num is not given/mapped with an idx" );
+    train_exe_worker_tid = train_exe_worker_tids[train_idx];
+    insert_cmd( train_cmds[train_idx], 
+        receive_cmds->train_id,    receive_cmds->train_action,
+        receive_cmds->train_delay, receive_cmds->train_speed,
+        receive_cmds->train_dest,  receive_cmds->train_mm_past_dest,
+        receive_cmds->train_accel, receive_cmds->train_decel );
   }
 
-  inline void insert_switch_cmd( int switch_idx, bool user_command ) {
-    int switch_id = receive_cmds->switch_cmds[switch_idx].switch_id;
-    assertu( 1, switch_id > 0 && switch_id < SW_MAX );
-    insert_cmd( switch_cmds[switch_id], switch_id, 
-        receive_cmds->switch_cmds[switch_idx].switch_action, 0, NONE, NONE, NONE, NONE, NONE );
+  inline void insert_switch_cmd( int cur_rail_cmd_switch_idx, bool user_command ) {
+    assert( 1, receive_cmds );
+    int switch_cmds_idx = receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_id;//idx is the same as id
+    bwprintf( COM2, "insert switch_cmd, rail_cmd_idx: %d, switch_id: %d, user: %d", cur_rail_cmd_switch_idx, switch_cmds_idx, user_command );
+    assertu( 1, switch_cmds_idx > 0 && switch_cmds_idx < SW_MAX );
+    insert_cmd( switch_cmds[switch_cmds_idx], switch_cmds_idx, 
+        receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_action, 
+        receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_delay, NONE, NONE, NONE, NONE, NONE );
 
-    int other_switch_id = get_switch_twin( switch_id );
-    CONVERT_SWITCH_ID( other_switch_id );
-    if( user_command && other_switch_id != NONE && receive_cmds->switch_cmds[switch_idx].switch_action == SW_CURVED ) {
-      assertum( 1, other_switch_id > 0 && other_switch_id < SW_MAX, "other switch_id: %d", other_switch_id );
-      insert_cmd( switch_cmds[other_switch_id], other_switch_id, SW_STRAIGHT, 0, NONE, NONE, NONE, NONE, NONE );
+    int other_switch_idx = get_switch_twin( switch_cmds_idx );
+    if( user_command && other_switch_idx != NONE && receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_action == SW_CURVED ) {
+      assertum( 1, other_switch_idx > 0 && other_switch_idx < SW_MAX, "other switch_idx: %d", other_switch_idx );
+      insert_cmd( switch_cmds[other_switch_idx], other_switch_idx, SW_STRAIGHT, 
+          receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_delay, NONE, NONE, NONE, NONE, NONE ); // same delay as twin
     }
   }
-
 
   FOREVER { 
     ret_val = Receive( &client_tid, (char *)&receive_msg, sizeof( receive_msg ));
@@ -765,78 +772,19 @@ void cmd_server( ) {
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     receive_cmds = receive_msg.to_server_content.rail_cmds;
 
+    debugu( 1, "cmd_server before switch cases" );
     switch( receive_msg.request_type ) {
       case COLLISION_CMDS:
       case USER_INPUT:
-        debugu( 1, "USER_INPUT" );
+        debugu( 1, "USER_INPUT OR COLLISION" );
         // TODO: If user/collision reverse, make sure we properly set switches ahead so we don't derail
         ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
         assertum( 1, ret_val >= 0, "retval: %d", ret_val );
         if( receive_cmds->train_id != NONE ) {
           insert_train_cmd( );
-
-          //switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
-          //case TRAIN_58_NUM:
-          //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
-          //  break;
-          //case TRAIN_45_NUM:
-          //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_45_IDX];
-          //  break;
-          //case TRAIN_24_NUM:
-          //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
-          //  break;
-          //case TRAIN_63_NUM:
-          //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
-          //  break;
-          //default:
-          //  train_exe_worker_tid = -1;
-          //  break;
-          //}
-          //if( train_exe_worker_tid > 0 ) {
-          //  train_cmd_args.cmd = (receive_msg.to_server_content.rail_cmds)->train_action;
-          //  train_cmd_args.speed_num = (receive_msg.to_server_content.rail_cmds)->train_speed;
-          //  train_cmd_args.delay_time = (receive_msg.to_server_content.rail_cmds)->train_delay;
-          //  train_cmd_args.dest = (receive_msg.to_server_content.rail_cmds)->train_dest;
-          //  train_cmd_args.mm_past_dest = (receive_msg.to_server_content.rail_cmds)->train_mm_past_dest;
-          //  train_cmd_args.accel_rate = (receive_msg.to_server_content.rail_cmds)->train_accel;
-          //  train_cmd_args.decel_rate = (receive_msg.to_server_content.rail_cmds)->train_decel;
-          //  ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
-          //  //FIXME: if the train_exe_worker_tid is not ready, should not Reply, or add a secretary
-          //  assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
-          //}
-        } else if ( receive_cmds->switch_idx != NONE ) {
-            assertum( 1, receive_cmds->switch_idx == 0, "user packed %d sw_cmds, should it?", receive_cmds->switch_idx + 1 );
+        } else if ( receive_cmds->rail_cmd_switch_idx != NONE ) {
+            assertum( 1, receive_cmds->rail_cmd_switch_idx == 0, "user packed %d sw_cmds, should it?", receive_cmds->rail_cmd_switch_idx + 1 );
             insert_switch_cmd( 0, true );
-
-          //switch_exe_worker_tid = switch_exe_worker_tids[switch_id];
-          //switch_cmd_args.state = receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action;
-          //switch_cmd_args.delay_time = 0;
-          //ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-          //assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-          //int other_switch_id = NONE;
-          //if( receive_msg.to_server_content.rail_cmds->switch_cmds[0].switch_action == SW_CURVED ) {
-          //  switch( switch_id ) {
-          //  case SW153:
-          //    other_switch_id = SW154;
-          //    break;
-          //  case SW154:
-          //    other_switch_id = SW153;
-          //    break;
-          //  case SW155:
-          //    other_switch_id = SW156;
-          //    break;
-          //  case SW156:
-          //    other_switch_id = SW155;
-          //    break;
-          //  }
-          //}
-          //if( other_switch_id != NONE ) {
-          //  switch_exe_worker_tid = switch_exe_worker_tids[other_switch_id];
-          //  switch_cmd_args.state = SW_STRAIGHT;
-          //  switch_cmd_args.delay_time = 0;
-          //  ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-          //  assertum( 1, ret_val >= 0, "retval: %d", ret_val );
-          //}
         } else if ( receive_msg.to_server_content.rail_cmds->rsv_node_id != NONE ) {
           int rsv_node_id = receive_msg.to_server_content.rail_cmds->rsv_node_id;
           int rsv_node_dir = receive_msg.to_server_content.rail_cmds->rsv_node_dir;
@@ -859,80 +807,23 @@ void cmd_server( ) {
         break;
 
       case RAIL_CMDS:
+        debugu( 1, "RAIL_CMDS" );
+        bwprintf( COM2, "RAIL_CMDS\n\r" );
         /* get and store train cmds */
         if( receive_cmds->train_id != NONE ) {
           insert_train_cmd( );
-
-        //receive_cmds = receive_msg.to_server_content.rail_cmds;
-        //
-        //switch( (receive_msg.to_server_content.rail_cmds)->train_id ) {
-        //case TRAIN_58_NUM:
-        //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_58_IDX];
-        //  break;
-        //case TRAIN_45_NUM:
-        //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_45_IDX];
-        //  break;
-        //case TRAIN_24_NUM:
-        //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_24_IDX];
-        //  break;
-        //case TRAIN_63_NUM:
-        //  train_exe_worker_tid = train_exe_worker_tids[TRAIN_63_IDX];
-        //  break;
-        //default:
-        //  train_exe_worker_tid = -1;
-        //  break;
-        //}
-        //if( train_exe_worker_tid != NONE ) {
-        //  debugu( 4, "server got requested train_exe_worker_tid: %d", train_exe_worker_tid );
-        //  train_cmd_args.cmd = receive_cmds->train_action;
-        //  train_cmd_args.speed_num = receive_cmds->train_speed;
-        //  train_cmd_args.delay_time = receive_cmds->train_delay;
-        //  ret_val = Reply( train_exe_worker_tid, (char*)&train_cmd_args, sizeof( train_cmd_args ));
-        //  assertum( 1, ret_val >= 0, "retval: %d, cmd: %d", ret_val, receive_cmds->train_action ); //asdasdasdasd
         }
         /* get and store switch cmds */
-        for( i = 0; i <= receive_cmds->switch_idx; ++i ) {
-          debugu( 4, "before reply to switch_exe_worker: switch_idx: %d, i: %d", receive_cmds->switch_idx, i );
+        for( i = 0; i <= receive_cmds->rail_cmd_switch_idx; ++i ) {
+          bwprintf( COM2, "before reply to switch worker, idx: %d, i: %d\n\r", receive_cmds->rail_cmd_switch_idx, i );
+          debugu( 4, "before reply to switch_exe_worker: switch_idx: %d, i: %d", receive_cmds->rail_cmd_switch_idx, i );
           insert_switch_cmd( i, false );
-          
-          //switch_exe_worker_tid = switch_exe_worker_tids[receive_cmds->switch_cmds[i].switch_id];
-          //switch_cmd_args.state = receive_cmds->switch_cmds[i].switch_action;
-          //switch_cmd_args.delay_time = receive_cmds->switch_cmds[i].switch_delay;
-          //ret_val = Reply( switch_exe_worker_tid, (char*)&switch_cmd_args, sizeof( switch_cmd_args ));
-          //debugu( 4, "after reply to switch_exe_worker" );
-          //assertum( 1, ret_val >= 0, "retval: %d, switch_worker_tid: %d, switch_id: %d", ret_val, 
-          //    switch_exe_worker_tid, receive_cmds->switch_cmds[i].switch_id );
-          //////FIXME: do NOT need to handle this for path finding commands
-          //int other_switch_id = NONE;
-          //if( receive_cmds->switch_cmds[i].switch_action == SW_CURVED ) {
-          //  switch( receive_cmds->switch_cmds[i].switch_id ) {
-          //  case SW153:
-          //    other_switch_id = SW154;
-          //    break;
-          //  case SW154:
-          //    other_switch_id = SW153;
-          //    break;
-          //  case SW155:
-          //    other_switch_id = SW156;
-          //    break;
-          //  case SW156:
-          //    other_switch_id = SW155;
-          //    break;
-          //  }
-          //}
-          //if( other_switch_id != NONE ) {
-          //  switch_exe_worker_tid = switch_exe_worker_tids[other_switch_id];
-          //  switch_cmd_args.state = SW_STRAIGHT;
-          //  switch_cmd_args.delay_time = 0;
-          //  ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-          //  // It can actually fail here, since the previous iteration could have sent off the worker
-          //  // We don't actually give a shit about that case
-          //}
         }
         break;
 
       case TRAIN_EXE_READY:
         {
+          debugu( 1, "TRAIN EXE" );
           int train_idx = convert_train_num2idx( receive_msg.train_or_switch_id );
           assertu( 1, train_idx != NONE );
           train_exe_busy[train_idx] = false;
@@ -948,6 +839,7 @@ void cmd_server( ) {
         }
         break;
       case SWITCH_EXE_READY: {
+        debugu( 1, "SWITCH EXE" );
         int switch_idx = receive_msg.train_or_switch_id;
         CONVERT_SWITCH_ID( switch_idx );
         assertu( 1, switch_idx > 0 && switch_idx < SW_MAX ); //153-156
@@ -967,15 +859,18 @@ void cmd_server( ) {
       }
         break;
       default:
+        bwprintf( COM2, "DEFAULT\n\r" );
         assertum( 1, false, "ERROR: cmd_server wrong request_type: %d was sent to cmd_server by tid: %d", 
             receive_msg.request_type, client_tid );
         break;
     }
 
-    /* after switch, dispatch exe workers now */
+    /* after switch cases, dispatch exe workers now */
+    debugu( COM2, "before dispatching workers" );
     int id, action, delay, train_speed, train_dest, train_mm_past_dest, train_accel, train_decel;
     for( i = 0; i < TRAIN_MAX; ++i ) {
       if( train_cmds[i]->count > 0 && train_exe_busy[i] == false ) {
+        bwprintf( COM2, "before extract train cmd\n\r" );
         extract_cmd( train_cmds[i], &id, &action, &delay, &train_speed, &train_dest, &train_mm_past_dest, &train_accel, &train_decel );
         assertu( 1, i == convert_train_num2idx( id )); // really shouldn't fail here
         train_exe_worker_tid = train_exe_worker_tids[i];
@@ -988,6 +883,9 @@ void cmd_server( ) {
         train_cmd_args.accel_rate = train_accel;
         train_cmd_args.decel_rate = train_decel;
 
+        Printf( COM2, "debug: extracted_train_cmd: train_idx: %d action: %d, delay: %d\n\r",
+           i, action, delay );
+
         train_exe_busy[i] = true;
         ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
         assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
@@ -996,16 +894,20 @@ void cmd_server( ) {
 
     for( i = 1; i < SW_MAX; ++i ) { // recall idx=0 is not used in switch array
       if( switch_cmds[i]->count > 0 && switch_exe_busy[i] == false ) {
+        bwprintf( COM2, "before extract train cmd\n\r" );
         extract_cmd( switch_cmds[i], &id, &action, &delay, &train_speed, &train_dest, &train_mm_past_dest, &train_accel, &train_decel );
-        assertu( 1, i == id );
+        assert( 1, i == id );
         switch_exe_worker_tid = switch_exe_worker_tids[i];
-        assertu( 1, switch_exe_worker_tid > 0 );
+        assert( 1, switch_exe_worker_tid > 0 );
         switch_cmd_args.state = action;
         switch_cmd_args.delay_time = delay;
 
+        Printf( COM2, "debug: extracted_switch_cmd: switch_id: %d action: %d, delay: %d\n\r",
+            i, action, delay );
+
         switch_exe_busy[i] = true;
         ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );
-        assertum( 1, ret_val >= 0, "retval: %d", ret_val );
+        assertm( 1, ret_val >= 0, "retval: %d", ret_val );
       }
     }
   }
@@ -1087,7 +989,6 @@ void rail_server( ) {
         if( receive_msg.to_server_content.train_state != NULL ) {
           // FIXME: reply to the trigger the first
           // NOTE: Does the above matter? Reply is non-blocking. We're saving only a few nanoseconds by doing so.
-          // TODO: ARE YOU TALKING TO YOURSELF?
           int i = 0;
           for( ;  i < TR_MAX ; ++i ) {
             if( trains[i].dest_id != NONE && trains[i].state == READY ) {
@@ -1099,7 +1000,6 @@ void rail_server( ) {
             }
           }
         }
-        //TODO: run dynamic graph search
         break;
       default:
         assertum( 1, false, "ERROR: rail_server: unrecognized request: %d", receive_msg.request_type );
