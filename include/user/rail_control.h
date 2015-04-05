@@ -9,14 +9,22 @@
 #define TR_MAX 4
 #define TR_PREF_SPEED 10
 
-#define TRAIN_58_NUM 58
-#define TRAIN_45_NUM 45
-#define TRAIN_24_NUM 24
-#define TRAIN_63_NUM 63
+#define TRAIN_MAX   4
 #define TRAIN_58_IDX 0
-#define TRAIN_45_IDX 3
 #define TRAIN_24_IDX 1
 #define TRAIN_63_IDX 2
+#define TRAIN_45_IDX 3
+
+#define TRAIN_58_NUM 58
+#define TRAIN_24_NUM 24
+#define TRAIN_63_NUM 63
+#define TRAIN_45_NUM 45
+
+#define convert_train_num2idx( _train_num ) \
+  ( _train_num == TRAIN_58_NUM ? TRAIN_58_IDX : \
+    _train_num == TRAIN_24_NUM ? TRAIN_24_IDX : \
+    _train_num == TRAIN_63_NUM ? TRAIN_63_IDX : \
+    _train_num == TRAIN_45_NUM ? TRAIN_45_IDX : NONE )
 
 #define NONE      -1
 #define TR_STOP   0
@@ -62,6 +70,12 @@
 #define SW155  21 
 #define SW156  22 
 
+#define get_switch_twin( _switch_id ) \
+  ( _switch_id == SW153 ? SW154 : \
+    _switch_id == SW154 ? SW153 : \
+    _switch_id == SW155 ? SW156 : \
+    _switch_id == SW156 ? SW155 : NONE )
+
 #define SW_TIME     100 // in ms
 
 #define TR_STOP           0
@@ -90,12 +104,31 @@
 #define USER_INPUT_NUM  99
 #define DEFAULT_TRAIN_LEN 210
 
+#define CMD_QUEUE_MAX 5
+
 #define CONVERT_SWITCH_ID( _switch_num ) \
-  if( _switch_num > 18 ) { \
-    switch_id -= 134; \
-  }
+  if( _switch_num > 152 ) { \
+    _switch_num -= 134; \
+  } else { ; }
 
 struct _track_node_;
+
+typedef struct _generic_cmd_{
+  int id;
+  int action;
+  int delay;
+  
+  int train_speed;
+  int train_dest;
+  int train_mm_past_dest;
+  int train_accel;
+  int train_decel;
+} generic_cmd_t;
+
+typedef struct _generic_cmds_list_ {
+  int count;
+  struct _generic_cmd_ cmds[CMD_QUEUE_MAX];
+} generic_cmds_list_t;
 
 typedef struct _switch_cmd_ {
   int switch_id;
@@ -117,7 +150,7 @@ typedef struct _rail_cmds_ {
   int rsv_node_id;
   int rsv_node_dir;
   
-  int switch_idx;
+  int rail_cmd_switch_idx;
   switch_cmd_t switch_cmds[SW_CMD_MAX];
 } rail_cmds_t;
 
@@ -164,8 +197,6 @@ typedef struct _train_state_ {
   /* used as a stack */
   int rv_sensor_stack[SENSOR_STACK_MAX];
   int rv_sensor_stack_idx;
-
-  int rv_expected_branches[5];
 
   bool fallback_sensor_hit;
   bool train_reach_destination;
@@ -256,6 +287,8 @@ void extract_shortest_path( int* all_path, int* all_step, int src_id, int dst_id
 inline void get_shortest_path( train_state_t *train );
 
 void print_shortest_path( struct _track_node_ * track_graph, int* all_path, int* all_step, int src_id, int dst_id, int* dst_path );
+
+void print_shortest_dist( struct _train_state_ * train);
 
 void print_train_path( struct _train_state_ * train );
 

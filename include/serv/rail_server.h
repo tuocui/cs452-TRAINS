@@ -68,6 +68,7 @@ typedef struct _rail_msg_ {
   } response_type;
 
   int general_val;
+  int train_or_switch_id;
 
   content_t to_server_content;
   //FIXME: remove from_server_content;
