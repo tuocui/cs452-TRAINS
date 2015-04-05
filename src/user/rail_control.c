@@ -662,9 +662,11 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
       debugu( 4,  "END OF ROUTE or TRACK RESERVED: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       /* get dist between sensor and dest */  
       int sensor2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id] ) + train->mm_past_dest; 
-      /* if we are the last sensor or the dest and second sensor is too close */
+      //FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME
+      //FIXME: remove REVERSE_BUFFER from destination if destination is a reverse 
       debugu( 4,  "prev_sensor_id: %d, src_id: %d, second_sensor_id: %d, stop_dist: %d, sensor2dest_dist: %d",
               prev_sensor_id, src_id, second_sensor_id, stop_dist, sensor2dest_dist );
+      /* if we are the last sensor or the dest and second sensor is too close */
       if( prev_sensor_id == src_id || ( prev_sensor_id == second_sensor_id && stop_dist_at_const_vel > sensor2dest_dist - train_len_ahead )) {
         debugu( 4,  "computing stop command" );
         int src2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[src_id] ) + train->mm_past_dest;
