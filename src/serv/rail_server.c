@@ -64,7 +64,7 @@ void sensor_data_courier( ) {
   int sensor_num;
   int sensor_task_id = WhoIs( (char *) SENSOR_PROCESSING_TASK );
   FOREVER {
-    ret_val =Send( sensor_task_id, (char *)&sensor_num, 0, (char *)&sensor_num, sizeof(sensor_num) );
+    ret_val = Send( sensor_task_id, (char *)&sensor_num, 0, (char *)&sensor_num, sizeof(sensor_num) );
     assertum( 1, ret_val >= 0, "retval: %d", ret_val );
     (rail_msg.to_server_content.sensor_data)->sensor_num = sensor_num;
     ret_val = Send( rail_server_tid, (char*)&rail_msg, sizeof( rail_msg ), (char *)&rail_msg, 0);
@@ -97,7 +97,6 @@ void sensor_worker( ) {
     trains = sensor_args.trains;
     sensor_num = sensor_args.sensor_num;
     
-    // TODO: Change this function to also include fallback sensors
     expected_train_idx = get_expected_train_idx( trains, sensor_num );
     train_state_t *train = expected_train_idx == NONE ? NULL : &( trains[expected_train_idx] ); 
     //assertu( 1, train );
@@ -256,7 +255,7 @@ void train_exe_worker( ) {
           }
           Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
         }
-        Delay( stopping_time + STOP_TIME_BUFFER ); // TODO: Change this to stopping time;
+        Delay( stopping_time + STOP_TIME_BUFFER );
         set_train_speed( train, 15 );
         set_train_speed( train, prev_speed );
         if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
@@ -273,7 +272,6 @@ void train_exe_worker( ) {
       if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
         train->state = READY;
       }
-      // rerun graph search / prediction
       break;
     case TR_INIT:
       train->state = INITIALIZING;
@@ -290,10 +288,8 @@ void train_exe_worker( ) {
         sensor_id_to_name( train->dest_id, dest );
         if( train->dest_id == NONE ) {
           Printf( COM2, "\0337\033[14;%dHCurrent destination: N/A\0338", get_train_idx( train->train_id ) * 37 );
-          //Printf( COM2, "%d Current destination: N/A", get_train_idx( train->train_id ) * 37 );
         } else {
           Printf( COM2, "\0337\033[14;%dHCurrent destination: %c%c%c\0338", get_train_idx( train->train_id ) * 37, dest[0], dest[1], dest[2] );
-          //Printf( COM2, "%d Current destination: %c%c%c", get_train_idx( train->train_id ) * 37, dest[0], dest[1], dest[2] );
         }
         break;
       }
@@ -332,7 +328,7 @@ void train_exe_worker( ) {
           break;
         }
         if( cur_speed_normalized == 0 ) {
-          cur_speed_normalized += 7;
+          cur_speed_normalized += 8;
         }
         set_train_speed( train, cur_speed_normalized + 1 );
         if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
@@ -352,8 +348,8 @@ void train_exe_worker( ) {
           }
           break;
         }
-        if( cur_speed_normalized == 8 ) {
-          cur_speed_normalized -= 7;
+        if( cur_speed_normalized == 9 ) {
+          cur_speed_normalized -= 8;
         }
         set_train_speed( train, cur_speed_normalized - 1 );
         if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
@@ -415,14 +411,19 @@ void train_exe_worker( ) {
       }
     case TR_USER_CTRL:
       train->user_controlled = true;
+      train->priority = LIMO;
       break;
     case TR_STOP_USER_CTRL:
       train->user_controlled = false;
+      train->priority = NO_PRIORITY;
+      break;
+    case TR_PRIORITY:
+      train->user_controlled = false;
+      train->priority = train_cmd_args.speed_num;
       break;
     case TR_SET_RAND_DEST:
       train->dest_id = get_rand_dest( train->time_since_last_pos_update, train->track_graph, train->prev_sensor_id );
       sensor_id_to_name( train->dest_id, sensor_name );
-      // TODO: Get train idx
       Printf( COM2, "\0337\033[14;%dHCurrent destination: %c%c%c\0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
       break;
     default:
@@ -525,7 +526,6 @@ void update_trains( ) {
           ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
         }
         /* clear destination if stopping flag is set */
-        // TODO: Use cur_vel to know whe nthe train stops
         if( trains[i].dest_id == NONE && trains[i].prev_dest_id != NONE && trains[i].cur_vel == 0 ) {
           if( trains[i].set_rand_dest ) {
             trains[i].dest_id = get_rand_dest( cur_time, trains[i].track_graph, trains[i].prev_sensor_id );
@@ -764,7 +764,6 @@ void cmd_server( ) {
       case COLLISION_CMDS:
       case USER_INPUT:
         debugu( 1, "USER_INPUT" );
-        // TODO: If user/collision reverse, make sure we properly set switches ahead so we don't derail
         ret_val = Reply( client_tid, (char *)&receive_msg, 0 );
         assertum( 1, ret_val >= 0, "retval: %d", ret_val );
         if( (receive_msg.to_server_content.rail_cmds)->train_id != NONE ) {
@@ -1027,7 +1026,6 @@ void rail_server( ) {
             }
           }
         }
-        //TODO: run dynamic graph search
         break;
       default:
         assertum( 1, false, "ERROR: rail_server: unrecognized request: %d", receive_msg.request_type );

@@ -61,8 +61,9 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   int mm_past_sensor = train->mm_past_landmark / 10;
   int cur_speed = train->cur_speed;
   int train_state = train->state;
-  int forward_dist = ( safe_distance_to_stop( train ) * 5 ) / 4; // 1.25x the safe distance to stop
-  int orig_forward_dist = forward_dist;
+  int forward_dist = ( safe_distance_to_stop( train ) * 3 ) / 2; // 1.25x the safe distance to stop
+  //int orig_forward_dist = forward_dist;
+  int forward_dist_ahead = (2 * train->length) + STOP_BUFFER;
   //Printf( COM2, "forward_dist: %d\r\n", forward_dist );
   int branch_ind;
   track_node_t *cur_node = &(graph[sensor_id]);
@@ -160,8 +161,6 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   while( !cur_edge_empty( ) ) {
     //Printf( COM2, "second loop, forward_dist: %d\r\n", forward_dist );
     // grab the current edge
-    // TODO: Check the expected path to determine which branch
-    // TODO: Just reserve both branches
     edge = cur_edge_pop_front( );
     forward_dist = forward_dist_pop_front( );
     edge_dist = edge->dist;
@@ -191,11 +190,13 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       colliding_train_idx = get_train_idx( rev_edge->begin_train_num );
     }
     // Oh shit, a collision
-    if( has_collision && rev_edge->begin_train_num == USER_INPUT_NUM ) {
-      train->state = HANDLING_COLLISION;
-      return -1;
+    if( has_collision && ( rev_edge->begin_train_num == USER_INPUT_NUM || train->priority < colliding_train->priority ) ) {
+      if( train_state != HANDLING_COLLISION && train_state != REVERSING ) {
+        train->state = HANDLING_COLLISION;
+        return -1;
+      }
     }
-    if( has_collision && colliding_train_idx != NONE ) {
+    if( has_collision && colliding_train_idx != NONE && train->priority >= colliding_train->priority ) {
       colliding_train = &(all_trains[colliding_train_idx]);
       colliding_train_state = colliding_train->state;
       // Other train is delaying and doing... something
@@ -230,13 +231,13 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       length_rsvd += edge->dist - edge->middle_train_rsv_start;
       colliding_train_idx = get_train_idx( edge->middle_train_num );
       if( edge->middle_train_num == USER_INPUT_NUM ) {
-        if( length_rsvd < orig_forward_dist ) {
+        if( length_rsvd < forward_dist_ahead ) {
           return -1;
         }
       }
       colliding_train = &(all_trains[colliding_train_idx]);
       if( colliding_train->cur_speed == 0 ) {
-        if( length_rsvd < orig_forward_dist ) {
+        if( length_rsvd < forward_dist_ahead ) {
           return -1;
         }
         return -1; // TODO: Switch this to 0
@@ -273,9 +274,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         if( branch_ind > 152 ) {
           branch_ind -= 134;
         }
-        cur_edge_push_back( &(cur_node->edge[DIR_STRAIGHT]) );
-        forward_dist_push_back( forward_dist );
-        cur_edge_push_back( &(cur_node->edge[DIR_CURVED]) );
+        cur_edge_push_back( &(cur_node->edge[train->switch_states[branch_ind]]) );
         forward_dist_push_back( forward_dist );
       } else if ( cur_node->type == NODE_EXIT ) {
         continue;
@@ -941,8 +940,6 @@ void dijkstra( struct _track_node_* track_graph, int train_id, int src_id, int* 
   dist[src_id] = 0;
 
   /* in our case all vertices are connected, so loop until the heap is empty */
-  //TODO: think about replacing edge weight with time
-  //TODO: if use time, reverse edge weight should be dynamically calculated
   while( !heap_empty( &min_heap )) {
     assertu( 1, min_heap.size );
     min_heap_node_t * heap_node = extract_min( &min_heap );

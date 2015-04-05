@@ -17,6 +17,7 @@
 #define RSV_CMD 10
 #define RAND_CMD 11
 #define CTRL_CMD 12
+#define PRIORITY_CMD 13
 #define CLEAR_CMD 98
 #define QUIT_CMD 99
 

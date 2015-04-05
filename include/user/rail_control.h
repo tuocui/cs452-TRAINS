@@ -81,6 +81,7 @@
 #define TR_SWITCH_RIGHT   14
 #define TR_STOP_USER_CTRL 15
 #define TR_SET_RAND_DEST  16
+#define TR_PRIORITY       17
 
 #define NUM_FALLBACK 5
 #define SENSOR_STACK_MAX 10 
@@ -146,6 +147,13 @@ typedef struct _train_state_ {
     INITIALIZING,
     HANDLING_COLLISION,
   } state;
+
+  enum {
+    NO_PRIORITY = -1,
+    SHUTTLE = 0,
+    LIMO,
+    TANK,
+  } priority;
 
   /* used as a queue */
   int dest_path[NODE_MAX];

@@ -66,6 +66,9 @@ int get_cmd( char *cmd_buffer ) {
   if ( cmd1 == 'c' && cmd2 == 't' ) {
     return CTRL_CMD;  
   }
+  if ( cmd1 == 's' && cmd2 == 'p' ) {
+    return PRIORITY_CMD;  
+  }
   
   return -1;
 }
@@ -371,6 +374,21 @@ short handle_ctrl( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid )
   return train;
 }
 
+int handle_priority( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid ) {
+  int buf_ind = 3;
+  short train = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+  short priority = parse_short( cmd_buffer, &buf_ind );
+  ++buf_ind;
+  ((rail_msg->to_server_content).rail_cmds)->train_id = train;
+  ((rail_msg->to_server_content).rail_cmds)->train_action = TR_PRIORITY;
+  ((rail_msg->to_server_content).rail_cmds)->train_speed = priority;
+  
+  Send( rail_server_tid, (char *)rail_msg, sizeof( *rail_msg ), (char *)&buf_ind, 0 );
+  Printf( COM2, "\0337\033[1A\033[2K\rTrain %d is now priority %d.\0338", train, priority );
+  return 0;
+}
+
 int handle_go( ) {
   track_go( );
   Putstr( COM2, "\0337\033[1A\033[2K\rTrack ON\0338", 21 );
@@ -425,6 +443,9 @@ int process_buffer( char *cmd_buffer, rail_msg_t *rail_msg, int rail_server_tid 
     break;
   case RAND_CMD:
     handle_rand_dest( cmd_buffer, rail_msg, rail_server_tid );
+    break;
+  case PRIORITY_CMD:
+    handle_priority( cmd_buffer, rail_msg, rail_server_tid );
     break;
   case CTRL_CMD:
     return ( int )handle_ctrl( cmd_buffer, rail_msg, rail_server_tid );

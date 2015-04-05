@@ -231,9 +231,7 @@ inline int safe_distance_to_branch( train_state_t *train ) {
 
 inline int get_expected_train_idx( train_state_t* trains, int sensor_num ) {
   debugu( 4, "NEW TRIGGERED SENSOR: %d", sensor_num );
-  //FIXME TODO: handle expected sensor hit list for stopping
   /* loop thorugh the trains to find the expected train for this sensor hit */
-  // TODO: Look through the times to hit the next expected sensor and assign this one to the lowest.
   int cur_idx;
   int expected_train_idx = NONE;
   int initializing_train_idx = NONE;
@@ -395,7 +393,7 @@ int time_to_node( train_state_t *train, int dist_to_node, int cur_time ) {
   dist_to_node -= mm_past;
   if( speed_finish_time < cur_time ) {
     return time_to_dist_constant_vel( dist_to_node, train->cur_vel );
-  } else { // still changing velocity? fuck TODO: Figure this shit out
+  } else { // still changing velocity?
     int cur_velocity = train->cur_vel;
     int dist_to_const_vel = ( ( speed_finish_time - cur_time ) * cur_velocity ) / 10000 + 
                             ( ( speed_finish_time - cur_time ) * ( train->speeds[train->cur_speed].straight_vel - cur_velocity ) ) / 20000;
@@ -484,18 +482,13 @@ int get_delay_time_to_stop( train_state_t *train, int dist ) {
 
   // accelerating?
   if( cur_speed_normalized > prev_speed_normalized ) {
-    //Printf( COM2, "Accelerating\r\n" );
     int stopping_dist_if_immediate;
     stopping_dist_if_immediate = ( ( (cur_vel * accel_finish_time_rel) + ( ( (finish_vel - cur_vel) * accel_finish_time_rel) / 2 ) ) / 100000 ) + finish_vel_stopping_dist;
     // need to find intersection
     //return ( ( 200000 * dist ) - ( cur_stopping_time * cur_vel ) ) / ( 2 * cur_vel );
-    // TODO: Finish this off
     if( stopping_dist_if_immediate < dist ) {
-      //Printf( COM2, "Fucking stupid fucking case fuck\r\n" );
-      // TODO: Figure this out
       return ( 100000 * ( dist - ( ( cur_stopping_dist + finish_vel_stopping_dist ) / 2 ) ) ) / ( ( cur_vel + finish_vel ) / 2 );
     } else {
-      //Printf( COM2, "Actually plateaus\r\n" );
       //return ( 100000 * ( dist - cur_stopping_dist ) ) / cur_vel;
       //int num = ( (200000 * dist) + (finish_vel * stopping_time_at_finish_vel) ) - ( (finish_vel * accel_finish_time_rel) + (cur_vel * accel_finish_time_rel) );
       //return ( num / (2 * finish_vel) );
@@ -795,6 +788,7 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
     trains[i].next_sensor_id= NONE;
     trains[i].dest_id = NONE;
     trains[i].prev_dest_id = NONE;
+    trains[i].priority = NO_PRIORITY;
     trains[i].mm_past_landmark = 0;
     trains[i].cur_speed = 0;
     trains[i].train_reach_destination = false;
