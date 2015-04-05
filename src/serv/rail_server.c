@@ -256,7 +256,7 @@ void train_exe_worker( ) {
           }
           Printf( COM2, "\0337\033[17;%dHNext expected sensor: %c%c%c    \0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
         }
-        Delay( stopping_time + STOP_TIME_BUFFER );
+        Delay( stopping_time );
         set_train_speed( train, 15 );
         set_train_speed( train, prev_speed );
         if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
@@ -322,14 +322,14 @@ void train_exe_worker( ) {
           train->state = BUSY;
         }
         int cur_speed_normalized = train->cur_speed > 14 ? train->cur_speed - 15 : train->cur_speed;
-        if( cur_speed_normalized == 12 ) {
+        if( cur_speed_normalized == 10 ) {
           if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
             train->state = READY;
           }
           break;
         }
         if( cur_speed_normalized == 0 ) {
-          cur_speed_normalized += 8;
+          cur_speed_normalized += 7;
         }
         set_train_speed( train, cur_speed_normalized + 1 );
         if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
@@ -349,8 +349,8 @@ void train_exe_worker( ) {
           }
           break;
         }
-        if( cur_speed_normalized == 9 ) {
-          cur_speed_normalized -= 8;
+        if( cur_speed_normalized == 8 ) {
+          cur_speed_normalized -= 7;
         }
         set_train_speed( train, cur_speed_normalized - 1 );
         if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
@@ -410,17 +410,26 @@ void train_exe_worker( ) {
         rail_msg.general_val = UPDATE_POS;
         break;
       }
+    // TODO: Print controls
     case TR_USER_CTRL:
       train->user_controlled = true;
       train->priority = LIMO;
+      print_commands( train->train_id );
       break;
     case TR_STOP_USER_CTRL:
       train->user_controlled = false;
       train->priority = NO_PRIORITY;
+      remove_print_commands( );
       break;
     case TR_PRIORITY:
       train->user_controlled = false;
       train->priority = train_cmd_args.speed_num;
+      if( train->priority == TANK ) {
+        train->dest_id = 70;
+        train->mm_past_dest = 0;
+        sensor_id_to_name( train->dest_id, sensor_name );
+        Printf( COM2, "\0337\033[14;%dHCurrent destination: %c%c%c\0338", get_train_idx( train->train_id ) * 37, sensor_name[0], sensor_name[1], sensor_name[2] );
+      }
       break;
     case TR_SET_RAND_DEST:
       train->dest_id = get_rand_dest( train->time_since_last_pos_update, train->track_graph, train->prev_sensor_id );
@@ -540,6 +549,32 @@ void update_trains( ) {
               ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
             }
             Printf( COM2, "\0337\033[14;%dHCurrent destination: %c%c%c\0338", i * 37, dest[0], dest[1], dest[2] );
+          } else if( trains[i].priority == TANK ) {
+            switch( trains[i].prev_dest_id ) {
+            case 39:
+              trains[i].dest_id = 15;
+              trains[i].mm_past_dest = -100;
+              break;
+            case 15:
+              trains[i].dest_id = 70;
+              trains[i].mm_past_dest = 0;
+              break;
+            case 70:
+              trains[i].dest_id = 56;
+              trains[i].mm_past_dest = 100;
+              break;
+            case 56:
+              trains[i].dest_id = 39;
+              trains[i].mm_past_dest = 250;
+              break;
+            }
+            sensor_id_to_name( trains[i].dest_id, dest );
+            ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
+            ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
+            ((rail_msg.to_server_content).rail_cmds)->train_speed = 10;
+            ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
+            ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+            Printf( COM2, "\0337\033[14;%dHCurrent destination: %c%c%c\0338", i * 37, dest[0], dest[1], dest[2] );
           } else {
             Printf( COM2, "\0337\033[14;%dHCurrent destination: N/A\0338", i * 37 );
           }
@@ -571,24 +606,27 @@ void update_trains( ) {
           ((rail_msg.to_server_content).rail_cmds)->train_speed = 10;
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
           ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
-        } else if( ret_val == -2 ) {
+        } else if( ret_val == -2 && trains[i].cur_speed != 9 && trains[i].cur_speed != 24 ) {
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
           ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
           ((rail_msg.to_server_content).rail_cmds)->train_speed = 9;
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
           ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
-        } else if( ret_val == -3 ) {
+        } else if( ret_val == -3 && trains[i].cur_speed != 0 ) {
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
           ((rail_msg.to_server_content).rail_cmds)->train_action = TR_STOP;
           ((rail_msg.to_server_content).rail_cmds)->train_speed = 0;
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
           ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
         } else if( ret_val > 0 ) {
-          ((rail_msg.to_server_content).rail_cmds)->train_id = ret_val;
-          ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
-          ((rail_msg.to_server_content).rail_cmds)->train_speed = 11;
-          ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
-          ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+          int ot_idx = get_train_idx( ret_val );
+          if( trains[ot_idx].cur_speed != 11 && trains[ot_idx].cur_speed != 26 && !(trains[ot_idx].user_controlled) ) {
+            ((rail_msg.to_server_content).rail_cmds)->train_id = ret_val;
+            ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
+            ((rail_msg.to_server_content).rail_cmds)->train_speed = 11;
+            ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
+            ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+          }
         }
       }
     }
@@ -647,7 +685,7 @@ inline int insert_cmd( generic_cmds_list_t * cmds_list, int id, int action, int 
       cmds_list->cmds[idx].delay = delay;
       cmds_list->cmds[idx].train_speed = train_speed;
       cmds_list->cmds[idx].train_dest = train_dest;
-      cmds_list->cmds[idx].train_mm_past_dest = train_accel;
+      cmds_list->cmds[idx].train_mm_past_dest = train_mm_past_dest;
       cmds_list->cmds[idx].train_accel = train_accel;
       cmds_list->cmds[idx].train_decel = train_decel;
       ++( cmds_list->count );
@@ -667,7 +705,7 @@ inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, in
   int ret_idx = NONE;
   for( ; idx < CMD_QUEUE_MAX; ++idx ) {
     if( cmds_list->cmds[idx].id != NONE && cmds_list->cmds[idx].delay < smallest_delay_so_far ) {
-      assert( 1, cmds_list->cmds[idx].action != NONE && cmds_list->cmds[idx].delay != NONE );
+      assert( 1, cmds_list->cmds[idx].action != NONE );// && cmds_list->cmds[idx].delay != NONE );
       smallest_delay_so_far = cmds_list->cmds[idx].delay;
       *id = cmds_list->cmds[idx].id;
       *action = cmds_list->cmds[idx].action;
@@ -696,8 +734,8 @@ inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, in
     --( cmds_list->count );
   }
   assert( 1, cmds_list->count <= CMD_QUEUE_MAX && cmds_list->count >= 0 );
-  assert( 1, ( ret_idx == NONE && *id == NONE && *action == NONE && *delay == NONE ) 
-          || ( ret_idx != NONE && *id != NONE && *action != NONE && *delay != NONE ));
+  assert( 1, ( ret_idx == NONE && *id == NONE && *action == NONE ) 
+          || ( ret_idx != NONE && *id != NONE && *action != NONE ));
   return ret_idx;
 }
 

@@ -32,6 +32,32 @@ int get_train_idx( int train_num ) {
   }
 }
 
+void print_commands( int train_num ) {
+  Printf( COM2, "\0337\033[?25l\033[2;83H==== COMMANDS: %d ====\0338", train_num );
+  Printf( COM2, "\0337\033[?25l\033[3;83HUP ARROW: Speed Up\0338" );
+  Printf( COM2, "\0337\033[?25l\033[4;83HDOWN ARROW: Slow Down\0338" );
+  Printf( COM2, "\0337\033[?25l\033[5;83HLEFT ARROW: Go Left\0338" );
+  Printf( COM2, "\0337\033[?25l\033[6;83HRIGHT ARROW: Go Right\0338" );
+  Printf( COM2, "\0337\033[?25l\033[7;83Hr: Reverse\0338" );
+  Printf( COM2, "\0337\033[?25l\033[8;83Hs: Stop\0338" );
+  Printf( COM2, "\0337\033[?25l\033[9;83Hd: Get Destination\0338" );
+  Printf( COM2, "\0337\033[?25l\033[10;83Hi: Initialize\0338" );
+  Printf( COM2, "\0337\033[?25l\033[11;83Hq: Quit Controlling\0338" ); 
+}
+
+void remove_print_commands( ) {
+  Printf( COM2, "\0337\033[?25l\033[2;83H                       \0338");
+  Printf( COM2, "\0337\033[?25l\033[3;83H                       \0338" );
+  Printf( COM2, "\0337\033[?25l\033[4;83H                       \0338" );
+  Printf( COM2, "\0337\033[?25l\033[5;83H                       \0338" );
+  Printf( COM2, "\0337\033[?25l\033[6;83H                       \0338" );
+  Printf( COM2, "\0337\033[?25l\033[7;83H                       \0338" );
+  Printf( COM2, "\0337\033[?25l\033[8;83H                       \0338" );
+  Printf( COM2, "\0337\033[?25l\033[9;83H                       \0338" );
+  Printf( COM2, "\0337\033[?25l\033[10;83H                       \0338" );
+  Printf( COM2, "\0337\033[?25l\033[11;83H                       \0338" );
+}
+
 bool reached_dest( train_state_t *train ) {
   int dest_id = train->dest_id;
   int next_sensor_id = train->next_sensor_id;
@@ -825,14 +851,14 @@ void init_switches( int *switch_states ) {
   switch_states[SW5] = SW_CURVED;
   switch_states[SW6] = SW_CURVED;
   switch_states[SW7] = SW_CURVED;
-  switch_states[SW8] = SW_CURVED;
-  switch_states[SW9] = SW_CURVED;
+  switch_states[SW8] = SW_STRAIGHT;
+  switch_states[SW9] = SW_STRAIGHT;
   switch_states[SW10] = SW_CURVED;
   switch_states[SW11] = SW_CURVED;
   switch_states[SW12] = SW_CURVED;
   switch_states[SW13] = SW_CURVED;
-  switch_states[SW14] = SW_CURVED;
-  switch_states[SW15] = SW_CURVED;
+  switch_states[SW14] = SW_STRAIGHT;
+  switch_states[SW15] = SW_STRAIGHT;
   switch_states[SW16] = SW_CURVED;
   switch_states[SW17] = SW_CURVED;
   switch_states[SW18] = SW_CURVED;

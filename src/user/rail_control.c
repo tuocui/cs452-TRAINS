@@ -72,7 +72,8 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   int mm_past_sensor = train->mm_past_landmark / 10;
   int cur_speed = train->cur_speed;
   int train_state = train->state;
-  int forward_dist = ( safe_distance_to_stop( train ) * 3 ) / 2; // 1.25x the safe distance to stop
+  int safe_dist_to_stop = safe_distance_to_stop( train );
+  int forward_dist = ( safe_dist_to_stop * 3 ) / 2; // 1.25x the safe distance to stop
   //int orig_forward_dist = forward_dist;
   int forward_dist_ahead = (2 * train->length) + STOP_BUFFER;
   //Printf( COM2, "forward_dist: %d\r\n", forward_dist );
@@ -213,7 +214,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         return -1;
       }
     }
-    if( has_collision && colliding_train_idx != NONE && train->priority >= colliding_train_priority ) {
+    if( has_collision && colliding_train_idx != NONE && train->priority == colliding_train_priority ) {
       // Other train is delaying and doing... something
       // Probably best just to reverse
       if( colliding_train_state == BUSY ) {
@@ -232,6 +233,8 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         train->state = HANDLING_COLLISION;
         return -1;
       }
+    } else if( has_collision && colliding_train_idx != NONE && train->priority > colliding_train_priority ) {
+      return -3;
     }
     
     // reserve!
@@ -252,10 +255,10 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       }
       colliding_train = &(all_trains[colliding_train_idx]);
       if( colliding_train->cur_speed == 0 ) {
-        if( length_rsvd < forward_dist_ahead ) {
+        if( length_rsvd < safe_dist_to_stop && train->priority <= colliding_train->priority ) {
           return -1;
         }
-        return -1; // TODO: Switch this to 0
+        return -2; // TODO: Switch this to 0
       }
       if( length_rsvd < 2 * train->length ) {
         if( cur_speed == 9 || cur_speed == 24 ) {
@@ -664,20 +667,21 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
         ( traverse_cur_idx == train->dest_total_steps - 1 || train->dest_id == src_id )) { 
       debugu( 4,  "END OF ROUTE or TRACK RESERVED: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       /* get dist between sensor and dest */  
-      int sensor2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id] ) + train->mm_past_dest; 
+      int sensor2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id] ); 
+      if( !(src_id == train->dest_id) && !(src_id == (train->track_graph[train->dest_id].reverse)->num) ) {
+         sensor2dest_dist += train->mm_past_dest;
+      }
       /* if we are the last sensor or the dest and second sensor is too close */
       debugu( 4,  "prev_sensor_id: %d, src_id: %d, second_sensor_id: %d, stop_dist: %d, sensor2dest_dist: %d",
               prev_sensor_id, src_id, second_sensor_id, stop_dist, sensor2dest_dist );
       if( prev_sensor_id == src_id || ( prev_sensor_id == second_sensor_id && stop_dist_at_const_vel > sensor2dest_dist - train_len_ahead )) {
         debugu( 4,  "computing stop command" );
-        int src2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[src_id] ) + train->mm_past_dest;
+        int src2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[src_id] );
+        if( !(src_id == train->dest_id) && !(src_id == (train->track_graph[train->dest_id].reverse)->num) ) {
+           src2dest_dist += train->mm_past_dest;
+        }
         int cur2dest_dist = src2dest_dist - train_len_ahead;
-        //int stop_delay_time = src2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) : 0;
-        //int stop_delay_time = ((( src2dest_dist - stop_dist - train_len_ahead > 0 ) && train->cur_vel ) > 0 ? 
-        //                  (( src2dest_dist - stop_dist - train_len_ahead ) * 10000 ) / (( train->cur_vel + constant_cur_vel) / 2) : 0 );
-        //Printf( COM2, "Original stop_delay_time: %d\r\n", stop_delay_time );
         int stop_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) / 10 : 0;
-        //Printf( COM2, "New stop_delay_time: %d\r\n", stop_delay_time );
         pack_train_cmd( cmds, train->train_id, TR_STOP, stop_delay_time );
         train->train_reach_destination = true;
         /* clear train destination */

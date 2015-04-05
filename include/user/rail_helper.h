@@ -10,6 +10,11 @@
 struct _train_state_;
 struct _track_node_;
 
+
+void print_commands( int train_num );
+
+void remove_print_commands( );
+
 int get_next_branch_num( struct _train_state_ *train );
 
 bool reached_dest( struct _train_state_ *train );

@@ -190,7 +190,7 @@ int initialize_track( ) {
     } else if ( switch_ind == 21 ) {
       set_switch_old( 156, STRAIGHT );
       initialized = 1;
-    } else if ( switch_ind == 0 || switch_ind == 1 || switch_ind == 3 ) {
+    } else if ( switch_ind == 0 || switch_ind == 1 || switch_ind == 3 || switch_ind == 7 || switch_ind == 8 || switch_ind == 13 || switch_ind == 14 ) {
       set_switch_old( switch_ind + 1, STRAIGHT );
     } else {
       set_switch_old( switch_ind + 1, CURVED );
