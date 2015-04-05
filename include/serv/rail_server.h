@@ -14,6 +14,7 @@ struct _tack_node_;
 #define INIT_SPEED 2
 
 #define REVERSE_FINISHED 1
+#define UPDATE_POS 1
 
 typedef union _content_ {
   struct _sensor_data_* sensor_data;

@@ -78,16 +78,24 @@
 
 #define SW_TIME     100 // in ms
 
-#define TR_STOP         0
-#define TR_REVERSE      1
-#define TR_CHANGE_SPEED 2
-#define TR_INIT         3
-#define TR_DEST         4
-#define TR_ACCEL        5
-#define TR_DECEL        6
-#define TR_CH_DIR       7
-#define TRACK_RSV       8
-#define TR_RAND_DEST    9
+#define TR_STOP           0
+#define TR_REVERSE        1
+#define TR_CHANGE_SPEED   2
+#define TR_INIT           3
+#define TR_DEST           4
+#define TR_ACCEL          5
+#define TR_DECEL          6
+#define TR_CH_DIR         7
+#define TRACK_RSV         8
+#define TR_RAND_DEST      9
+#define TR_USER_CTRL      10
+#define TR_SPEED_UP       11
+#define TR_SLOW_DOWN      12
+#define TR_SWITCH_LEFT    13
+#define TR_SWITCH_RIGHT   14
+#define TR_STOP_USER_CTRL 15
+#define TR_SET_RAND_DEST  16
+#define TR_PRIORITY       17
 
 #define NUM_FALLBACK 5
 #define SENSOR_STACK_MAX 10 
@@ -173,6 +181,13 @@ typedef struct _train_state_ {
     HANDLING_COLLISION,
   } state;
 
+  enum {
+    NO_PRIORITY = -1,
+    SHUTTLE = 0,
+    LIMO,
+    TANK,
+  } priority;
+
   /* used as a queue */
   int dest_path[NODE_MAX];
   int dest_path_cur_idx;
@@ -212,10 +227,12 @@ typedef struct _train_state_ {
   int init_time;
   bool is_forward;
   int rev_branch_ignore;
+  int next_branch_num;
   int fallback_sensors[NUM_FALLBACK];
   int fallback_dist[NUM_FALLBACK];
   int time_to_fallback_sensor[NUM_FALLBACK];
   bool set_rand_dest;
+  bool user_controlled;
   speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
 } train_state_t;
 

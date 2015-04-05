@@ -73,7 +73,8 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   int cur_speed = train->cur_speed;
   int train_state = train->state;
   int forward_dist = ( safe_distance_to_stop( train ) * 3 ) / 2; // 1.25x the safe distance to stop
-  int orig_forward_dist = forward_dist;
+  //int orig_forward_dist = forward_dist;
+  int forward_dist_ahead = (2 * train->length) + STOP_BUFFER;
   //Printf( COM2, "forward_dist: %d\r\n", forward_dist );
   int branch_ind;
   track_node_t *cur_node = &(graph[sensor_id]);
@@ -84,7 +85,8 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   int colliding_train_idx = NONE;
   int has_collision = 0;
   train_state_t *colliding_train;
-  int colliding_train_state;
+  int colliding_train_priority = NONE;
+  int colliding_train_state = READY;
   //int can_exit = 0;
 
   clear_reservations_by_train( graph, train );
@@ -171,8 +173,6 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   while( !cur_edge_empty( ) ) {
     //Printf( COM2, "second loop, forward_dist: %d\r\n", forward_dist );
     // grab the current edge
-    // TODO: Check the expected path to determine which branch
-    // TODO: Just reserve both branches
     edge = cur_edge_pop_front( );
     forward_dist = forward_dist_pop_front( );
     edge_dist = edge->dist;
@@ -189,6 +189,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
     // check to see if our reservations overlap
     if( rev_edge->begin_train_num != -1 && forward_dist + rev_edge->begin_train_rsv_end >= edge_dist ) {
       //Printf( COM2, "slightly less major collision\r\n" );
+      // WAIIIT, it might just actually loop around
       assert( 1, rev_edge->begin_train_num != train->train_id );
       // possibly it
       if( forward_dist > ( edge_dist - rev_edge->begin_train_rsv_end ) ) {
@@ -200,14 +201,19 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       has_collision = 1;
       colliding_train_idx = get_train_idx( rev_edge->begin_train_num );
     }
-    // Oh shit, a collision
-    if( has_collision && rev_edge->begin_train_num == USER_INPUT_NUM ) {
-      train->state = HANDLING_COLLISION;
-      return -1;
-    }
-    if( has_collision && colliding_train_idx != NONE ) {
+    if( colliding_train_idx > 0 ) {
       colliding_train = &(all_trains[colliding_train_idx]);
       colliding_train_state = colliding_train->state;
+      colliding_train_priority = colliding_train->priority;
+    }
+    // Oh shit, a collision
+    if( has_collision && ( rev_edge->begin_train_num == USER_INPUT_NUM || train->priority < colliding_train_priority ) ) {
+      if( train_state != HANDLING_COLLISION && train_state != REVERSING ) {
+        train->state = HANDLING_COLLISION;
+        return -1;
+      }
+    }
+    if( has_collision && colliding_train_idx != NONE && train->priority >= colliding_train_priority ) {
       // Other train is delaying and doing... something
       // Probably best just to reverse
       if( colliding_train_state == BUSY ) {
@@ -240,13 +246,13 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       length_rsvd += edge->dist - edge->middle_train_rsv_start;
       colliding_train_idx = get_train_idx( edge->middle_train_num );
       if( edge->middle_train_num == USER_INPUT_NUM ) {
-        if( length_rsvd < orig_forward_dist ) {
+        if( length_rsvd < forward_dist_ahead ) {
           return -1;
         }
       }
       colliding_train = &(all_trains[colliding_train_idx]);
       if( colliding_train->cur_speed == 0 ) {
-        if( length_rsvd < orig_forward_dist ) {
+        if( length_rsvd < forward_dist_ahead ) {
           return -1;
         }
         return -1; // TODO: Switch this to 0
@@ -283,9 +289,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         if( branch_ind > 152 ) {
           branch_ind -= 134;
         }
-        cur_edge_push_back( &(cur_node->edge[DIR_STRAIGHT]) );
-        forward_dist_push_back( forward_dist );
-        cur_edge_push_back( &(cur_node->edge[DIR_CURVED]) );
+        cur_edge_push_back( &(cur_node->edge[train->switch_states[branch_ind]]) );
         forward_dist_push_back( forward_dist );
       } else if ( cur_node->type == NODE_EXIT ) {
         continue;
@@ -609,7 +613,6 @@ inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int d
   cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_id = switch_id;
   cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_action = ACTION;
   cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_delay= delay;
-  Printf( COM2, "packed new swith cmd: id: %d, aciton: %d, delay: %d, new idx: %d", switch_id, ACTION, delay, cmds->rail_cmd_switch_idx );
 }
 
 
@@ -702,12 +705,10 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
       
       int sensor2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id] - REVERSE_BUFFER;
       if( track_graph[cur_node_id].type == NODE_BRANCH && ( prev_sensor_id == src_id || 
-          ( prev_sensor_id  == second_sensor_id 
-            && stop_dist_at_const_vel > sensor2reverse_dist + train_len_behind - train_len_ahead ))) {
+          ( prev_sensor_id  == second_sensor_id &&
+            stop_dist_at_const_vel > ( sensor2reverse_dist + train_len_behind + STOP_BUFFER ) - train_len_ahead ))) {
         assertu( 1, track_graph[train->dest_path[traverse_cur_idx-1]].type == NODE_MERGE );
         int src2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[src_id] - REVERSE_BUFFER;
-        Printf( COM2, "src2reverse_dist = all_dist[cur_node_id] - all_dist[src_id] - REVERSE_BUFFER = %d - %d - %d\n\r", 
-            train->all_dist[cur_node_id], train->all_dist[src_id], REVERSE_BUFFER );
         int cur2dest_dist = src2reverse_dist + train_len_behind + STOP_BUFFER;
         int reverse_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) / 10 : 0; 
         //int reverse_delay_time = ((( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist > 0 ) && train->cur_vel > 0 ) ? (( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist ) * 10000 ) / (( train->cur_vel) / 2) : 0 );// FIXME delay too short 
@@ -778,10 +779,9 @@ void request_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   get_shortest_path( train );
   //Printf( COM2, "get_next_command with: train_id: %d, src_id: %d, dest_id: %d, train->cur_speed: %d, train->cur_vel: %d, stop_dist: %d, safe_branch_dist: %d\n\r", train_id, src_id, dest_id, train->cur_speed, train->cur_vel, stop_dist, safe_branch_dist );
 
-  Printf( COM2, "NEXT COMMAND: \n\r" ); 
   compute_next_command( train, cmds );
-  print_shortest_dist( train );
-  print_cmds( cmds );
+  //print_shortest_dist( train );
+  //print_cmds( cmds );
 }
 
 inline void init_node( min_heap_node_t * node, int id, int dist ) {
@@ -956,8 +956,6 @@ void dijkstra( struct _track_node_* track_graph, int train_id, int src_id, int* 
   dist[src_id] = 0;
 
   /* in our case all vertices are connected, so loop until the heap is empty */
-  //TODO: think about replacing edge weight with time
-  //TODO: if use time, reverse edge weight should be dynamically calculated
   while( !heap_empty( &min_heap )) {
     assertu( 1, min_heap.size );
     min_heap_node_t * heap_node = extract_min( &min_heap );
