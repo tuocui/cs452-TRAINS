@@ -687,13 +687,46 @@ void dijkstra_test( ) {
   src_id = 70; //E7
   dest_id = 74 ; // E11
   train.cur_vel = 18000;
-  train.dest_id= dest_id;
+  //train.dest_id= dest_id;
   train.train_id = 58;
+  train.cur_speed = 10;
+  train.state = 0; // READY
+  train.mm_past_dest = 100;
 
+  /* C14 -> A16 */
   init_rail_cmds( &cmds );
-  train.prev_sensor_id = 48;
-  train.dest_id = 32;
+  train.prev_sensor_id = 45;
+  train.dest_id = 15 ;
   request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  Printf( COM2, "============================\n\r" );
+
+  /* C14 -> A15 */
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = 45;
+  train.dest_id = 14 ;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  Printf( COM2, "============================\n\r" );
+
+  /* C15 -> A16 */
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = 14;
+  train.dest_id = 15 ;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
+  Printf( COM2, "============================\n\r" );
+
+  /* A15 -> A15 */
+  init_rail_cmds( &cmds );
+  train.prev_sensor_id = 14;
+  train.dest_id = 14 ;
+  request_next_command( &train, &cmds );
+  print_cmds( &cmds );
+
 
   //debugu( 1, "should see normal path because the train itself reserves the edge " );
   //init_rail_cmds( &cmds );
