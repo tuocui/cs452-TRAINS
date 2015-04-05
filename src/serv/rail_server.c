@@ -549,7 +549,6 @@ void update_trains( ) {
           if( trains[i].cur_vel == 0 && trains[i].dest_id != NONE ) {
             bool has_reached_dest = reached_dest( &(trains[i]) );
             if( has_reached_dest ) {
-              Printf( COM2, "YES WE DID!!!\r\n" );
               trains[i].dest_id = get_rand_dest( cur_time, trains[i].track_graph, trains[i].prev_sensor_id );
               sensor_id_to_name( trains[i].dest_id, dest );
               Printf( COM2, "\0337\033[14;%dHCurrent destination: %c%c%c\0338", i * 37, dest[0], dest[1], dest[2] );
@@ -936,14 +935,12 @@ void cmd_server( ) {
 
       case RAIL_CMDS:
         debugu( 1, "RAIL_CMDS" );
-        bwprintf( COM2, "RAIL_CMDS\n\r" );
         /* get and store train cmds */
         if( receive_cmds->train_id != NONE ) {
           insert_train_cmd( );
         }
         /* get and store switch cmds */
         for( i = 0; i <= receive_cmds->rail_cmd_switch_idx; ++i ) {
-          bwprintf( COM2, "before reply to switch worker, idx: %d, i: %d\n\r", receive_cmds->rail_cmd_switch_idx, i );
           debugu( 4, "before reply to switch_exe_worker: switch_idx: %d, i: %d", receive_cmds->rail_cmd_switch_idx, i );
           insert_switch_cmd( i, false );
         }
@@ -1021,9 +1018,6 @@ void cmd_server( ) {
         train_cmd_args.accel_rate = train_accel;
         train_cmd_args.decel_rate = train_decel;
 
-        Printf( COM2, "debug: extracted_train_cmd: train_idx: %d action: %d, delay: %d\n\r",
-           i, action, delay );
-
         train_exe_busy[i] = true;
         ret_val = Reply( train_exe_worker_tid, (char *)&train_cmd_args, sizeof( train_cmd_args ) );
         assertum( 1, ret_val == 0, "ret_val: %d", ret_val );
@@ -1038,9 +1032,6 @@ void cmd_server( ) {
         assert( 1, switch_exe_worker_tid > 0 );
         switch_cmd_args.state = action;
         switch_cmd_args.delay_time = delay;
-
-        Printf( COM2, "debug: extracted_switch_cmd: switch_id: %d action: %d, delay: %d\n\r",
-            i, action, delay );
 
         switch_exe_busy[i] = true;
         ret_val = Reply( switch_exe_worker_tid, (char *)&switch_cmd_args, sizeof( switch_cmd_args ) );

@@ -613,7 +613,6 @@ inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int d
   cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_id = switch_id;
   cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_action = ACTION;
   cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_delay= delay;
-  Printf( COM2, "packed new swith cmd: id: %d, aciton: %d, delay: %d, new idx: %d", switch_id, ACTION, delay, cmds->rail_cmd_switch_idx );
 }
 
 
@@ -708,8 +707,6 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
             stop_dist_at_const_vel > ( sensor2reverse_dist + train_len_behind + STOP_BUFFER ) - train_len_ahead ))) {
         assertu( 1, track_graph[train->dest_path[traverse_cur_idx-1]].type == NODE_MERGE );
         int src2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[src_id] - REVERSE_BUFFER;
-        Printf( COM2, "src2reverse_dist = all_dist[cur_node_id] - all_dist[src_id] - REVERSE_BUFFER = %d - %d - %d\n\r", 
-            train->all_dist[cur_node_id], train->all_dist[src_id], REVERSE_BUFFER );
         int cur2dest_dist = src2reverse_dist + train_len_behind + STOP_BUFFER;
         int reverse_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) / 10 : 0; 
         //int reverse_delay_time = ((( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist > 0 ) && train->cur_vel > 0 ) ? (( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist ) * 10000 ) / (( train->cur_vel) / 2) : 0 );// FIXME delay too short 
@@ -780,10 +777,9 @@ void request_next_command( train_state_t* train, rail_cmds_t* cmds ) {
   get_shortest_path( train );
   //Printf( COM2, "get_next_command with: train_id: %d, src_id: %d, dest_id: %d, train->cur_speed: %d, train->cur_vel: %d, stop_dist: %d, safe_branch_dist: %d\n\r", train_id, src_id, dest_id, train->cur_speed, train->cur_vel, stop_dist, safe_branch_dist );
 
-  Printf( COM2, "NEXT COMMAND: \n\r" ); 
   compute_next_command( train, cmds );
-  print_shortest_dist( train );
-  print_cmds( cmds );
+  //print_shortest_dist( train );
+  //print_cmds( cmds );
 }
 
 inline void init_node( min_heap_node_t * node, int id, int dist ) {

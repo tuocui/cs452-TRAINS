@@ -40,12 +40,10 @@ bool reached_dest( train_state_t *train ) {
   int prev_sensor_id_rev = ((train->track_graph[train->prev_sensor_id]).reverse)->num;
   int dist_past_prev_sensor = train->mm_past_landmark / 10;
   if( dest_id == prev_sensor_id || dest_id == prev_sensor_id_rev ) {
-    Printf( COM2, "wat" );
     if( dist_past_prev_sensor < train->length ) {
       return true;
     }
   } else if( dest_id == next_sensor_id || dest_id == next_sensor_id_rev ) {
-    Printf( COM2, "pls" );
     int dist_between_sensors = 0;
     track_node_t *cur_node = &(train->track_graph[train->prev_sensor_id]);
     int i;
