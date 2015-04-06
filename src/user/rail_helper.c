@@ -17,11 +17,11 @@ int get_train_idx( int train_num ) {
   case TRAIN_58_NUM:
     return TRAIN_58_IDX;
     break;
+  case TRAIN_62_NUM:
+    return TRAIN_62_IDX;
+    break;
   case TRAIN_45_NUM:
     return TRAIN_45_IDX;
-    break;
-  case TRAIN_63_NUM:
-    return TRAIN_63_IDX;
     break;
   case TRAIN_24_NUM:
     return TRAIN_24_IDX;
@@ -592,7 +592,7 @@ void init_58( train_state_t *train ) {
   (train->speeds[29]).stopping_distance = 2158;
 }
 
-void init_45( train_state_t *train ) {
+void init_62( train_state_t *train ) {
   /* Copypasta calibration output here */
   // Velocity in mm/100s, divide by 1000 to get cm/s
   // Stopping distance in mm
@@ -601,7 +601,7 @@ void init_45( train_state_t *train ) {
   train->pickup_len = 50;
   train->front_len = 25;
   train->back_len = 145;
-  train->train_id = 45;
+  train->train_id = 62;
   train->prev_sensor_id = NONE;
   train->next_sensor_id = NONE;
   train->dest_id = NONE;
@@ -613,8 +613,8 @@ void init_45( train_state_t *train ) {
   train->speed_change_time = 0;
   train->is_forward = 1;
   train->state = NOT_INITIALIZED;
-  train->decel_rate = 119;
-  train->accel_rate = 90;
+  train->decel_rate = 122;
+  train->accel_rate = 92;
   (train->speeds[14]).straight_vel = 50579; // 14 HIGH
   (train->speeds[14]).curved_vel = 50586;
   (train->speeds[14]).stopping_distance = 2158;
@@ -627,24 +627,24 @@ void init_45( train_state_t *train ) {
   (train->speeds[11]).straight_vel = 41440; // 11 HIGH
   (train->speeds[11]).curved_vel = 41749;
   (train->speeds[11]).stopping_distance = 678;
-  (train->speeds[10]).straight_vel = 33814; // 10 HIGH
-  (train->speeds[10]).curved_vel = 34627;
-  (train->speeds[10]).stopping_distance = 460;
-  (train->speeds[9]).straight_vel = 28004; // 9 HIGH
-  (train->speeds[9]).curved_vel = 27860;
-  (train->speeds[9]).stopping_distance = 336;
-  (train->speeds[8]).straight_vel = 22133; // 8 HIGH
-  (train->speeds[8]).curved_vel = 22370;
-  (train->speeds[8]).stopping_distance = 231;
-  (train->speeds[23]).straight_vel = 18907; // 8 LOW
-  (train->speeds[23]).curved_vel = 19127;
-  (train->speeds[23]).stopping_distance = 176;
-  (train->speeds[24]).straight_vel = 24765; // 9 LOW
-  (train->speeds[24]).curved_vel = 24770;
-  (train->speeds[24]).stopping_distance = 285;
-  (train->speeds[25]).straight_vel = 31219; // 10 LOW
-  (train->speeds[25]).curved_vel = 31030;
-  (train->speeds[25]).stopping_distance = 412;
+  (train->speeds[10]).straight_vel = 43000; // 10 HIGH
+  (train->speeds[10]).curved_vel = 43000;
+  (train->speeds[10]).stopping_distance = 680;
+  (train->speeds[9]).straight_vel = 40300; // 9 HIGH
+  (train->speeds[9]).curved_vel = 40300;
+  (train->speeds[9]).stopping_distance = 630;
+  (train->speeds[8]).straight_vel = 36200; // 8 HIGH
+  (train->speeds[8]).curved_vel = 36200;
+  (train->speeds[8]).stopping_distance = 580;
+  (train->speeds[23]).straight_vel = 36200; // 8 LOW
+  (train->speeds[23]).curved_vel = 36200;
+  (train->speeds[23]).stopping_distance = 580;
+  (train->speeds[24]).straight_vel = 40300; // 9 LOW
+  (train->speeds[24]).curved_vel = 40300;
+  (train->speeds[24]).stopping_distance = 630;
+  (train->speeds[25]).straight_vel = 43000; // 10 LOW
+  (train->speeds[25]).curved_vel = 43000;
+  (train->speeds[25]).stopping_distance = 680;
   (train->speeds[26]).straight_vel = 37021; // 11 LOW
   (train->speeds[26]).curved_vel = 37043;
   (train->speeds[26]).stopping_distance = 580;
@@ -680,8 +680,8 @@ void init_24( train_state_t *train ) {
   train->speed_change_time = 0;
   train->is_forward = 1;
   train->state = NOT_INITIALIZED;
-  train->decel_rate = 117;
-  train->accel_rate = 90;
+  train->decel_rate = 140;
+  train->accel_rate = 85;
   (train->speeds[14]).straight_vel = 50579; // 14 HIGH
   (train->speeds[14]).curved_vel = 50586;
   (train->speeds[14]).stopping_distance = 2158;
@@ -726,7 +726,7 @@ void init_24( train_state_t *train ) {
   (train->speeds[29]).stopping_distance = 2158;
 }
 
-void init_63( train_state_t *train ) {
+void init_45( train_state_t *train ) {
   /* Copypasta calibration output here */
   // Velocity in mm/100s, divide by 1000 to get cm/s
   // Stopping distance in mm
@@ -735,7 +735,7 @@ void init_63( train_state_t *train ) {
   train->pickup_len = 50;
   train->front_len = 25;
   train->back_len = 145;
-  train->train_id = 63;
+  train->train_id = 45;
   train->prev_sensor_id = NONE;
   train->next_sensor_id = NONE;
   train->dest_id = NONE;
@@ -747,8 +747,8 @@ void init_63( train_state_t *train ) {
   train->speed_change_time = 0;
   train->is_forward = 1;
   train->state = NOT_INITIALIZED;
-  train->decel_rate = 155;
-  train->accel_rate = 125;
+  train->decel_rate = 103;
+  train->accel_rate = 83;
   (train->speeds[14]).straight_vel = 50579; // 14 HIGH
   (train->speeds[14]).curved_vel = 50586;
   (train->speeds[14]).stopping_distance = 2158;
@@ -761,24 +761,24 @@ void init_63( train_state_t *train ) {
   (train->speeds[11]).straight_vel = 41440; // 11 HIGH
   (train->speeds[11]).curved_vel = 41749;
   (train->speeds[11]).stopping_distance = 678;
-  (train->speeds[10]).straight_vel = 33814; // 10 HIGH
-  (train->speeds[10]).curved_vel = 34627;
-  (train->speeds[10]).stopping_distance = 460;
-  (train->speeds[9]).straight_vel = 28004; // 9 HIGH
-  (train->speeds[9]).curved_vel = 27860;
-  (train->speeds[9]).stopping_distance = 336;
-  (train->speeds[8]).straight_vel = 22133; // 8 HIGH
-  (train->speeds[8]).curved_vel = 22370;
-  (train->speeds[8]).stopping_distance = 231;
-  (train->speeds[23]).straight_vel = 18907; // 8 LOW
-  (train->speeds[23]).curved_vel = 19127;
-  (train->speeds[23]).stopping_distance = 176;
+  (train->speeds[10]).straight_vel = 38500; // 10 HIGH
+  (train->speeds[10]).curved_vel = 38500;
+  (train->speeds[10]).stopping_distance = 550;
+  (train->speeds[9]).straight_vel = 38000; // 9 HIGH
+  (train->speeds[9]).curved_vel = 38000;
+  (train->speeds[9]).stopping_distance = 500;
+  (train->speeds[8]).straight_vel = 34300; // 8 HIGH
+  (train->speeds[8]).curved_vel = 34300;
+  (train->speeds[8]).stopping_distance = 450;
+  (train->speeds[23]).straight_vel = 34300; // 8 LOW
+  (train->speeds[23]).curved_vel = 34300;
+  (train->speeds[23]).stopping_distance = 450;
   (train->speeds[24]).straight_vel = 24765; // 9 LOW
   (train->speeds[24]).curved_vel = 24770;
-  (train->speeds[24]).stopping_distance = 285;
-  (train->speeds[25]).straight_vel = 46750; // 10 LOW
-  (train->speeds[25]).curved_vel = 46750;
-  (train->speeds[25]).stopping_distance = 712;
+  (train->speeds[24]).stopping_distance = 500;
+  (train->speeds[25]).straight_vel = 38500; // 10 LOW
+  (train->speeds[25]).curved_vel = 38500;
+  (train->speeds[25]).stopping_distance = 550;
   (train->speeds[26]).straight_vel = 37021; // 11 LOW
   (train->speeds[26]).curved_vel = 37043;
   (train->speeds[26]).stopping_distance = 580;
@@ -839,9 +839,9 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
   }
 
   init_58( &(trains[TRAIN_58_IDX]) );
-  init_45( &(trains[TRAIN_45_IDX]) );
+  init_62( &(trains[TRAIN_62_IDX]) );
   init_24( &(trains[TRAIN_24_IDX]) );
-  init_63( &(trains[TRAIN_63_IDX]) );
+  init_45( &(trains[TRAIN_45_IDX]) );
 }
 
 void init_switches( int *switch_states ) {

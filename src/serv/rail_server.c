@@ -147,14 +147,14 @@ void sensor_worker( ) {
       case TRAIN_58_NUM:
         init_58( train );
         break;
-      case TRAIN_45_NUM:
-        init_45( train );
+      case TRAIN_62_NUM:
+        init_62( train );
         break;
       case TRAIN_24_NUM:
         init_24( train );
         break;
-      case TRAIN_63_NUM:
-        init_63( train );
+      case TRAIN_45_NUM:
+        init_45( train );
         break;
       default:
         break;
@@ -604,8 +604,13 @@ void update_trains( ) {
             case 56:
               trains[i].dest_id = 39;
               trains[i].mm_past_dest = 250;
-              pack_switch_cmd( (rail_msg.to_server_content).rail_cmds, 7, SW_CURVED, 0);
-              pack_switch_cmd( (rail_msg.to_server_content).rail_cmds, 18, SW_STRAIGHT, 0);
+              ((rail_msg.to_server_content).rail_cmds)->rail_cmd_switch_idx = -1;
+              if( trains[i].switch_states[7] == SW_STRAIGHT ) {
+                set_switch( 7, CURVED, trains[i].switch_states );
+              }
+              if( trains[i].switch_states[18] == SW_CURVED ) {
+                set_switch( 18, STRAIGHT, trains[i].switch_states );
+              }
               break;
             }
             sensor_id_to_name( trains[i].dest_id, dest );
@@ -666,12 +671,14 @@ void update_trains( ) {
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
           ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
         } else if( ret_val == -2 && trains[i].cur_speed != 9 && trains[i].cur_speed != 24 ) {
-          //Printf( COM2, "Train %d needs issuing slow down\r\n", trains[i].train_id );
-          ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
-          ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
-          ((rail_msg.to_server_content).rail_cmds)->train_speed = 9;
-          ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
-          ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+          if( trains[i].cur_speed != 0 || trains[i].cur_vel == 0 ) {
+            //Printf( COM2, "Train %d needs issuing slow down\r\n", trains[i].train_id );
+            ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
+            ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
+            ((rail_msg.to_server_content).rail_cmds)->train_speed = 9;
+            ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
+            ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
+          }
         } else if( ret_val == -3 && trains[i].cur_speed != 0 ) {
           //Printf( COM2, "Train %d needs issuing stop\r\n", trains[i].train_id );
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;

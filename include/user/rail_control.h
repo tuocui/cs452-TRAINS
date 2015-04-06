@@ -12,19 +12,19 @@
 #define TRAIN_MAX   4
 #define TRAIN_58_IDX 0
 #define TRAIN_24_IDX 1
-#define TRAIN_63_IDX 2
 #define TRAIN_45_IDX 3
+#define TRAIN_62_IDX 2
 
 #define TRAIN_58_NUM 58
 #define TRAIN_24_NUM 24
-#define TRAIN_63_NUM 63
 #define TRAIN_45_NUM 45
+#define TRAIN_62_NUM 62
 
 #define convert_train_num2idx( _train_num ) \
   ( _train_num == TRAIN_58_NUM ? TRAIN_58_IDX : \
     _train_num == TRAIN_24_NUM ? TRAIN_24_IDX : \
-    _train_num == TRAIN_63_NUM ? TRAIN_63_IDX : \
-    _train_num == TRAIN_45_NUM ? TRAIN_45_IDX : NONE )
+    _train_num == TRAIN_45_NUM ? TRAIN_45_IDX : \
+    _train_num == TRAIN_62_NUM ? TRAIN_62_IDX : NONE )
 
 #define NONE      -1
 #define TR_STOP   0

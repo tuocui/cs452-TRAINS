@@ -77,7 +77,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   int safe_dist_to_stop = safe_distance_to_stop( train );
   int forward_dist = ( safe_dist_to_stop * 3 ) / 2; // 1.25x the safe distance to stop
   //int orig_forward_dist = forward_dist;
-  int forward_dist_ahead = (2 * train->length) + STOP_BUFFER;
+  int forward_dist_ahead = (3 * train->length) + STOP_BUFFER;
   //Printf( COM2, "forward_dist: %d\r\n", forward_dist );
   int branch_ind;
   track_node_t *cur_node = &(graph[sensor_id]);
@@ -257,9 +257,13 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       }
       colliding_train = &(all_trains[colliding_train_idx]);
       if( colliding_train->cur_speed == 0 ) {
-        if( length_rsvd < safe_dist_to_stop && train->priority <= colliding_train->priority && train_state != HANDLING_COLLISION && train_state != REVERSING ) {
-          train->state = HANDLING_COLLISION;
-          return -1;
+        if( length_rsvd < safe_dist_to_stop && train_state != HANDLING_COLLISION && train_state != REVERSING ) {
+          if( train->priority <= colliding_train->priority ) {
+            train->state = HANDLING_COLLISION;
+            return -1;
+          } else {
+            return -3;
+          }
         }
         return -2; // TODO: Switch this to 0
       }

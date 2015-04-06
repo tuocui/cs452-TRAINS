@@ -69,10 +69,10 @@ inline int get_len_train_behind( struct _train_state_ *train );
 
 void init_58( struct _train_state_ *train );
 
-void init_45( struct _train_state_ *train );
+void init_62( struct _train_state_ *train );
 
 void init_24( struct _train_state_ *train );
 
-void init_63( struct _train_state_ *train );
+void init_45( struct _train_state_ *train );
 
 #endif
