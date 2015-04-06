@@ -152,7 +152,7 @@ int get_rand_dest( int super_complicated_seed, track_node_t *graph, int cur_sens
         }
         break;
       } else if (dest_node->type == NODE_EXIT ) {
-        dest_id = ( dest_id + totally_rand_num + super_complicated_seed ) % 80;
+        dest_id = ( dest_id + totally_rand_num + super_complicated_seed + i) % 80;
         break;
       } else {
         dest_node = dest_node->edge[DIR_AHEAD].dest;
@@ -164,7 +164,7 @@ int get_rand_dest( int super_complicated_seed, track_node_t *graph, int cur_sens
         if( dest_node->type == NODE_BRANCH ) {
           return dest_id;
         } else if (dest_node->type == NODE_EXIT ) {
-          dest_id = ( dest_id + totally_rand_num + super_complicated_seed ) % 80;
+          dest_id = ( dest_id + totally_rand_num + super_complicated_seed + i) % 80;
           break;
         } else {
           dest_node = dest_node->edge[DIR_AHEAD].dest;

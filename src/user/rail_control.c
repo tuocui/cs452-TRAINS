@@ -744,7 +744,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
             stop_dist_at_const_vel > ( sensor2reverse_dist + train_len_behind + STOP_BUFFER ) - train_len_ahead ))) {
         assertu( 1, track_graph[train->dest_path[traverse_cur_idx-1]].type == NODE_MERGE );
         int src2reverse_dist = train->all_dist[cur_node_id] - train->all_dist[src_id] - REVERSE_BUFFER;
-        int cur2dest_dist = src2reverse_dist + train_len_behind + STOP_BUFFER;
+        int cur2dest_dist = src2reverse_dist + train_len_behind + (( 5 * STOP_BUFFER ) / 4 );
         int reverse_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) / 10 : 0; 
         //int reverse_delay_time = ((( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist > 0 ) && train->cur_vel > 0 ) ? (( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist ) * 10000 ) / (( train->cur_vel) / 2) : 0 );// FIXME delay too short 
         debugu( 2, "calling pack_train_cmd on branch reverse" );

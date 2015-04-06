@@ -263,7 +263,7 @@ void train_exe_worker( ) {
           predict_next_fallback_sensors_static( train );
           sensor_id_to_name( train->next_sensor_id, sensor_name );
           // TODO FIXME: MAKE THIS NOT BE IN THE TRAIN EXE WORKER
-          int stopping_dist = get_cur_stopping_distance( train ) + STOP_BUFFER + get_len_train_behind( train ) + ( train->mm_past_landmark / 10 );
+          int stopping_dist = get_cur_stopping_distance( train ) + ( ( 5 * STOP_BUFFER ) / 4 ) + get_len_train_behind( train ) + ( train->mm_past_landmark / 10 );
           track_node_t *cur_node = &(train->track_graph[train->prev_sensor_id]);
           track_node_t *next_node;
           int branch_ind;
@@ -995,10 +995,16 @@ void cmd_server( ) {
         receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_delay, NONE, NONE, NONE, NONE, NONE );
 
     int other_switch_idx = get_switch_twin( switch_cmds_idx );
-    if( user_command && other_switch_idx != NONE && receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_action == SW_CURVED ) {
-      assertum( 1, other_switch_idx > 0 && other_switch_idx < SW_MAX, "other switch_idx: %d", other_switch_idx );
-      insert_cmd( switch_cmds[other_switch_idx], other_switch_idx, SW_STRAIGHT, 
-          receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_delay, NONE, NONE, NONE, NONE, NONE ); // same delay as twin
+    if( user_command && other_switch_idx != NONE ) {
+      if( receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_action == SW_CURVED ) {
+        assertum( 1, other_switch_idx > 0 && other_switch_idx < SW_MAX, "other switch_idx: %d", other_switch_idx );
+        insert_cmd( switch_cmds[other_switch_idx], other_switch_idx, SW_STRAIGHT, 
+            receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_delay, NONE, NONE, NONE, NONE, NONE ); // same delay as twin
+      } else if ( receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_action == SW_STRAIGHT ) {
+        assertum( 1, other_switch_idx > 0 && other_switch_idx < SW_MAX, "other switch_idx: %d", other_switch_idx );
+        insert_cmd( switch_cmds[other_switch_idx], other_switch_idx, SW_CURVED, 
+            receive_cmds->switch_cmds[cur_rail_cmd_switch_idx].switch_delay, NONE, NONE, NONE, NONE, NONE ); // same delay as twin
+      }
     }
   }
 
