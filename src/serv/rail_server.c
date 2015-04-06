@@ -641,7 +641,7 @@ void update_trains( ) {
           // can display system train colision warning here
         }
       }
-      if( ret_val >= 0 && trains[i].warning_displayed ) {
+      if( ret_val == 0 && trains[i].warning_displayed ) {
         if( trains[i].user_controlled ) {
           trains[i].warning_displayed = false;
           erase_stop_sign( );
@@ -650,7 +650,7 @@ void update_trains( ) {
           // can erase system train collision warnings here
         }
       }
-      if( !(trains[i].user_controlled) && trains[i].state == READY ) {
+      if( !(trains[i].user_controlled) && ( trains[i].state == READY || trains[i].state == HANDLING_COLLISION ) ) {
         if( ret_val == -1 ) {
           //Printf( COM2, "Train %d needs issuing reverse\r\n", trains[i].train_id );
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
