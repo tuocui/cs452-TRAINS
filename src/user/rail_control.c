@@ -73,7 +73,8 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
   int mm_past_sensor = train->mm_past_landmark / 10;
   int cur_speed = train->cur_speed;
   int train_state = train->state;
-  int forward_dist = ( safe_distance_to_stop( train ) * 3 ) / 2; // 1.25x the safe distance to stop
+  int safe_dist_to_stop = safe_distance_to_stop( train );
+  int forward_dist = ( safe_dist_to_stop * 3 ) / 2; // 1.25x the safe distance to stop
   //int orig_forward_dist = forward_dist;
   int forward_dist_ahead = (2 * train->length) + STOP_BUFFER;
   //Printf( COM2, "forward_dist: %d\r\n", forward_dist );
@@ -214,7 +215,7 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         return -1;
       }
     }
-    if( has_collision && colliding_train_idx != NONE && train->priority >= colliding_train_priority ) {
+    if( has_collision && colliding_train_idx != NONE && train->priority == colliding_train_priority ) {
       // Other train is delaying and doing... something
       // Probably best just to reverse
       if( colliding_train_state == BUSY ) {
@@ -233,6 +234,8 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
         train->state = HANDLING_COLLISION;
         return -1;
       }
+    } else if( has_collision && colliding_train_idx != NONE && train->priority > colliding_train_priority ) {
+      return -3;
     }
     
     // reserve!
@@ -253,10 +256,10 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       }
       colliding_train = &(all_trains[colliding_train_idx]);
       if( colliding_train->cur_speed == 0 ) {
-        if( length_rsvd < forward_dist_ahead ) {
+        if( length_rsvd < safe_dist_to_stop && train->priority <= colliding_train->priority ) {
           return -1;
         }
-        return -1; // TODO: Switch this to 0
+        return -2; // TODO: Switch this to 0
       }
       if( length_rsvd < 2 * train->length ) {
         if( cur_speed == 9 || cur_speed == 24 ) {
@@ -690,7 +693,6 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
         //Printf( COM2, "FOUND reverse condition 1 \n\r" );
         sensor2dest_dist = ( sensor2dest_dist - REVERSE_BUFFER > 0 ? sensor2dest_dist - REVERSE_BUFFER : 0 );
       }
-
       debugu( 4,  "prev_sensor_id: %d, src_id: %d, second_sensor_id: %d, stop_dist: %d, sensor2dest_dist: %d",
               prev_sensor_id, src_id, second_sensor_id, stop_dist, sensor2dest_dist );
       /* if we just hit the only sensor before the destination or the second sensor to destination is too close */
