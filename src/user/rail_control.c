@@ -255,7 +255,8 @@ int update_track_reservation( train_state_t *train, train_state_t *all_trains ) 
       }
       colliding_train = &(all_trains[colliding_train_idx]);
       if( colliding_train->cur_speed == 0 ) {
-        if( length_rsvd < safe_dist_to_stop && train->priority <= colliding_train->priority ) {
+        if( length_rsvd < safe_dist_to_stop && train->priority <= colliding_train->priority && train_state != HANDLING_COLLISION && train_state != REVERSING ) {
+          train->state = HANDLING_COLLISION;
           return -1;
         }
         return -2; // TODO: Switch this to 0

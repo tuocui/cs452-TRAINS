@@ -595,8 +595,9 @@ void update_trains( ) {
     i = cur_time % TR_MAX;
     if( trains[i].state != NOT_INITIALIZED && trains[i].state != INITIALIZING ) {
       ret_val = update_track_reservation( &(trains[i]), trains );
-      if( !(trains[i].user_controlled) ) {
+      if( !(trains[i].user_controlled) && trains[i].state == READY ) {
         if( ret_val == -1 ) {
+          //Printf( COM2, "Train %d needs issuing reverse\r\n", trains[i].train_id );
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
           ((rail_msg.to_server_content).rail_cmds)->train_action = TR_REVERSE;
           ((rail_msg.to_server_content).rail_cmds)->train_speed = -1;
@@ -607,26 +608,30 @@ void update_trains( ) {
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
           ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
         } else if( ret_val == -2 && trains[i].cur_speed != 9 && trains[i].cur_speed != 24 ) {
+          //Printf( COM2, "Train %d needs issuing slow down\r\n", trains[i].train_id );
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
           ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
           ((rail_msg.to_server_content).rail_cmds)->train_speed = 9;
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
           ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
         } else if( ret_val == -3 && trains[i].cur_speed != 0 ) {
+          //Printf( COM2, "Train %d needs issuing stop\r\n", trains[i].train_id );
           ((rail_msg.to_server_content).rail_cmds)->train_id = trains[i].train_id;
           ((rail_msg.to_server_content).rail_cmds)->train_action = TR_STOP;
           ((rail_msg.to_server_content).rail_cmds)->train_speed = 0;
           ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
           ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
-        } else if( ret_val > 0 ) {
-          int ot_idx = get_train_idx( ret_val );
-          if( trains[ot_idx].cur_speed != 11 && trains[ot_idx].cur_speed != 26 && !(trains[ot_idx].user_controlled) ) {
-            ((rail_msg.to_server_content).rail_cmds)->train_id = ret_val;
-            ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
-            ((rail_msg.to_server_content).rail_cmds)->train_speed = 11;
-            ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
-            ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
-          }
+        }
+      }
+      if( ret_val > 0 ) {
+        //Printf( COM2, "Train %d needs issuing speed up\r\n", ret_val );
+        int ot_idx = get_train_idx( ret_val );
+        if( trains[ot_idx].cur_speed != 11 && trains[ot_idx].cur_speed != 26 && !(trains[ot_idx].user_controlled) && trains[ot_idx].state == READY ) {
+          ((rail_msg.to_server_content).rail_cmds)->train_id = ret_val;
+          ((rail_msg.to_server_content).rail_cmds)->train_action = TR_CHANGE_SPEED;
+          ((rail_msg.to_server_content).rail_cmds)->train_speed = 11;
+          ((rail_msg.to_server_content).rail_cmds)->train_delay = 0;
+          ret_val = Send( cmd_server_tid, (char *)&rail_msg, sizeof(rail_msg), (char *)&ret_val, 0 );
         }
       }
     }
@@ -672,7 +677,7 @@ void print_trains( ) {
 /* return inserted idx, if empty spot not found, return NONE */
 inline int insert_cmd( generic_cmds_list_t * cmds_list, int id, int action, int delay, int train_speed, int train_dest, int train_mm_past_dest, int train_accel, int train_decel ) {
   if( cmds_list->count >= CMD_QUEUE_MAX ) {
-    assertum( 1, false, "ERROR: don't panic, this indicates exe worker queues are overrun, just increase the cmd queue size" );
+    assertum( 1, false, "ERROR: don't panic, this indicates exe worker queues are overrun, just increase the cmd queue size. train:%d cmd: %d", id, action );
     return NONE;
   }
 
