@@ -145,10 +145,10 @@ int get_rand_dest( int super_complicated_seed, track_node_t *graph, int cur_sens
     dest_node = &(graph[dest_id]);
     while( 1 ) {
       if( dest_node->type == NODE_BRANCH ) {
-        if( dest_id - cur_sensor_id <= ( -30 + i ) || dest_id - cur_sensor_id >= ( 30 - i ) ) { 
+        if( ( dest_id - cur_sensor_id ) <= ( -30 + i ) || ( dest_id - cur_sensor_id ) >= ( 30 - i ) ) { 
           front_good = 1;
         } else {
-          dest_id = ( dest_id + totally_rand_num + super_complicated_seed ) % 80;
+          dest_id = ( dest_id + totally_rand_num + super_complicated_seed + i ) % 80;
         }
         break;
       } else if (dest_node->type == NODE_EXIT ) {
@@ -879,6 +879,9 @@ void update_velocity( train_state_t *train, int cur_time, int prev_time, int dis
   int new_vel = ( dist * 10000 ) / ( cur_time - prev_time );
   (train->speeds[train->cur_speed]).straight_vel = 
     ( (80 * (train->speeds[train->cur_speed]).straight_vel ) + ( 20 * new_vel ) ) / 100;
+  if( train->cur_speed == 0 ) {
+    (train->speeds[0]).straight_vel = 0;
+  }
   train->cur_vel = (train->speeds[train->cur_speed]).straight_vel;
   (train->speeds[train->cur_speed]).stopping_distance = get_cur_stopping_distance( train );
 }

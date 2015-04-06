@@ -243,6 +243,7 @@ void train_exe_worker( ) {
       if( train->train_reach_destination ) {
         train->dest_id = NONE;
         train->train_reach_destination = false;
+        Printf( COM2, "\0337\033[14;%dHCurrent destination: N/A\0338", get_train_idx( train->train_id ) * 37 );
       }
       if( train->state != INITIALIZING && train->state != NOT_INITIALIZED ) {
         train->state = READY;
@@ -603,6 +604,8 @@ void update_trains( ) {
             case 56:
               trains[i].dest_id = 39;
               trains[i].mm_past_dest = 250;
+              pack_switch_cmd( (rail_msg.to_server_content).rail_cmds, 7, SW_CURVED, 0);
+              pack_switch_cmd( (rail_msg.to_server_content).rail_cmds, 18, SW_STRAIGHT, 0);
               break;
             }
             sensor_id_to_name( trains[i].dest_id, dest );
@@ -714,7 +717,7 @@ void print_trains( ) {
         Printf( COM2, "\0337\033[15;%dH%d    \0338", ( i * 37 ) + 7, cur_speed_normalized );
         Printf( COM2, "\0337\033[18;%dH%d    \0338", ( i * 37 ) + 9, trains[i].mm_past_landmark / 10 );
         Printf( COM2, "\0337\033[16;%dH%d    \0338", ( i * 37 ) + 9, trains[i].cur_vel );
-        Printf( COM2, "\0337\033[12;%dH%d    \0338", ( i * 37 ) + 16, trains[i].next_branch_num );
+        //Printf( COM2, "\0337\033[12;%dH%d    \0338", ( i * 37 ) + 16, trains[i].next_branch_num );
         /*if( cur_time % 50 < 10 ) {
           print_rsv( &(trains[i]), trains );
         }*/
@@ -723,7 +726,7 @@ void print_trains( ) {
         Printf( COM2, "\0337\033[15;%dHSpeed: N/A\0338", ( i * 37 ) );
         Printf( COM2, "\0337\033[18;%dHmm past: N/A\0338", ( i * 37 ) );
         Printf( COM2, "\0337\033[16;%dHCur vel: N/A\0338", ( i * 37 ) );
-        Printf( COM2, "\0337\033[12;%dHNext branch num: N/A\0338", ( i * 37 ) );
+        //Printf( COM2, "\0337\033[12;%dHNext branch num: N/A\0338", ( i * 37 ) );
       }
     }
   }
