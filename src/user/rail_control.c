@@ -65,7 +65,8 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
 
 // returns 0 on safe allocation
 // -1 if train needs to reverse
-// -2 if train needs to slow down/stop
+// -2 if train needs to slow down
+// -3 if train needs to stop
 // TODO: shit, what if the train ahead is reversing????
 int update_track_reservation( train_state_t *train, train_state_t *all_trains ) {
   track_node_t *graph = train->track_graph;

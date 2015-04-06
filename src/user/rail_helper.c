@@ -819,6 +819,7 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
     trains[i].rev_branch_ignore = NONE;
     trains[i].set_rand_dest = false;
     trains[i].user_controlled = false;
+    trains[i].warning_displayed = false;
 
     for( j = 0; j < NUM_SPEEDS; ++j ) {
       trains[i].speeds[j].speed = 0;

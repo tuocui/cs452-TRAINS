@@ -77,4 +77,8 @@ typedef struct _rail_msg_ {
 
 void rail_server( );
 
+inline void print_stop_sign( );
+
+inline void erase_stop_sign( );
+
 #endif

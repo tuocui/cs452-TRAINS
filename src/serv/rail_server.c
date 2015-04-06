@@ -16,6 +16,43 @@
 #include "track_data_new.h"
 #include "track_node.h"
 
+inline void print_stop_sign( ) {
+  Printf( COM2, "\0337\033[28;0H\033[1;31m\
+       u ************************** u\n\r\
+     u                                u\n\r\
+   u                                    u\n\r\
+ u                                        u\n\r\
+*                           _              *\n\r\
+* __      ____ _ _ __ _ __ (_)_ __   __ _  *\n\r\
+* \\ \\ /\\ / / _` | '__| '_ \\| | '_ \\ / _` | *\n\r\
+*  \\ V  V / (_| | |  | | | | | | | | (_| | *\n\r\
+*   \\_/\\_/ \\__,_|_|  |_| |_|_|_| |_|\\__, | *\n\r\
+*                                   |___/  *\n\r\
+ u                                        u\n\r\
+   u                                    u\n\r\
+     u                                u\n\r\
+       u............................u\0338\033[0m" );
+}
+
+inline void erase_stop_sign( ) {
+Printf( COM2, "\0337\033[28;0H\
+                                        \n\r\
+                                         \n\r\
+                                           \n\r\
+                                             \n\r\
+                                               \n\r\
+                                               \n\r\
+                                               \n\r\
+                                                    \n\r\
+                                                \n\r\
+                                                   \n\r\
+                                               \n\r\
+                                              \n\r\
+                                            \n\r\
+                                          \n\r\
+                                          \0338" );
+
+}
 
 void rail_graph_worker( ) {
   //DEBUG
@@ -595,6 +632,24 @@ void update_trains( ) {
     i = cur_time % TR_MAX;
     if( trains[i].state != NOT_INITIALIZED && trains[i].state != INITIALIZING ) {
       ret_val = update_track_reservation( &(trains[i]), trains );
+      if( ret_val < 0 && !trains[i].warning_displayed ) {
+        if( trains[i].user_controlled ) {
+          trains[i].warning_displayed = true;
+          print_stop_sign( );// display a big stop sign
+        }
+        else { 
+          // can display system train colision warning here
+        }
+      }
+      if( ret_val >= 0 && trains[i].warning_displayed ) {
+        if( trains[i].user_controlled ) {
+          trains[i].warning_displayed = false;
+          erase_stop_sign( );
+        }
+        else {
+          // can erase system train collision warnings here
+        }
+      }
       if( !(trains[i].user_controlled) && trains[i].state == READY ) {
         if( ret_val == -1 ) {
           //Printf( COM2, "Train %d needs issuing reverse\r\n", trains[i].train_id );
