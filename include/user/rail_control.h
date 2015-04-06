@@ -233,6 +233,7 @@ typedef struct _train_state_ {
   int time_to_fallback_sensor[NUM_FALLBACK];
   bool set_rand_dest;
   bool user_controlled;
+  bool warning_displayed;
   speed_info_t speeds[NUM_SPEEDS]; // Two different velocities per speed.
 } train_state_t;
 

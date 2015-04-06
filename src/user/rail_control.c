@@ -8,6 +8,7 @@
 #include "ring_buf.h"
 #include "rail_helper.h"
 #include "syscall.h"
+#include "clock_server.h"
 
 #define REVERSE_BUFFER (( 2 * DEFAULT_TRAIN_LEN ) + ( 2 * STOP_BUFFER ))
 /* get_next_command calls graph search to get the shortest path,
@@ -64,7 +65,8 @@ inline void init_rail_cmds( rail_cmds_t* cmds ) {
 
 // returns 0 on safe allocation
 // -1 if train needs to reverse
-// -2 if train needs to slow down/stop
+// -2 if train needs to slow down
+// -3 if train needs to stop
 // TODO: shit, what if the train ahead is reversing????
 int update_track_reservation( train_state_t *train, train_state_t *all_trains ) {
   track_node_t *graph = train->track_graph;
@@ -603,24 +605,25 @@ inline void get_shortest_path( train_state_t *train ) {
   //assertu( 1, train->track_graph[train->dest_path_cur_idx].type == NODE_SENSOR );
 }
 
-inline void pack_train_cmd( rail_cmds_t *cmds, int train_id, int ACTION, int delay ) {
+inline void pack_train_cmd( rail_cmds_t *cmds, int train_id, int ACTION, int delay_until ) {
   cmds->train_id = train_id;
   cmds->train_action = ACTION;
-  cmds->train_delay = delay;
+  cmds->train_delay = delay_until;
 }
 
-inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int delay ) {
+inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int delay_until ) {
   CONVERT_SWITCH_ID( switch_id );
   assertum( 1, cmds->rail_cmd_switch_idx < SW_CMD_MAX, "failure here means we need more switch_cmd_t in rail_cmds" );
   assertum( 1, switch_id >= SW1 && switch_id <= SW156, "switch_id: %d", switch_id );
   ++( cmds->rail_cmd_switch_idx );
   cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_id = switch_id;
   cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_action = ACTION;
-  cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_delay= delay;
+  cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_delay= delay_until;
 }
 
 
 inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
+  //Printf( COM2, "inside compute next command \n\r" );
   assertu( 1, cmds->train_id == NONE && cmds->rail_cmd_switch_idx == NONE );
   track_node_t *track_graph = train->track_graph;
   int src_id = train->prev_sensor_id;
@@ -645,14 +648,24 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   //print_train_path( train );
 
   debugu( 4,  "TEST: total length: %d, should see -1 here: %d", train->all_dist[train->dest_path[train->dest_total_steps-1]], train->dest_path[train->dest_total_steps] );
+
+  /* if sensor hit is destination or reverse of destination, immidiately issue stop command */
+  //NOTE: this should not be necessary, but who cares at this point 
+  if( track_graph[src_id].num == track_graph[train->dest_id].num || 
+      track_graph[src_id].num == track_graph[train->dest_id].reverse->num ) {
+    pack_train_cmd( cmds, train->train_id, TR_STOP, Time( ));
+    return;
+  }
+
   if( train->all_dist[train->dest_path[train->dest_total_steps-1]] >= DIST_MAX ) {
     debugu( 4, "all possible paths are reserved, we will just stop the train now" );
-    pack_train_cmd( cmds, train->train_id, TR_STOP, 0 );
+    pack_train_cmd( cmds, train->train_id, TR_STOP, Time( ));
     train->train_reach_destination = true;
     return;
   }
 
   for( ; traverse_cur_idx < train->dest_total_steps; ++traverse_cur_idx ) {
+    //Printf( COM2, "traverse_cur_idx: %d, total_steps: %d\n\r", traverse_cur_idx, train->dest_total_steps );
     cur_node_id = train->dest_path[traverse_cur_idx];
     debugu( 3, "traverse_cur_idx: %d, cur_node_name: %s", traverse_cur_idx, track_graph[cur_node_id].name );
 
@@ -663,30 +676,45 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
       prev_sensor_id = second_sensor_id;
     } 
 
-    /* if the node is the end of the route, and if there is no other train command has been issued */
+    /* if the cur node is the end of the route, or if the train just hit the destination route,
+     * and if there is no other train command has been issued */
     if(( train->cur_speed != 0 && cmds->train_id == NONE && train->state == READY ) && 
         ( traverse_cur_idx == train->dest_total_steps - 1 || train->dest_id == src_id )) { 
       debugu( 4,  "END OF ROUTE or TRACK RESERVED: %d, %s", cur_node_id, track_graph[cur_node_id].name );
       /* get dist between sensor and dest */  
-      int sensor2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id] ); 
-      if( !(src_id == train->dest_id) && !(src_id == (train->track_graph[train->dest_id].reverse)->num) ) {
-         sensor2dest_dist += train->mm_past_dest;
+      int sensor2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[prev_sensor_id] );// + train->mm_past_dest; 
+      /* if the destination is in the reverse dir, we set the dist to 0,  otherwise add mm_past_dest */
+      sensor2dest_dist = ( sensor2dest_dist == REVERSE_BUFFER ? 0 : sensor2dest_dist + train->mm_past_dest );
+      //Printf( COM2, "before checking reverse, dest_name: %s, src_name: %s \n\r",
+          //track_graph[train->dest_id].name, track_graph[src_id].name );
+      //Printf( COM2, "traverse_cur_idx - 1 name: %s\n\r", track_graph[train->dest_path[traverse_cur_idx-1]].name );
+
+      if(( traverse_cur_idx - 1 >= 0 && 
+            track_graph[train->dest_path[traverse_cur_idx-1]].reverse->num == track_graph[train->dest_id].num ) ||
+           track_graph[src_id].reverse->num == track_graph[train->dest_id].num ) {
+        //Printf( COM2, "FOUND reverse condition 1 \n\r" );
+        sensor2dest_dist = ( sensor2dest_dist - REVERSE_BUFFER > 0 ? sensor2dest_dist - REVERSE_BUFFER : 0 );
       }
-      /* if we are the last sensor or the dest and second sensor is too close */
       debugu( 4,  "prev_sensor_id: %d, src_id: %d, second_sensor_id: %d, stop_dist: %d, sensor2dest_dist: %d",
               prev_sensor_id, src_id, second_sensor_id, stop_dist, sensor2dest_dist );
+      /* if we just hit the only sensor before the destination or the second sensor to destination is too close */
       if( prev_sensor_id == src_id || ( prev_sensor_id == second_sensor_id && stop_dist_at_const_vel > sensor2dest_dist - train_len_ahead )) {
         debugu( 4,  "computing stop command" );
-        int src2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[src_id] );
-        if( !(src_id == train->dest_id) && !(src_id == (train->track_graph[train->dest_id].reverse)->num) ) {
-           src2dest_dist += train->mm_past_dest;
+        int src2dest_dist = ( train->all_dist[cur_node_id] - train->all_dist[src_id] ) + train->mm_past_dest;
+        /* if the destination is in the reverse dir, we subtract mm_past_dest instead, also subtract REVERSE_BUF */
+        if(( traverse_cur_idx - 1 >= 0 &&
+              track_graph[train->dest_path[traverse_cur_idx-1]].reverse->num == track_graph[train->dest_id].num ) ||
+             track_graph[src_id].reverse->num == track_graph[train->dest_id].num ) {
+          //Printf( COM2, "FOUND reverse condition 2 \n\r" );
+          src2dest_dist = src2dest_dist - 2 * train->mm_past_dest - REVERSE_BUFFER;
         }
+        //Printf( COM2, "final srcc2dest_dist: %d\n\r", src2dest_dist );
         int cur2dest_dist = src2dest_dist - train_len_ahead;
+        //Printf( COM2, "Original stop_delay_time: %d\r\n", stop_delay_time );
         int stop_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) / 10 : 0;
-        pack_train_cmd( cmds, train->train_id, TR_STOP, stop_delay_time );
+        //Printf( COM2, "New stop_delay_time: %d\r\n", stop_delay_time );
+        pack_train_cmd( cmds, train->train_id, TR_STOP, stop_delay_time + Time( ));
         train->train_reach_destination = true;
-        /* clear train destination */
-        //train->dest_id = NONE;
       }
     }
 
@@ -694,7 +722,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
     if( traverse_cur_idx == train->dest_path_cur_idx && track_graph[cur_node_id].reverse == &track_graph[src_id] && 
         ( cmds->train_id == NONE && train->cur_speed != 0 && train->state == READY )) {
       debugu( 2, "calling pack_train_cmd on immeidate reverse" );
-      pack_train_cmd( cmds, train->train_id, TR_REVERSE, 0 );
+      pack_train_cmd( cmds, train->train_id, TR_REVERSE, Time( ));
     }
 
     /* handle reverse on branch */
@@ -717,7 +745,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
         //int reverse_delay_time = ((( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist > 0 ) && train->cur_vel > 0 ) ? (( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist ) * 10000 ) / (( train->cur_vel) / 2) : 0 );// FIXME delay too short 
         debugu( 2, "calling pack_train_cmd on branch reverse" );
         train->rev_branch_ignore = track_graph[cur_node_id].num;
-        pack_train_cmd( cmds, train->train_id, TR_REVERSE, reverse_delay_time );
+        pack_train_cmd( cmds, train->train_id, TR_REVERSE, reverse_delay_time + Time( ));
         branch_to_switch_immediately = cur_node_id;
       }
     }
@@ -753,7 +781,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
         if( cur_node_id == branch_to_switch_immediately ) {
           branch_delay_time = 0;
         }
-        pack_switch_cmd( cmds, switch_id, action, branch_delay_time );
+        pack_switch_cmd( cmds, switch_id, action, branch_delay_time + Time( ));
       }
       else {
         debugu( 4,  "branch to be handled at next sensor hit" );   
