@@ -418,7 +418,7 @@ void train_exe_worker( ) {
       break;
     case TR_STOP_USER_CTRL:
       train->user_controlled = false;
-      train->priority = NO_PRIORITY;
+      train->priority = SHUTTLE;
       remove_print_commands( );
       break;
     case TR_PRIORITY:

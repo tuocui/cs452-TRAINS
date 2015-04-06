@@ -184,8 +184,8 @@ typedef struct _train_state_ {
   enum {
     NO_PRIORITY = -1,
     SHUTTLE = 0,
-    LIMO,
-    TANK,
+    LIMO = 1,
+    TANK = 2,
   } priority;
 
   /* used as a queue */
