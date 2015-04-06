@@ -861,7 +861,7 @@ void init_switches( int *switch_states ) {
   switch_states[SW15] = SW_STRAIGHT;
   switch_states[SW16] = SW_CURVED;
   switch_states[SW17] = SW_CURVED;
-  switch_states[SW18] = SW_CURVED;
+  switch_states[SW18] = SW_STRAIGHT;
   switch_states[SW153] = SW_STRAIGHT;
   switch_states[SW154] = SW_CURVED;
   switch_states[SW155] = SW_CURVED;
