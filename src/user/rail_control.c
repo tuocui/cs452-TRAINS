@@ -8,6 +8,7 @@
 #include "ring_buf.h"
 #include "rail_helper.h"
 #include "syscall.h"
+#include "clock_server.h"
 
 #define REVERSE_BUFFER (( 2 * DEFAULT_TRAIN_LEN ) + ( 2 * STOP_BUFFER ))
 /* get_next_command calls graph search to get the shortest path,
@@ -599,20 +600,20 @@ inline void get_shortest_path( train_state_t *train ) {
   //assertu( 1, train->track_graph[train->dest_path_cur_idx].type == NODE_SENSOR );
 }
 
-inline void pack_train_cmd( rail_cmds_t *cmds, int train_id, int ACTION, int delay ) {
+inline void pack_train_cmd( rail_cmds_t *cmds, int train_id, int ACTION, int delay_until ) {
   cmds->train_id = train_id;
   cmds->train_action = ACTION;
-  cmds->train_delay = delay;
+  cmds->train_delay = delay_until;
 }
 
-inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int delay ) {
+inline void pack_switch_cmd( rail_cmds_t *cmds, int switch_id, int ACTION, int delay_until ) {
   CONVERT_SWITCH_ID( switch_id );
   assertum( 1, cmds->rail_cmd_switch_idx < SW_CMD_MAX, "failure here means we need more switch_cmd_t in rail_cmds" );
   assertum( 1, switch_id >= SW1 && switch_id <= SW156, "switch_id: %d", switch_id );
   ++( cmds->rail_cmd_switch_idx );
   cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_id = switch_id;
   cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_action = ACTION;
-  cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_delay= delay;
+  cmds->switch_cmds[cmds->rail_cmd_switch_idx].switch_delay= delay_until;
 }
 
 
@@ -647,13 +648,13 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
   //NOTE: this should not be necessary, but who cares at this point 
   if( track_graph[src_id].num == track_graph[train->dest_id].num || 
       track_graph[src_id].num == track_graph[train->dest_id].reverse->num ) {
-    pack_train_cmd( cmds, train->train_id, TR_STOP, 0 );
+    pack_train_cmd( cmds, train->train_id, TR_STOP, Time( ));
     return;
   }
 
   if( train->all_dist[train->dest_path[train->dest_total_steps-1]] >= DIST_MAX ) {
     debugu( 4, "all possible paths are reserved, we will just stop the train now" );
-    pack_train_cmd( cmds, train->train_id, TR_STOP, 0 );
+    pack_train_cmd( cmds, train->train_id, TR_STOP, Time( ));
     train->train_reach_destination = true;
     return;
   }
@@ -708,7 +709,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
         //Printf( COM2, "Original stop_delay_time: %d\r\n", stop_delay_time );
         int stop_delay_time = cur2dest_dist > 0 ? get_delay_time_to_stop( train, cur2dest_dist ) / 10 : 0;
         //Printf( COM2, "New stop_delay_time: %d\r\n", stop_delay_time );
-        pack_train_cmd( cmds, train->train_id, TR_STOP, stop_delay_time );
+        pack_train_cmd( cmds, train->train_id, TR_STOP, stop_delay_time + Time( ));
         train->train_reach_destination = true;
       }
     }
@@ -717,7 +718,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
     if( traverse_cur_idx == train->dest_path_cur_idx && track_graph[cur_node_id].reverse == &track_graph[src_id] && 
         ( cmds->train_id == NONE && train->cur_speed != 0 && train->state == READY )) {
       debugu( 2, "calling pack_train_cmd on immeidate reverse" );
-      pack_train_cmd( cmds, train->train_id, TR_REVERSE, 0 );
+      pack_train_cmd( cmds, train->train_id, TR_REVERSE, Time( ));
     }
 
     /* handle reverse on branch */
@@ -740,7 +741,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
         //int reverse_delay_time = ((( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist > 0 ) && train->cur_vel > 0 ) ? (( src2reverse_dist + train_len_behind + STOP_BUFFER - stop_dist ) * 10000 ) / (( train->cur_vel) / 2) : 0 );// FIXME delay too short 
         debugu( 2, "calling pack_train_cmd on branch reverse" );
         train->rev_branch_ignore = track_graph[cur_node_id].num;
-        pack_train_cmd( cmds, train->train_id, TR_REVERSE, reverse_delay_time );
+        pack_train_cmd( cmds, train->train_id, TR_REVERSE, reverse_delay_time + Time( ));
         branch_to_switch_immediately = cur_node_id;
       }
     }
@@ -776,7 +777,7 @@ inline void compute_next_command( train_state_t *train, rail_cmds_t* cmds ) {
         if( cur_node_id == branch_to_switch_immediately ) {
           branch_delay_time = 0;
         }
-        pack_switch_cmd( cmds, switch_id, action, branch_delay_time );
+        pack_switch_cmd( cmds, switch_id, action, branch_delay_time + Time( ));
       }
       else {
         debugu( 4,  "branch to be handled at next sensor hit" );   

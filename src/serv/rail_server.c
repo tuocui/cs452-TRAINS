@@ -662,6 +662,7 @@ inline int insert_cmd( generic_cmds_list_t * cmds_list, int id, int action, int 
 /* return the idx of item with the smallest delay, NONE of empty list */
 inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, int* delay, int* train_speed, int* train_dest, int* train_mm_past_dest, int* train_accel, int* train_decel ) {
   *id = *action = *delay = *train_speed = *train_dest = *train_mm_past_dest = *train_accel = *train_decel = NONE;
+  int cur_time = Time( );
   int idx = 0;
   int smallest_delay_so_far = INT_MAX;
   int ret_idx = NONE;
@@ -671,7 +672,7 @@ inline int extract_cmd( generic_cmds_list_t* cmds_list, int* id, int* action, in
       smallest_delay_so_far = cmds_list->cmds[idx].delay;
       *id = cmds_list->cmds[idx].id;
       *action = cmds_list->cmds[idx].action;
-      *delay = cmds_list->cmds[idx].delay;
+      *delay = cmds_list->cmds[idx].delay - cur_time > 0 ? cmds_list->cmds[idx].delay - cur_time : 0;
 
       *train_speed = cmds_list->cmds[idx].train_speed;
       *train_dest = cmds_list->cmds[idx].train_dest;
