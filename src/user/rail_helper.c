@@ -812,7 +812,7 @@ void init_trains( train_state_t *trains, track_node_t* track_graph, int* switch_
     trains[i].next_sensor_id= NONE;
     trains[i].dest_id = NONE;
     trains[i].prev_dest_id = NONE;
-    trains[i].priority = NO_PRIORITY;
+    trains[i].priority = SHUTTLE;
     trains[i].mm_past_landmark = 0;
     trains[i].cur_speed = 0;
     trains[i].train_reach_destination = false;
